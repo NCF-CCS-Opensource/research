@@ -18,6 +18,7 @@ export function ResearchActions({
   const [message, setMessage] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [accessState, setAccessState] = useState<PdfAccessState["state"] | null>(null)
+  const [requestId, setRequestId] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
 
   useEffect(() => {
@@ -28,11 +29,27 @@ export function ResearchActions({
 
   useEffect(() => {
     clientPublicGet<PdfAccessState>(`/pdf-requests/${researchId}/access-state`)
-      .then(({ state }) => setAccessState(state))
+      .then(({ state, requestId }) => {
+        setAccessState(state)
+        setRequestId(requestId ?? null)
+      })
       .catch((err: unknown) =>
         setError(err instanceof Error ? err.message : "Unable to load PDF access"),
       )
   }, [researchId])
+
+  function download() {
+    if (!requestId) return
+    setError(null)
+    startTransition(async () => {
+      try {
+        const { url } = await clientAction<{ url: string }>(`/pdf-requests/${requestId}/download`, "POST")
+        window.open(url, "_blank")
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Unable to download PDF")
+      }
+    })
+  }
 
   function addToCollection() {
     setError(null)
@@ -75,6 +92,11 @@ export function ResearchActions({
           </Button>
         )}
         {accessState === "pending" && <Button disabled>Request pending</Button>}
+        {accessState === "granted" && (
+          <Button type="button" disabled={isPending} onClick={download}>
+            Download PDF
+          </Button>
+        )}
         <Button type="button" variant="outline" disabled={isPending} onClick={cite}>
           Cite
         </Button>

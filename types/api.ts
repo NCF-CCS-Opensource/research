@@ -125,7 +125,8 @@ export type CollectionItem = {
 }
 
 export type PdfAccessState = {
-  state: "guest" | "requestable" | "pending" | "unavailable"
+  state: "guest" | "requestable" | "pending" | "granted" | "unavailable"
+  requestId?: string
 }
 
 export type MyPdfAccessItem = {

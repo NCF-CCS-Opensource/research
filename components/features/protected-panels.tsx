@@ -337,6 +337,7 @@ export function PdfRequestsPanel() {
   const [mine, setMine] = useState<MyPdfAccessItem[]>([])
   const [pending, setPending] = useState<PendingPdfRequestItem[]>([])
   const [error, setError] = useState<string | null>(null)
+  const [isPending, startTransition] = useTransition()
 
   function load() {
     void Promise.all([
@@ -348,6 +349,30 @@ export function PdfRequestsPanel() {
   }
 
   useEffect(load, [])
+
+  function approve(id: string) {
+    setError(null)
+    startTransition(async () => {
+      try {
+        await clientAction(`/pdf-requests/${id}/approve`, "POST")
+        load()
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Approve failed")
+      }
+    })
+  }
+
+  function download(id: string) {
+    setError(null)
+    startTransition(async () => {
+      try {
+        const { url } = await clientAction<{ url: string }>(`/pdf-requests/${id}/download`, "POST")
+        window.open(url, "_blank")
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Unable to download PDF")
+      }
+    })
+  }
 
   return (
     <section className="rounded-3xl border bg-card p-8">
@@ -367,9 +392,16 @@ export function PdfRequestsPanel() {
               )}
               <p className="mt-1 text-sm text-muted-foreground">Owner: {request.ownerName}</p>
               <p className="mt-2 whitespace-pre-wrap text-sm">{request.requestNote}</p>
-              <p className="mt-2 text-xs capitalize text-muted-foreground">
-                {request.status} · {new Date(request.createdAt).toLocaleString()}
-              </p>
+              <div className="mt-2 flex items-center justify-between gap-4">
+                <p className="text-xs capitalize text-muted-foreground">
+                  {request.status} · {new Date(request.createdAt).toLocaleString()}
+                </p>
+                {request.status === "granted" && (
+                  <Button size="sm" disabled={isPending} onClick={() => download(request.id)}>
+                    Download
+                  </Button>
+                )}
+              </div>
             </div>
           ))}
           {!mine.length && !error && <p className="text-sm text-muted-foreground">No PDF access requests yet.</p>}
@@ -389,9 +421,14 @@ export function PdfRequestsPanel() {
                 {request.requester.program ? ` · ${request.requester.program.name}` : ""}
               </p>
               <p className="mt-2 whitespace-pre-wrap text-sm">{request.requestNote}</p>
-              <p className="mt-2 text-xs text-muted-foreground">
-                Requested {new Date(request.createdAt).toLocaleString()}
-              </p>
+              <div className="mt-2 flex items-center justify-between gap-4">
+                <p className="text-xs text-muted-foreground">
+                  Requested {new Date(request.createdAt).toLocaleString()}
+                </p>
+                <Button size="sm" disabled={isPending} onClick={() => approve(request.id)}>
+                  Approve
+                </Button>
+              </div>
             </div>
           ))}
           {!pending.length && !error && <p className="text-sm text-muted-foreground">No pending requests.</p>}
