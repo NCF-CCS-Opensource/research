@@ -2,21 +2,18 @@ import { cookies } from "next/headers"
 import { NextResponse } from "next/server"
 
 import { API_ROOT } from "@/lib/api"
-import { ACCESS_TOKEN_COOKIE, REFRESH_TOKEN_COOKIE, USER_ROLE_COOKIE } from "@/lib/auth-cookies"
+import {
+  ACCESS_TOKEN_COOKIE,
+  REFRESH_TOKEN_COOKIE,
+  USER_ROLE_COOKIE,
+} from "@/lib/auth-cookies"
+import type { LoginResponse } from "@/types/api"
 
 export { ACCESS_TOKEN_COOKIE, REFRESH_TOKEN_COOKIE, USER_ROLE_COOKIE }
 
 const secure = process.env.NODE_ENV === "production"
 
-type LoginPayload = {
-  accessToken: string
-  refreshToken: string
-  user: {
-    role: "admin" | "user" | "guest"
-  }
-}
-
-export function setAuthCookies(response: NextResponse, payload: LoginPayload) {
+export function setAuthCookies(response: NextResponse, payload: LoginResponse) {
   response.cookies.set(ACCESS_TOKEN_COOKIE, payload.accessToken, {
     httpOnly: true,
     sameSite: "lax",
@@ -70,7 +67,9 @@ export async function refreshAccessToken(response: NextResponse) {
     return null
   }
 
-  const payload = (await backendResponse.json()) as { data: { accessToken: string } }
+  const payload = (await backendResponse.json()) as {
+    data: { accessToken: string }
+  }
   response.cookies.set(ACCESS_TOKEN_COOKIE, payload.data.accessToken, {
     httpOnly: true,
     sameSite: "lax",

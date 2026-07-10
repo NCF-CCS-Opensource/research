@@ -2,6 +2,8 @@ export type ApiEnvelope<T> = {
   data: T
 }
 
+export type UserRole = "admin" | "user"
+
 export type PaginatedResponse<T> = {
   data: T[]
   meta: {
@@ -40,7 +42,7 @@ export type ResearchDetail = ResearchSummary & {
     email: string
     firstName: string
     lastName: string
-    role: "admin" | "user" | "guest"
+    role: UserRole
   }
   keywords?: Keyword[]
 }
@@ -74,7 +76,7 @@ export type LoginResponse = {
   user: {
     id: string
     email: string
-    role: "admin" | "user" | "guest"
+    role: UserRole
   }
 }
 
@@ -85,7 +87,7 @@ export type UserProfile = {
   middleName?: string | null
   lastName: string
   suffix?: string | null
-  role: "admin" | "user" | "guest"
+  role: UserRole
   status: string
   institution?: { id: string; name: string } | null
   program?: { id: string; name: string } | null

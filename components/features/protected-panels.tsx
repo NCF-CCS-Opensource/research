@@ -594,7 +594,6 @@ export function AdminUsersPanel() {
                   <label className="grid gap-1 text-xs">
                     Role
                     <select name="role" defaultValue={user.role} className="h-8 rounded border bg-background px-2 text-sm">
-                      <option value="guest">guest</option>
                       <option value="user">user</option>
                       <option value="admin">admin</option>
                     </select>
