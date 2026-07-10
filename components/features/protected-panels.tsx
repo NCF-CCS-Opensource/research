@@ -11,8 +11,9 @@ import type {
   Category,
   CollectionItem,
   Keyword,
+  MyPdfAccessItem,
   NotificationItem,
-  PdfRequestItem,
+  PendingPdfRequestItem,
   ResearchSummary,
   UserProfile,
 } from "@/types/api"
@@ -333,49 +334,68 @@ export function NotificationsPanel() {
 }
 
 export function PdfRequestsPanel() {
-  const [items, setItems] = useState<PdfRequestItem[]>([])
+  const [mine, setMine] = useState<MyPdfAccessItem[]>([])
+  const [pending, setPending] = useState<PendingPdfRequestItem[]>([])
   const [error, setError] = useState<string | null>(null)
-  const [isPending, startTransition] = useTransition()
 
   function load() {
-    clientEnvelope<PdfRequestItem[]>("/pdf-requests/my")
-      .then(setItems)
-      .catch((err: unknown) => setError(err instanceof Error ? err.message : "Unable to load PDF requests"))
+    void Promise.all([
+      clientEnvelope<MyPdfAccessItem[]>("/pdf-requests/mine").then(setMine),
+      clientEnvelope<PendingPdfRequestItem[]>("/pdf-requests/pending").then(setPending),
+    ]).catch((err: unknown) =>
+      setError(err instanceof Error ? err.message : "Unable to load PDF access"),
+    )
   }
 
   useEffect(load, [])
 
-  function decide(id: string, action: "approve" | "reject") {
-    startTransition(async () => {
-      try {
-        await clientAction(`/pdf-requests/${id}/${action}`, "POST")
-        load()
-      } catch (err) {
-        setError(err instanceof Error ? err.message : `${action === "approve" ? "Approve" : "Reject"} failed`)
-      }
-    })
-  }
-
   return (
     <section className="rounded-3xl border bg-card p-8">
-      <h1 className="text-3xl font-semibold tracking-tight">PDF Requests</h1>
+      <h1 className="text-3xl font-semibold tracking-tight">PDF Access</h1>
       <div className="mt-6"><AuthNotice error={error} /></div>
-      <div className="mt-6 grid gap-3">
-        {items.map(({ request, research }) => (
-          <div key={request.id} className="rounded-xl border p-4">
-            <h2 className="font-medium">{research.title}</h2>
-            <p className="mt-1 text-sm text-muted-foreground">{request.requesterName} · {request.requesterEmail}</p>
-            <p className="mt-2 text-sm">{request.purpose}</p>
-            <p className="mt-1 text-xs capitalize text-muted-foreground">Status: {request.status}</p>
-            {request.status === "pending" && (
-              <div className="mt-4 flex gap-2">
-                <Button disabled={isPending} onClick={() => decide(request.id, "approve")}>Approve</Button>
-                <Button variant="outline" disabled={isPending} onClick={() => decide(request.id, "reject")}>Reject</Button>
-              </div>
-            )}
-          </div>
-        ))}
-        {!items.length && !error && <p className="text-sm text-muted-foreground">No PDF requests yet.</p>}
+      <div className="mt-8">
+        <h2 className="text-xl font-semibold">My PDF Access</h2>
+        <div className="mt-4 grid gap-3">
+          {mine.map((request) => (
+            <div key={request.id} className="rounded-xl border p-4">
+              {request.research.id ? (
+                <Link href={`/research/${request.research.id}`} className="font-medium hover:underline">
+                  {request.research.title}
+                </Link>
+              ) : (
+                <p className="font-medium">{request.research.title}</p>
+              )}
+              <p className="mt-1 text-sm text-muted-foreground">Owner: {request.ownerName}</p>
+              <p className="mt-2 whitespace-pre-wrap text-sm">{request.requestNote}</p>
+              <p className="mt-2 text-xs capitalize text-muted-foreground">
+                {request.status} · {new Date(request.createdAt).toLocaleString()}
+              </p>
+            </div>
+          ))}
+          {!mine.length && !error && <p className="text-sm text-muted-foreground">No PDF access requests yet.</p>}
+        </div>
+      </div>
+
+      <div className="mt-10">
+        <h2 className="text-xl font-semibold">Pending Requests</h2>
+        <div className="mt-4 grid gap-3">
+          {pending.map((request) => (
+            <div key={request.id} className="rounded-xl border p-4">
+              <Link href={`/research/${request.research.id}`} className="font-medium hover:underline">
+                {request.research.title}
+              </Link>
+              <p className="mt-1 text-sm text-muted-foreground">
+                {request.requester.fullName} · {request.requester.institution.name}
+                {request.requester.program ? ` · ${request.requester.program.name}` : ""}
+              </p>
+              <p className="mt-2 whitespace-pre-wrap text-sm">{request.requestNote}</p>
+              <p className="mt-2 text-xs text-muted-foreground">
+                Requested {new Date(request.createdAt).toLocaleString()}
+              </p>
+            </div>
+          ))}
+          {!pending.length && !error && <p className="text-sm text-muted-foreground">No pending requests.</p>}
+        </div>
       </div>
     </section>
   )

@@ -124,14 +124,28 @@ export type CollectionItem = {
   }
 }
 
-export type PdfRequestItem = {
-  request: {
-    id: string
-    requesterName: string
-    requesterEmail: string
-    purpose?: string | null
-    status: string
-    createdAt: string
-  }
+export type PdfAccessState = {
+  state: "guest" | "requestable" | "pending" | "unavailable"
+}
+
+export type MyPdfAccessItem = {
+  id: string
+  requestNote: string
+  status: string
+  createdAt: string
+  research: { id: string | null; title: string }
+  ownerName: string
+}
+
+export type PendingPdfRequestItem = {
+  id: string
+  requestNote: string
+  status: string
+  createdAt: string
   research: { id: string; title: string }
+  requester: {
+    fullName: string
+    institution: { id: string; name: string }
+    program: { id: string; name: string } | null
+  }
 }

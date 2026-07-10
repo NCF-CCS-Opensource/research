@@ -62,7 +62,6 @@ export default async function ResearchDetailPage({ params }: PageProps) {
 
   const authorList = research.authors ?? []
   const authorLine = authorList.map((a) => a.name).join(", ") || "Unknown authors"
-  const isPrivate = research.filePrivacy === "private"
   const citationYear = research.publishDate?.slice(0, 4) ?? "n.d."
 
   return (
@@ -134,7 +133,7 @@ export default async function ResearchDetailPage({ params }: PageProps) {
             })()}
           </div>
 
-          <ResearchActions researchId={research.id} isPrivate={isPrivate} citation={`${authorLine}. (${citationYear}). ${research.title}.`} />
+          <ResearchActions researchId={research.id} citation={`${authorLine}. (${citationYear}). ${research.title}.`} />
         </div>
 
         <section className="mt-8 rounded-3xl border bg-card p-6 sm:p-8">

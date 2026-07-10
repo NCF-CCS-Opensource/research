@@ -4,25 +4,34 @@ import Link from "next/link"
 import { useEffect, useRef, useState, useTransition } from "react"
 
 import { Button } from "@/components/ui/button"
-import { clientAction } from "@/lib/client-api"
+import { clientAction, clientPublicGet } from "@/lib/client-api"
+import type { PdfAccessState } from "@/types/api"
 
 export function ResearchActions({
   researchId,
   citation,
 }: {
   researchId: string
-  isPrivate: boolean
   citation: string
 }) {
   const trackedView = useRef(false)
   const [message, setMessage] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [accessState, setAccessState] = useState<PdfAccessState["state"] | null>(null)
   const [isPending, startTransition] = useTransition()
 
   useEffect(() => {
     if (trackedView.current) return
     trackedView.current = true
     void clientAction<{ message: string }>(`/research/${researchId}/view`, "POST").catch(() => {})
+  }, [researchId])
+
+  useEffect(() => {
+    clientPublicGet<PdfAccessState>(`/pdf-requests/${researchId}/access-state`)
+      .then(({ state }) => setAccessState(state))
+      .catch((err: unknown) =>
+        setError(err instanceof Error ? err.message : "Unable to load PDF access"),
+      )
   }, [researchId])
 
   function addToCollection() {
@@ -55,9 +64,17 @@ export function ResearchActions({
   return (
     <>
       <div className="mt-6 flex flex-wrap gap-3">
-        <Button asChild>
-          <Link href={`/research/${researchId}/request-pdf`}>Request PDF</Link>
-        </Button>
+        {accessState === "guest" && (
+          <Button asChild>
+            <Link href={`/login?next=/research/${researchId}`}>Sign in to request PDF</Link>
+          </Button>
+        )}
+        {accessState === "requestable" && (
+          <Button asChild>
+            <Link href={`/research/${researchId}/request-pdf`}>Request PDF</Link>
+          </Button>
+        )}
+        {accessState === "pending" && <Button disabled>Request pending</Button>}
         <Button type="button" variant="outline" disabled={isPending} onClick={cite}>
           Cite
         </Button>

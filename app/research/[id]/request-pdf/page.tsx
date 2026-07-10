@@ -30,9 +30,9 @@ export default async function RequestPdfPage({ params }: PageProps) {
           </Link>
         </Button>
         <div className="mt-8 rounded-3xl border bg-card p-8">
-          <h1 className="text-3xl font-semibold tracking-tight">Request whole PDF</h1>
+          <h1 className="text-3xl font-semibold tracking-tight">Request Research PDF</h1>
           <p className="mt-3 text-muted-foreground">
-            This sends your access request to the owner of “{research.title}”. Metadata remains public, but the PDF download URL is owner-controlled.
+            Send one Request Note to the Owner of “{research.title}”. Your verified profile supplies your identity; your email stays private.
           </p>
           <div className="mt-8">
             <PdfRequestForm researchId={id} />

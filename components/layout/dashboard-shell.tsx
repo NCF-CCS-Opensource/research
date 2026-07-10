@@ -8,7 +8,7 @@ const userLinks = [
   ["/dashboard", "Overview"],
   ["/dashboard/papers", "My Papers"],
   ["/dashboard/collections", "Collections"],
-  ["/dashboard/pdf-requests", "PDF Requests"],
+  ["/dashboard/pdf-requests", "PDF Access"],
   ["/dashboard/settings", "Settings"],
   ["/upload", "Upload Research"],
 ]
