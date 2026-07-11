@@ -27,8 +27,13 @@ async function proxy(request: NextRequest, context: { params: Promise<unknown> }
 
   let backendResponse = await makeBackendRequest(token)
 
-  // Only attempt token refresh if we had a token that the backend rejected
-  if (backendResponse.status === 401 && token) {
+  // Attempt a refresh on any 401 — not just when an access token was present
+  // and got rejected. The access-token cookie expires (15m) and disappears
+  // from the jar entirely well before the refresh token (7d) does, so a
+  // request can hit this route with no access token at all while a perfectly
+  // valid refresh token still sits in the jar; skipping refresh in that case
+  // forwarded a raw 401 straight to the client and forced a needless logout.
+  if (backendResponse.status === 401) {
     const { accessToken, invalid } = await refreshAccessToken(cookieCarrier)
     if (!accessToken) {
       // A rate-limited refresh isn't a real logout — surface it as 429 so the
