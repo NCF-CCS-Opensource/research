@@ -52,7 +52,7 @@ type UploadsByRole = { role: string; uploads: number }
 
 type AuditLogEntry = {
   id: string
-  action: "approve" | "reject" | "delete"
+  action: "approve" | "reject" | "delete" | "moderate"
   createdAt: string
   admin: { firstName: string; lastName: string } | null
   research: { id: string; title: string } | null
@@ -866,6 +866,18 @@ export function AdminResearchPanel({ statusFilter = "" }: { statusFilter?: strin
     }
   }
 
+  function viewPdf(id: string) {
+    setError(null)
+    startTransition(async () => {
+      try {
+        const { url } = await clientAction<{ url: string }>(`/research/${id}/moderation-access`, "POST")
+        window.open(url, "_blank")
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Unable to view PDF")
+      }
+    })
+  }
+
   function runAi(paper: ResearchSummary, type: "summarize" | "suggest-rejection" | "suggest-tags") {
     setAiResult(null)
     startAiTransition(async () => {
@@ -1021,10 +1033,15 @@ export function AdminResearchPanel({ statusFilter = "" }: { statusFilter?: strin
                 </div>
               )}
             </div>
-            {paper.status === "pending" && (
+            {paper.status !== "approved" && (
               <div className="flex shrink-0 gap-2">
-                <Button size="sm" disabled={isPending} onClick={() => decide(paper.id, "approve")}>Approve</Button>
-                <Button size="sm" variant="outline" disabled={isPending} onClick={() => decide(paper.id, "reject")}>Reject</Button>
+                <Button size="sm" variant="outline" disabled={isPending} onClick={() => viewPdf(paper.id)}>View PDF</Button>
+                {paper.status === "pending" && (
+                  <>
+                    <Button size="sm" disabled={isPending} onClick={() => decide(paper.id, "approve")}>Approve</Button>
+                    <Button size="sm" variant="outline" disabled={isPending} onClick={() => decide(paper.id, "reject")}>Reject</Button>
+                  </>
+                )}
               </div>
             )}
           </div>
@@ -1133,6 +1150,7 @@ const ACTION_STYLES: Record<string, string> = {
   approve: "text-green-700 bg-green-50 border-green-200",
   reject: "text-red-700 bg-red-50 border-red-200",
   delete: "text-gray-700 bg-gray-50 border-gray-200",
+  moderate: "text-blue-700 bg-blue-50 border-blue-200",
 }
 
 export function AuditLogPanel() {
