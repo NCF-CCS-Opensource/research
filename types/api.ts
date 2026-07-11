@@ -19,7 +19,6 @@ export type ResearchSummary = {
   abstract?: string | null
   publishDate?: string | null
   status?: "pending" | "approved" | "rejected"
-  filePrivacy?: "public" | "private"
   viewCount?: number
   downloadCount?: number
   citationCount?: number

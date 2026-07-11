@@ -28,6 +28,11 @@ function AuthNotice({ error }: { error: string | null }) {
   )
 }
 
+async function openPdfUrl(fetchUrl: () => Promise<{ url: string }>) {
+  const { url } = await fetchUrl()
+  window.open(url, "_blank")
+}
+
 function StatGrid({ overview }: { overview: AnalyticsOverview | null }) {
   const stats = [
     ["Papers", overview?.totalResearches],
@@ -177,6 +182,17 @@ export function MyPapersPanel() {
     })
   }
 
+  function download(id: string) {
+    setError(null)
+    startTransition(async () => {
+      try {
+        await openPdfUrl(() => clientEnvelope<{ url: string }>(`/research/${id}/pdf`))
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Unable to download PDF")
+      }
+    })
+  }
+
   return (
     <section className="rounded-3xl border bg-card p-8">
       <div className="flex items-center justify-between gap-4">
@@ -196,7 +212,6 @@ export function MyPapersPanel() {
                   <span className={`rounded border px-1.5 py-0.5 font-medium capitalize ${STATUS_STYLES[paper.status ?? "pending"] ?? ""}`}>
                     {paper.status ?? "pending"}
                   </span>
-                  <span className="capitalize">{paper.filePrivacy ?? "public"}</span>
                   <span>{paper.viewCount ?? 0} views</span>
                 </div>
                 {paper.status === "rejected" && paper.rejectionReason && (
@@ -237,6 +252,9 @@ export function MyPapersPanel() {
                     </Button>
                   </>
                 )}
+                <Button variant="outline" size="sm" disabled={isPending} onClick={() => download(paper.id)}>
+                  Download
+                </Button>
                 <Button variant="ghost" size="sm" asChild>
                   <Link href={`/research/${paper.id}`}>View</Link>
                 </Button>
@@ -393,8 +411,7 @@ export function PdfRequestsPanel() {
     setError(null)
     startTransition(async () => {
       try {
-        const { url } = await clientAction<{ url: string }>(`/pdf-requests/${id}/download`, "POST")
-        window.open(url, "_blank")
+        await openPdfUrl(() => clientAction<{ url: string }>(`/pdf-requests/${id}/download`, "POST"))
       } catch (err) {
         setError(err instanceof Error ? err.message : "Unable to download PDF")
       }
@@ -870,8 +887,7 @@ export function AdminResearchPanel({ statusFilter = "" }: { statusFilter?: strin
     setError(null)
     startTransition(async () => {
       try {
-        const { url } = await clientAction<{ url: string }>(`/research/${id}/moderation-access`, "POST")
-        window.open(url, "_blank")
+        await openPdfUrl(() => clientAction<{ url: string }>(`/research/${id}/moderation-access`, "POST"))
       } catch (err) {
         setError(err instanceof Error ? err.message : "Unable to view PDF")
       }

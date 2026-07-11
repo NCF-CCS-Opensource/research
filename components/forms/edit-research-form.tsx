@@ -34,9 +34,6 @@ export function EditResearchForm({ id }: { id: string }) {
           abstract: form.get("abstract"),
           publishDate: form.get("publishDate") || undefined,
         })
-        await clientAction(`/research/${id}/privacy`, "PATCH", {
-          filePrivacy: form.get("filePrivacy"),
-        })
         router.push("/dashboard/papers")
         router.refresh()
       } catch (err) {
@@ -97,30 +94,6 @@ export function EditResearchForm({ id }: { id: string }) {
           className="h-10 rounded-lg border bg-background px-3 text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-ring"
         />
       </label>
-
-      <fieldset className="grid gap-2">
-        <legend className="text-sm font-medium">File Privacy</legend>
-        <div className="flex gap-4 text-sm">
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input
-              type="radio"
-              name="filePrivacy"
-              value="public"
-              defaultChecked={research.filePrivacy !== "private"}
-            />
-            Public — PDF visible to everyone
-          </label>
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input
-              type="radio"
-              name="filePrivacy"
-              value="private"
-              defaultChecked={research.filePrivacy === "private"}
-            />
-            Private — request access required
-          </label>
-        </div>
-      </fieldset>
 
       {error ? <p className="text-sm text-destructive">{error}</p> : null}
 
