@@ -125,7 +125,11 @@ export function ResearchActions({
         )}
         {accessState === "cooldown" && (
           <Button disabled>
-            {cooldownReason === "rejected" ? "Request was rejected — " : "Request canceled — "}
+            {cooldownReason === "rejected"
+              ? "Request was rejected — "
+              : cooldownReason === "revoked"
+                ? "Access was revoked — "
+                : "Request canceled — "}
             {availableAt
               ? `you can request again after ${new Date(availableAt).toLocaleString()}`
               : "you can request again later"}

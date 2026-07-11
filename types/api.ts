@@ -128,7 +128,7 @@ export type PdfAccessState = {
   state: "guest" | "requestable" | "pending" | "granted" | "cooldown" | "unavailable"
   requestId?: string
   availableAt?: string
-  reason?: "canceled" | "rejected"
+  reason?: "canceled" | "rejected" | "revoked"
 }
 
 export type MyPdfAccessItem = {
@@ -145,6 +145,19 @@ export type PendingPdfRequestItem = {
   requestNote: string
   status: string
   createdAt: string
+  research: { id: string; title: string }
+  requester: {
+    fullName: string
+    institution: { id: string; name: string }
+    program: { id: string; name: string } | null
+  }
+}
+
+export type ActivePdfGrantItem = {
+  id: string
+  status: string
+  createdAt: string
+  grantedAt: string | null
   research: { id: string; title: string }
   requester: {
     fullName: string

@@ -6,6 +6,7 @@ import { useEffect, useState, useTransition } from "react"
 import { Button } from "@/components/ui/button"
 import { clientAction, clientEnvelope, clientPaginated } from "@/lib/client-api"
 import type {
+  ActivePdfGrantItem,
   AnalyticsOverview,
   AnalyticsPoint,
   Category,
@@ -336,6 +337,7 @@ export function NotificationsPanel() {
 export function PdfRequestsPanel() {
   const [mine, setMine] = useState<MyPdfAccessItem[]>([])
   const [pending, setPending] = useState<PendingPdfRequestItem[]>([])
+  const [grants, setGrants] = useState<ActivePdfGrantItem[]>([])
   const [error, setError] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
 
@@ -343,6 +345,7 @@ export function PdfRequestsPanel() {
     void Promise.all([
       clientEnvelope<MyPdfAccessItem[]>("/pdf-requests/mine").then(setMine),
       clientEnvelope<PendingPdfRequestItem[]>("/pdf-requests/pending").then(setPending),
+      clientEnvelope<ActivePdfGrantItem[]>("/pdf-requests/grants").then(setGrants),
     ]).catch((err: unknown) =>
       setError(err instanceof Error ? err.message : "Unable to load PDF access"),
     )
@@ -394,6 +397,18 @@ export function PdfRequestsPanel() {
         window.open(url, "_blank")
       } catch (err) {
         setError(err instanceof Error ? err.message : "Unable to download PDF")
+      }
+    })
+  }
+
+  function revoke(id: string) {
+    setError(null)
+    startTransition(async () => {
+      try {
+        await clientAction(`/pdf-requests/${id}/revoke`, "POST")
+        load()
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Revoke failed")
       }
     })
   }
@@ -478,6 +493,38 @@ export function PdfRequestsPanel() {
             </div>
           ))}
           {!pending.length && !error && <p className="text-sm text-muted-foreground">No pending requests.</p>}
+        </div>
+      </div>
+
+      <div className="mt-10">
+        <h2 className="text-xl font-semibold">Active Grants</h2>
+        <div className="mt-4 grid gap-3">
+          {grants.map((grant) => (
+            <div key={grant.id} className="rounded-xl border p-4">
+              <Link href={`/research/${grant.research.id}`} className="font-medium hover:underline">
+                {grant.research.title}
+              </Link>
+              <p className="mt-1 text-sm text-muted-foreground">
+                {grant.requester.fullName} · {grant.requester.institution.name}
+                {grant.requester.program ? ` · ${grant.requester.program.name}` : ""}
+              </p>
+              <div className="mt-2 flex items-center justify-between gap-4">
+                <p className="text-xs text-muted-foreground">
+                  Granted {grant.grantedAt ? new Date(grant.grantedAt).toLocaleString() : "—"}
+                </p>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={isPending}
+                  onClick={() => revoke(grant.id)}
+                  className="text-destructive hover:text-destructive"
+                >
+                  Revoke
+                </Button>
+              </div>
+            </div>
+          ))}
+          {!grants.length && !error && <p className="text-sm text-muted-foreground">No active grants.</p>}
         </div>
       </div>
     </section>
