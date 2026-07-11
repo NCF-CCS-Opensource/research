@@ -19,6 +19,8 @@ export function ResearchActions({
   const [error, setError] = useState<string | null>(null)
   const [accessState, setAccessState] = useState<PdfAccessState["state"] | null>(null)
   const [requestId, setRequestId] = useState<string | null>(null)
+  const [availableAt, setAvailableAt] = useState<string | null>(null)
+  const [cooldownReason, setCooldownReason] = useState<PdfAccessState["reason"] | null>(null)
   const [isPending, startTransition] = useTransition()
 
   useEffect(() => {
@@ -27,16 +29,33 @@ export function ResearchActions({
     void clientAction<{ message: string }>(`/research/${researchId}/view`, "POST").catch(() => {})
   }, [researchId])
 
-  useEffect(() => {
+  function loadAccessState() {
     clientPublicGet<PdfAccessState>(`/pdf-requests/${researchId}/access-state`)
-      .then(({ state, requestId }) => {
+      .then(({ state, requestId, availableAt, reason }) => {
         setAccessState(state)
         setRequestId(requestId ?? null)
+        setAvailableAt(availableAt ?? null)
+        setCooldownReason(reason ?? null)
       })
       .catch((err: unknown) =>
         setError(err instanceof Error ? err.message : "Unable to load PDF access"),
       )
-  }, [researchId])
+  }
+
+  useEffect(loadAccessState, [researchId])
+
+  function cancel() {
+    if (!requestId) return
+    setError(null)
+    startTransition(async () => {
+      try {
+        await clientAction(`/pdf-requests/${requestId}/cancel`, "POST")
+        loadAccessState()
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Unable to cancel request")
+      }
+    })
+  }
 
   function download() {
     if (!requestId) return
@@ -91,10 +110,25 @@ export function ResearchActions({
             <Link href={`/research/${researchId}/request-pdf`}>Request PDF</Link>
           </Button>
         )}
-        {accessState === "pending" && <Button disabled>Request pending</Button>}
+        {accessState === "pending" && (
+          <>
+            <Button disabled>Request pending</Button>
+            <Button type="button" variant="outline" disabled={isPending} onClick={cancel}>
+              Cancel request
+            </Button>
+          </>
+        )}
         {accessState === "granted" && (
           <Button type="button" disabled={isPending} onClick={download}>
             Download PDF
+          </Button>
+        )}
+        {accessState === "cooldown" && (
+          <Button disabled>
+            {cooldownReason === "rejected" ? "Request was rejected — " : "Request canceled — "}
+            {availableAt
+              ? `you can request again after ${new Date(availableAt).toLocaleString()}`
+              : "you can request again later"}
           </Button>
         )}
         <Button type="button" variant="outline" disabled={isPending} onClick={cite}>

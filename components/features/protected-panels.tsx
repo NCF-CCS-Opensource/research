@@ -362,6 +362,30 @@ export function PdfRequestsPanel() {
     })
   }
 
+  function reject(id: string) {
+    setError(null)
+    startTransition(async () => {
+      try {
+        await clientAction(`/pdf-requests/${id}/reject`, "POST")
+        load()
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Reject failed")
+      }
+    })
+  }
+
+  function cancel(id: string) {
+    setError(null)
+    startTransition(async () => {
+      try {
+        await clientAction(`/pdf-requests/${id}/cancel`, "POST")
+        load()
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Cancel failed")
+      }
+    })
+  }
+
   function download(id: string) {
     setError(null)
     startTransition(async () => {
@@ -401,6 +425,17 @@ export function PdfRequestsPanel() {
                     Download
                   </Button>
                 )}
+                {request.status === "pending" && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={isPending}
+                    onClick={() => cancel(request.id)}
+                    className="text-destructive hover:text-destructive"
+                  >
+                    Cancel
+                  </Button>
+                )}
               </div>
             </div>
           ))}
@@ -425,9 +460,20 @@ export function PdfRequestsPanel() {
                 <p className="text-xs text-muted-foreground">
                   Requested {new Date(request.createdAt).toLocaleString()}
                 </p>
-                <Button size="sm" disabled={isPending} onClick={() => approve(request.id)}>
-                  Approve
-                </Button>
+                <div className="flex gap-2">
+                  <Button size="sm" disabled={isPending} onClick={() => approve(request.id)}>
+                    Approve
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={isPending}
+                    onClick={() => reject(request.id)}
+                    className="text-destructive hover:text-destructive"
+                  >
+                    Reject
+                  </Button>
+                </div>
               </div>
             </div>
           ))}
