@@ -29,19 +29,28 @@ async function proxy(request: NextRequest, context: { params: Promise<unknown> }
 
   // Only attempt token refresh if we had a token that the backend rejected
   if (backendResponse.status === 401 && token) {
-    const refreshed = await refreshAccessToken(cookieCarrier)
-    if (!refreshed) {
-      // refreshAccessToken wrote cookie-deletion headers onto cookieCarrier.
-      // Without propagating them here, the browser keeps the old cookies and
-      // proxy.ts bounces the user back to /admin, creating an infinite loop.
-      const expiredResponse = NextResponse.json(
-        { statusCode: 401, message: "Session expired. Sign in again." },
-        { status: 401 },
-      )
-      cookieCarrier.cookies.getAll().forEach((cookie) => expiredResponse.cookies.set(cookie))
-      return expiredResponse
+    const { accessToken, invalid } = await refreshAccessToken(cookieCarrier)
+    if (!accessToken) {
+      // A rate-limited refresh isn't a real logout — surface it as 429 so the
+      // client doesn't hard-redirect to /login. Otherwise the browser bounces
+      // straight back here (cookies are still valid) and re-fires the same
+      // request batch, looping until the rate limit clears on its own.
+      // refreshAccessToken wrote cookie-deletion headers onto cookieCarrier
+      // for the genuinely-invalid case — propagate them so the browser
+      // doesn't keep stale cookies proxy.ts would otherwise bounce on.
+      const failedResponse = invalid
+        ? NextResponse.json(
+            { statusCode: 401, message: "Session expired. Sign in again." },
+            { status: 401 },
+          )
+        : NextResponse.json(
+            { statusCode: 429, message: "Too many requests. Try again shortly." },
+            { status: 429 },
+          )
+      cookieCarrier.cookies.getAll().forEach((cookie) => failedResponse.cookies.set(cookie))
+      return failedResponse
     }
-    backendResponse = await makeBackendRequest(refreshed)
+    backendResponse = await makeBackendRequest(accessToken)
   }
 
   const payload = await backendResponse.text()

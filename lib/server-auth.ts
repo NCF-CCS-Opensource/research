@@ -77,9 +77,17 @@ async function requestRefresh(refreshToken: string): Promise<RefreshOutcome> {
   return { accessToken: payload.data.accessToken, invalid: false }
 }
 
-export async function refreshAccessToken(response: NextResponse) {
+// invalid: the refresh token itself is bad/expired — the caller should treat
+// this as a real logout. When false (no refresh token, or a rate-limited/
+// transient refresh failure), the session may still be good — the caller
+// must not force a client redirect over it, or a rate-limited refresh
+// bounces the browser to /login and straight back to the still-cookied
+// page, re-firing the same request batch in a loop.
+export async function refreshAccessToken(
+  response: NextResponse,
+): Promise<RefreshOutcome> {
   const refreshToken = await getRefreshToken()
-  if (!refreshToken) return null
+  if (!refreshToken) return { accessToken: null, invalid: true }
 
   let inFlight = refreshInFlight.get(refreshToken)
   if (!inFlight) {
@@ -88,19 +96,19 @@ export async function refreshAccessToken(response: NextResponse) {
     })
     refreshInFlight.set(refreshToken, inFlight)
   }
-  const { accessToken, invalid } = await inFlight
+  const outcome = await inFlight
 
-  if (accessToken) {
-    response.cookies.set(ACCESS_TOKEN_COOKIE, accessToken, {
+  if (outcome.accessToken) {
+    response.cookies.set(ACCESS_TOKEN_COOKIE, outcome.accessToken, {
       httpOnly: true,
       sameSite: "lax",
       secure,
       path: "/",
       maxAge: 15 * 60,
     })
-    return accessToken
+  } else if (outcome.invalid) {
+    clearAuthCookies(response)
   }
 
-  if (invalid) clearAuthCookies(response)
-  return null
+  return outcome
 }
