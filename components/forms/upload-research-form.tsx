@@ -4,10 +4,11 @@ import { useState, useTransition, useEffect } from "react"
 
 import { Button } from "@/components/ui/button"
 import { clientAction, clientPublicGet } from "@/lib/client-api"
+import { uploadResearchPdf } from "@/lib/upload-research-pdf"
 
 type CreatedResearch = { id: string }
-type UploadUrl = { uploadUrl: string; key: string }
 type Option = { id: string; name: string }
+type FailedUpload = { researchId: string; file: File; resumeKey?: string }
 
 function MultiCheckbox({
   legend,
@@ -39,6 +40,7 @@ export function UploadResearchForm() {
   const [keywords, setKeywords] = useState<Option[]>([])
   const [message, setMessage] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [failedUpload, setFailedUpload] = useState<FailedUpload | null>(null)
   const [isPending, startTransition] = useTransition()
 
   useEffect(() => {
@@ -59,6 +61,7 @@ export function UploadResearchForm() {
     const file = form.get("file")
     setError(null)
     setMessage(null)
+    setFailedUpload(null)
 
     if (!(file instanceof File) || file.type !== "application/pdf") {
       setError("Upload a PDF file.")
@@ -90,22 +93,39 @@ export function UploadResearchForm() {
           keywordIds: keywordIds.length ? keywordIds : undefined,
         })
 
-        const upload = await clientAction<UploadUrl>(`/research/${created.id}/upload-url`, "POST", {
-          filename: file.name,
-          contentType: "application/pdf",
-        })
+        await runUpload(created.id, file)
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Upload failed")
+      }
+    })
+  }
 
-        const r2Response = await fetch(upload.uploadUrl, {
-          method: "PUT",
-          body: file,
-          headers: { "Content-Type": "application/pdf" },
-        })
+  async function runUpload(researchId: string, file: File, resumeKey?: string) {
+    const outcome = await uploadResearchPdf(researchId, file, undefined, resumeKey)
 
-        if (!r2Response.ok) throw new Error("PDF upload to storage failed")
+    if (outcome.status === "ok") {
+      setMessage("Research uploaded and submitted for approval.")
+      setFailedUpload(null)
+      return
+    }
 
-        await clientAction<{ message: string }>(`/research/${created.id}/confirm-upload`, "POST")
+    if (outcome.status === "storage-failed") {
+      setError("Upload to storage failed. Your research record was saved — retry to finish uploading the PDF.")
+      setFailedUpload({ researchId, file })
+      return
+    }
 
-        setMessage("Research uploaded and submitted for approval.")
+    setError("The file reached storage but confirmation failed. Retry to finish submitting it.")
+    setFailedUpload({ researchId, file, resumeKey: outcome.key })
+  }
+
+  function onRetry() {
+    if (!failedUpload) return
+    setError(null)
+    setMessage(null)
+    startTransition(async () => {
+      try {
+        await runUpload(failedUpload.researchId, failedUpload.file, failedUpload.resumeKey)
       } catch (err) {
         setError(err instanceof Error ? err.message : "Upload failed")
       }
@@ -138,7 +158,13 @@ export function UploadResearchForm() {
       </label>
       {message ? <p className="rounded-lg bg-secondary p-3 text-sm">{message}</p> : null}
       {error ? <p className="text-sm text-destructive">{error}</p> : null}
-      <Button type="submit" disabled={isPending}>{isPending ? "Uploading…" : "Submit Research"}</Button>
+      {failedUpload ? (
+        <Button type="button" variant="outline" disabled={isPending} onClick={onRetry}>
+          {isPending ? "Retrying…" : "Retry upload"}
+        </Button>
+      ) : (
+        <Button type="submit" disabled={isPending}>{isPending ? "Uploading…" : "Submit Research"}</Button>
+      )}
     </form>
   )
 }
