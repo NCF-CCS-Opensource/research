@@ -8,7 +8,7 @@ import { uploadResearchPdf } from "@/lib/upload-research-pdf"
 
 type CreatedResearch = { id: string }
 type Option = { id: string; name: string }
-type FailedUpload = { researchId: string; file: File; resumeKey?: string }
+type FailedUpload = { researchId: string; file: File; skipUpload: boolean }
 
 function MultiCheckbox({
   legend,
@@ -100,8 +100,8 @@ export function UploadResearchForm() {
     })
   }
 
-  async function runUpload(researchId: string, file: File, resumeKey?: string) {
-    const outcome = await uploadResearchPdf(researchId, file, undefined, resumeKey)
+  async function runUpload(researchId: string, file: File, skipUpload = false) {
+    const outcome = await uploadResearchPdf(researchId, file, undefined, skipUpload)
 
     if (outcome.status === "ok") {
       setMessage("Research uploaded and submitted for approval.")
@@ -111,12 +111,12 @@ export function UploadResearchForm() {
 
     if (outcome.status === "storage-failed") {
       setError("Upload to storage failed. Your research record was saved — retry to finish uploading the PDF.")
-      setFailedUpload({ researchId, file })
+      setFailedUpload({ researchId, file, skipUpload: false })
       return
     }
 
     setError("The file reached storage but confirmation failed. Retry to finish submitting it.")
-    setFailedUpload({ researchId, file, resumeKey: outcome.key })
+    setFailedUpload({ researchId, file, skipUpload: true })
   }
 
   function onRetry() {
@@ -125,7 +125,7 @@ export function UploadResearchForm() {
     setMessage(null)
     startTransition(async () => {
       try {
-        await runUpload(failedUpload.researchId, failedUpload.file, failedUpload.resumeKey)
+        await runUpload(failedUpload.researchId, failedUpload.file, failedUpload.skipUpload)
       } catch (err) {
         setError(err instanceof Error ? err.message : "Upload failed")
       }

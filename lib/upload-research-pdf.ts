@@ -13,7 +13,7 @@ export type UploadResearchPdfDeps = {
 export type UploadResearchPdfOutcome =
   | { status: "ok" }
   | { status: "storage-failed"; message: string }
-  | { status: "confirm-failed"; message: string; key: string }
+  | { status: "confirm-failed"; message: string }
 
 const defaultDeps: UploadResearchPdfDeps = {
   presign: (researchId, filename, contentType) =>
@@ -39,17 +39,16 @@ const defaultDeps: UploadResearchPdfDeps = {
 
 // Owns the retryable presign -> PUT -> confirm sequence for an existing
 // Research Record. Research Record creation is a separate, preceding step.
-// Pass `resumeKey` (the `key` from a prior `confirm-failed` outcome) to
-// retry only the confirm step without re-uploading bytes to storage.
+// Pass `skipUpload: true` (after a prior `confirm-failed` outcome) to retry
+// only the confirm step — the backend already has the pending file key on
+// file, so the frontend never needs to track or resend it.
 export async function uploadResearchPdf(
   researchId: string,
   file: File,
   deps: UploadResearchPdfDeps = defaultDeps,
-  resumeKey?: string
+  skipUpload = false
 ): Promise<UploadResearchPdfOutcome> {
-  let key = resumeKey
-
-  if (!key) {
+  if (!skipUpload) {
     const presigned = await deps.presign(
       researchId,
       file.name,
@@ -65,7 +64,6 @@ export async function uploadResearchPdf(
     if (!putOk) {
       return { status: "storage-failed", message: "PDF upload to storage failed" }
     }
-    key = presigned.key
   }
 
   try {
@@ -74,7 +72,6 @@ export async function uploadResearchPdf(
     return {
       status: "confirm-failed",
       message: err instanceof Error ? err.message : "Upload confirmation failed",
-      key,
     }
   }
 

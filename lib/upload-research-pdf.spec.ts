@@ -39,19 +39,18 @@ describe("uploadResearchPdf", () => {
     expect(deps.confirm).not.toHaveBeenCalled()
   })
 
-  it("returns confirm-failed with the pending key when confirm rejects after a successful upload", async () => {
+  it("returns confirm-failed when confirm rejects after a successful upload", async () => {
     const deps = makeDeps({ confirm: vi.fn().mockRejectedValue(new Error("File not found in storage")) })
     const result = await uploadResearchPdf("r1", makeFile(), deps)
     expect(result).toEqual({
       status: "confirm-failed",
       message: "File not found in storage",
-      key: "pdfs/r1/1-paper.pdf",
     })
   })
 
-  it("skips presign and put when resuming from a pending key", async () => {
+  it("skips presign and put when retrying with skipUpload", async () => {
     const deps = makeDeps()
-    const result = await uploadResearchPdf("r1", makeFile(), deps, "pdfs/r1/1-paper.pdf")
+    const result = await uploadResearchPdf("r1", makeFile(), deps, true)
     expect(result).toEqual({ status: "ok" })
     expect(deps.presign).not.toHaveBeenCalled()
     expect(deps.putToStorage).not.toHaveBeenCalled()
