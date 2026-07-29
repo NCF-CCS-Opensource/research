@@ -1,4 +1,4 @@
-import { AdminResearchPanel } from "@/components/features/protected-panels"
+import { AdminResearchPanel } from "@/components/features/admin-panels"
 import { DashboardShell } from "@/components/layout/dashboard-shell"
 
 export default function AdminResearchPage() {

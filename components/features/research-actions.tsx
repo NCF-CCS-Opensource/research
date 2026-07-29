@@ -5,6 +5,7 @@ import { useEffect, useRef, useState, useTransition } from "react"
 
 import { Button } from "@/components/ui/button"
 import { clientAction, clientPublicGet } from "@/lib/client-api"
+import { addToCollection as saveToCollection } from "@/lib/api"
 import type { PdfAccessState } from "@/types/api"
 
 export function ResearchActions({
@@ -75,8 +76,8 @@ export function ResearchActions({
     setMessage(null)
     startTransition(async () => {
       try {
-        const response = await clientAction<{ message: string }>("/collections", "POST", { researchId })
-        setMessage(response.message)
+        await saveToCollection(researchId)
+        setMessage("Saved to Collection")
       } catch (err) {
         setError(err instanceof Error ? err.message : "Unable to add to collection")
       }

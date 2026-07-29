@@ -1,6 +1,6 @@
-import { CollectionsPanel } from "@/components/features/protected-panels"
+import { CollectionPanel } from "@/components/features/collection-panel"
 import { DashboardShell } from "@/components/layout/dashboard-shell"
 
 export default function CollectionsPage() {
-  return <DashboardShell><CollectionsPanel /></DashboardShell>
+  return <DashboardShell><CollectionPanel /></DashboardShell>
 }

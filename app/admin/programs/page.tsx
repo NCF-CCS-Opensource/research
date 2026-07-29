@@ -1,6 +1,6 @@
-import { TaxonomyManager } from "@/components/features/protected-panels"
+import { MetadataManager } from "@/components/features/admin-panels"
 import { DashboardShell } from "@/components/layout/dashboard-shell"
 
 export default function AdminProgramsPage() {
-  return <DashboardShell admin><TaxonomyManager title="Manage Programs" endpoint="/programs" /></DashboardShell>
+  return <DashboardShell admin><MetadataManager title="Manage Programs" table="programs" /></DashboardShell>
 }

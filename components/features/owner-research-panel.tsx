@@ -4,7 +4,7 @@ import Link from "next/link"
 import { useEffect, useState, useTransition } from "react"
 
 import { Button } from "@/components/ui/button"
-import { callR2, deleteOwnedResearch, getMyResearches } from "@/lib/api"
+import { callR2, deleteOwnedResearch, getMyResearches, resubmitResearch } from "@/lib/api"
 import type { ResearchDetail } from "@/types/api"
 
 export function OwnerResearchPanel() {
@@ -56,6 +56,7 @@ export function OwnerResearchPanel() {
             </div>
             <div className="flex gap-2">
               {paper.status !== "approved" ? <Button variant="outline" size="sm" asChild><Link href={`/dashboard/papers/${paper.id}/edit`}>Edit</Link></Button> : null}
+              {paper.status === "rejected" ? <Button variant="outline" size="sm" disabled={isPending} onClick={() => startTransition(async () => { await resubmitResearch(paper.id); load() })}>Resubmit</Button> : null}
               {paper.uploadComplete ? <Button variant="outline" size="sm" disabled={isPending} onClick={() => download(paper.id)}>Download</Button> : null}
               <Button variant="outline" size="sm" disabled={isPending} onClick={() => remove(paper.id)}>Delete</Button>
             </div>

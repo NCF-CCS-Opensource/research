@@ -31,9 +31,15 @@ Deno.serve(async (request) => {
       .from("researches")
       .select("id,uploader_id,file_key,pending_file_key,upload_complete")
       .eq("id", researchId)
-      .eq("uploader_id", auth.user.id)
       .single()
     if (!research) return json({ error: "Research Record not found" }, 404)
+    const isOwner = research.uploader_id === auth.user.id
+    const { data: profile } = await service
+      .from("profiles")
+      .select("role,status")
+      .eq("id", auth.user.id)
+      .single()
+    const isAdmin = profile?.role === "admin" && profile.status === "active"
 
     const s3 = new S3Client({
       region: "auto",
@@ -46,6 +52,7 @@ Deno.serve(async (request) => {
     const bucket = Deno.env.get("R2_BUCKET_NAME")!
 
     if (body.action === "presign-upload") {
+      if (!isOwner) return json({ error: "Research Record not found" }, 404)
       if (body.contentType !== "application/pdf") return json({ error: "Only PDF files are accepted" }, 400)
       const filename = String(body.filename ?? "research.pdf").replace(/[^a-zA-Z0-9._-]/g, "_")
       const key = `pdfs/${researchId}/${Date.now()}-${filename}`
@@ -63,6 +70,7 @@ Deno.serve(async (request) => {
     }
 
     if (body.action === "confirm-upload") {
+      if (!isOwner) return json({ error: "Research Record not found" }, 404)
       if (!research.pending_file_key && research.upload_complete) return json({ message: "Upload confirmed" })
       if (!research.pending_file_key) return json({ error: "No pending upload to confirm" }, 404)
       try {
@@ -79,12 +87,29 @@ Deno.serve(async (request) => {
     }
 
     if (body.action === "owner-download") {
+      if (!isOwner) return json({ error: "Research Record not found" }, 404)
       if (!research.upload_complete || !research.file_key) return json({ error: "Research PDF not found" }, 404)
       const url = await getSignedUrl(
         s3,
         new GetObjectCommand({ Bucket: bucket, Key: research.file_key }),
         { expiresIn: 300 },
       )
+      return json({ url })
+    }
+
+    if (body.action === "moderation-download") {
+      if (!isAdmin) return json({ error: "Admin access required" }, 403)
+      if (!research.upload_complete || !research.file_key) return json({ error: "Research PDF not found" }, 404)
+      const url = await getSignedUrl(
+        s3,
+        new GetObjectCommand({ Bucket: bucket, Key: research.file_key }),
+        { expiresIn: 300 },
+      )
+      await service.from("audit_logs").insert({
+        admin_id: auth.user.id,
+        research_id: researchId,
+        action: "moderate",
+      })
       return json({ url })
     }
 
