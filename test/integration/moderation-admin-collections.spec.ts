@@ -1,6 +1,6 @@
 import { execFileSync } from "node:child_process"
 import { createClient, type SupabaseClient } from "@supabase/supabase-js"
-import { beforeAll, describe, expect, it } from "vitest"
+import { afterAll, beforeAll, describe, expect, it } from "vitest"
 
 let status: { API_URL: string; PUBLISHABLE_KEY: string; SECRET_KEY: string }
 let service: SupabaseClient
@@ -72,6 +72,10 @@ beforeAll(async () => {
   adminId = trusted.id
   ownerId = uploader.id
   await service.from("profiles").update({ role: "admin" }).eq("id", trusted.id)
+})
+
+afterAll(async () => {
+  await service.from("profiles").update({ role: "user" }).eq("id", adminId)
 })
 
 describe("moderation and administration", () => {

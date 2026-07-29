@@ -243,8 +243,16 @@ describe("Engagement Counts", () => {
     })
     await requester.rpc("record_engagement", {
       target_research_id: researchId,
-      kind: "citation",
+      kind: "citation_export",
     })
+    expect(
+      (
+        await requester.rpc("record_engagement", {
+          target_research_id: researchId,
+          kind: "citation",
+        })
+      ).error
+    ).not.toBeNull()
     expect(
       (
         await guest
@@ -262,25 +270,78 @@ describe("Engagement Counts", () => {
       target_request_id: requested.data,
       action: "approve",
     })
+    expect(
+      (
+        await owner.rpc("authorize_granted_download", {
+          target_request_id: requested.data,
+          requester: requesterId,
+        })
+      ).error
+    ).not.toBeNull()
+    await service
+      .from("profiles")
+      .update({ role: "admin" })
+      .eq("id", outsiderId)
+    expect(
+      (
+        await outsider.rpc("authorize_granted_download", {
+          target_request_id: requested.data,
+          requester: requesterId,
+        })
+      ).error
+    ).not.toBeNull()
+    await service.from("profiles").update({ role: "user" }).eq("id", outsiderId)
     await service.rpc("authorize_granted_download", {
       target_request_id: requested.data,
       requester: requesterId,
     })
     const counts = await service
       .from("researches")
-      .select("view_count,citation_count,download_count")
+      .select("view_count,citation_export_count,download_count")
       .eq("id", researchId)
       .single()
     expect(counts.data).toEqual({
       view_count: 1,
-      citation_count: 1,
+      citation_export_count: 1,
       download_count: 1,
     })
-    expect((await owner.rpc("get_engagement_overview")).data).toMatchObject({
-      totalResearches: 3,
-      totalViews: 1,
-      totalDownloads: 2,
-      totalCitations: 1,
+    expect(
+      (
+        await requester.from("engagement_daily").insert({
+          research_id: researchId,
+          day: new Date().toISOString().slice(0, 10),
+          view_count: 999,
+        })
+      ).error
+    ).not.toBeNull()
+    expect(
+      (
+        await service
+          .from("engagement_daily")
+          .select("day,view_count,download_count,citation_export_count")
+          .eq("research_id", researchId)
+          .single()
+      ).data
+    ).toEqual({
+      day: new Date().toISOString().slice(0, 10),
+      view_count: 1,
+      download_count: 1,
+      citation_export_count: 1,
+    })
+    expect(
+      (
+        await owner.rpc("get_dashboard", {
+          requested_scope: "personal",
+          requested_period: 30,
+        })
+      ).data
+    ).toMatchObject({
+      mode: "owner",
+      cards: {
+        researchViews: 1,
+        authorizedDownloads: 2,
+        citationExports: 1,
+      },
     })
   })
 })

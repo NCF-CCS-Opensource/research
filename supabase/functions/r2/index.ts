@@ -6,13 +6,13 @@ import {
 } from "npm:@aws-sdk/client-s3"
 import { getSignedUrl } from "npm:@aws-sdk/s3-request-presigner"
 import { createClient } from "npm:@supabase/supabase-js"
+import { countsDownloadEngagement } from "../_shared/engagement.ts"
 
-  const cors = {
-    "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Headers":
-      "authorization, x-client-info, apikey, content-type",
-  }
-
+const cors = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type",
+}
 
 Deno.serve(async (request) => {
   if (request.method === "OPTIONS") return new Response("ok", { headers: cors })
@@ -48,7 +48,9 @@ Deno.serve(async (request) => {
     }
     const { data: research } = await service
       .from("researches")
-      .select("id,uploader_id,file_key,pending_file_key,upload_complete")
+      .select(
+        "id,uploader_id,title,status,rejection_reason,file_key,pending_file_key,upload_complete"
+      )
       .eq("id", researchId)
       .single()
     if (!research) return json({ error: "Research Record not found" }, 404)
@@ -155,7 +157,7 @@ Deno.serve(async (request) => {
       return json({ url })
     }
 
-    if (body.action === "granted-download") {
+    if (countsDownloadEngagement(body.action)) {
       const requestId = String(body.requestId ?? "")
       const authorized = await service.rpc("authorize_granted_download", {
         target_request_id: requestId,
@@ -170,6 +172,41 @@ Deno.serve(async (request) => {
         { expiresIn: 300 }
       )
       return json({ url })
+    }
+
+    if (body.action === "email-research-moderation") {
+      if (!isAdmin) return json({ error: "Admin access required" }, 403)
+      if (!["approved", "rejected"].includes(research.status))
+        return json({ error: "Research moderation event is stale" }, 409)
+      if (!Deno.env.get("RESEND_API_KEY") || !Deno.env.get("EMAIL_FROM"))
+        return json({ error: "Application email is not configured" }, 503)
+
+      const { data: recipient } = await service.auth.admin.getUserById(
+        research.uploader_id
+      )
+      if (!recipient.user?.email)
+        return json({ error: "Recipient is unavailable" }, 404)
+
+      const subject = `Research ${research.status}: ${research.title}`
+      const text =
+        research.status === "approved"
+          ? `Your research paper "${research.title}" has been approved.`
+          : `Your research paper "${research.title}" has been rejected.\n\nMessage: ${research.rejection_reason}`
+      const response = await fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${Deno.env.get("RESEND_API_KEY")}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          from: Deno.env.get("EMAIL_FROM"),
+          to: [recipient.user.email],
+          subject,
+          text,
+        }),
+      })
+      if (!response.ok) return json({ error: "Email delivery failed" }, 502)
+      return json({ message: "Email sent" })
     }
 
     if (body.action === "email-pdf-access") {

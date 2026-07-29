@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-describe("Guest discovery", () => {
+describe("API client", () => {
   beforeEach(() => {
     vi.resetModules()
     process.env.NEXT_PUBLIC_SUPABASE_URL = "http://supabase.test"
@@ -20,7 +20,7 @@ describe("Guest discovery", () => {
               created_at: "2026-01-03T00:00:00Z",
               view_count: 7,
               download_count: 3,
-              citation_count: 2,
+              citation_export_count: 2,
               authors: [{ id: "author-1", name: "Ada Lovelace" }],
               categories: [{ id: "category-1", name: "Computing" }],
             },
@@ -40,6 +40,7 @@ describe("Guest discovery", () => {
           publishDate: "2026-01-02",
           createdAt: "2026-01-03T00:00:00Z",
           viewCount: 7,
+          citationExportCount: 2,
           authors: [{ id: "author-1", name: "Ada Lovelace" }],
         }),
       ],
@@ -49,5 +50,31 @@ describe("Guest discovery", () => {
       expect.stringContaining("/rest/v1/public_research"),
       expect.any(Object)
     )
+  })
+
+  it("emails the owner after a successful moderation decision", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(new Response(null, { status: 204 }))
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ message: "Email sent" }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        })
+      )
+    vi.stubGlobal("fetch", fetchMock)
+
+    const { moderateResearch } = await import("./api")
+    await moderateResearch("research-1", "rejected", "Needs revision")
+
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+    expect(String(fetchMock.mock.calls[0][0])).toContain(
+      "/rest/v1/rpc/moderate_research"
+    )
+    expect(String(fetchMock.mock.calls[1][0])).toContain("/functions/v1/r2")
+    expect(JSON.parse(String(fetchMock.mock.calls[1][1]?.body))).toEqual({
+      action: "email-research-moderation",
+      researchId: "research-1",
+    })
   })
 })

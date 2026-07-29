@@ -184,7 +184,8 @@
 
 @media (prefers-reduced-motion: reduce) {
   .animate-fade-up,
-  .animate-fade-in {
+  .animate-fade-in,
+  .animate-pulse {
     animation: none !important;
     opacity: 1;
     transform: none;

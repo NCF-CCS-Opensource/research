@@ -11,6 +11,7 @@ import {
   recordEngagement,
   transitionPdfRequest,
 } from "@/lib/api"
+import { trackSuccessfulCitationExport } from "@/lib/citation-export"
 import type { PdfAccessState } from "@/types/api"
 
 export function ResearchActions({
@@ -107,9 +108,13 @@ export function ResearchActions({
     setMessage(null)
     startTransition(async () => {
       try {
-        void recordEngagement(researchId, "citation").catch(() => {})
-        await navigator.clipboard.writeText(citation)
+        const tracked = await trackSuccessfulCitationExport(
+          () => navigator.clipboard.writeText(citation),
+          () => recordEngagement(researchId, "citation_export")
+        )
         setMessage("Citation copied")
+        if (!tracked)
+          setError("Citation copied, but its activity could not be recorded")
       } catch (err) {
         setError(err instanceof Error ? err.message : "Unable to cite research")
       }
