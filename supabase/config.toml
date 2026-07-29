@@ -14,3 +14,8 @@ additional_redirect_urls = ["http://127.0.0.1:3000/auth/confirm", "http://localh
 [auth.email]
 enable_signup = true
 enable_confirmations = true
+
+[functions.r2]
+enabled = true
+verify_jwt = false
+entrypoint = "./functions/r2/index.ts"

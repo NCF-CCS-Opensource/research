@@ -6,7 +6,7 @@ import { ArrowLeft } from "lucide-react"
 import Link from "next/link"
 
 import { Button } from "@/components/ui/button"
-import { clientAction, clientEnvelope } from "@/lib/client-api"
+import { getMyResearch, updateOwnedResearch } from "@/lib/api"
 import type { ResearchDetail } from "@/types/api"
 
 export function EditResearchForm({ id }: { id: string }) {
@@ -17,7 +17,7 @@ export function EditResearchForm({ id }: { id: string }) {
   const [isPending, startTransition] = useTransition()
 
   useEffect(() => {
-    clientEnvelope<ResearchDetail>(`/research/${id}`)
+    getMyResearch(id)
       .then(setResearch)
       .catch((err: unknown) => setLoadError(err instanceof Error ? err.message : "Failed to load"))
   }, [id])
@@ -29,10 +29,10 @@ export function EditResearchForm({ id }: { id: string }) {
 
     startTransition(async () => {
       try {
-        await clientAction(`/research/${id}`, "PATCH", {
-          title: form.get("title"),
-          abstract: form.get("abstract"),
-          publishDate: form.get("publishDate") || undefined,
+        await updateOwnedResearch(id, {
+          title: String(form.get("title")),
+          abstract: String(form.get("abstract")),
+          publishDate: String(form.get("publishDate") || ""),
         })
         router.push("/dashboard/papers")
         router.refresh()

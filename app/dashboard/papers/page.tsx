@@ -1,6 +1,6 @@
-import { MyPapersPanel } from "@/components/features/protected-panels"
+import { OwnerResearchPanel } from "@/components/features/owner-research-panel"
 import { DashboardShell } from "@/components/layout/dashboard-shell"
 
 export default function PapersPage() {
-  return <DashboardShell><MyPapersPanel /></DashboardShell>
+  return <DashboardShell><OwnerResearchPanel /></DashboardShell>
 }

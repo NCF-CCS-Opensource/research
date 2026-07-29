@@ -1,4 +1,4 @@
-import { clientAction } from "@/lib/client-api"
+import { callR2 } from "@/lib/api"
 
 export type UploadResearchPdfDeps = {
   presign: (
@@ -17,11 +17,12 @@ export type UploadResearchPdfOutcome =
 
 const defaultDeps: UploadResearchPdfDeps = {
   presign: (researchId, filename, contentType) =>
-    clientAction<{ uploadUrl: string; key: string }>(
-      `/research/${researchId}/upload-url`,
-      "POST",
-      { filename, contentType }
-    ),
+    callR2<{ uploadUrl: string; key: string }>({
+      action: "presign-upload",
+      researchId,
+      filename,
+      contentType,
+    }),
   putToStorage: async (uploadUrl, file) => {
     const response = await fetch(uploadUrl, {
       method: "PUT",
@@ -31,10 +32,10 @@ const defaultDeps: UploadResearchPdfDeps = {
     return response.ok
   },
   confirm: (researchId) =>
-    clientAction<{ message: string }>(
-      `/research/${researchId}/confirm-upload`,
-      "POST"
-    ),
+    callR2<{ message: string }>({
+      action: "confirm-upload",
+      researchId,
+    }),
 }
 
 // Owns the retryable presign -> PUT -> confirm sequence for an existing

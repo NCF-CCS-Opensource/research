@@ -3,7 +3,7 @@
 import { useState, useTransition, useEffect } from "react"
 
 import { Button } from "@/components/ui/button"
-import { clientAction, clientPublicGet } from "@/lib/client-api"
+import { createOwnedResearch, getCategories, getKeywords } from "@/lib/api"
 import { uploadResearchPdf } from "@/lib/upload-research-pdf"
 
 type CreatedResearch = { id: string }
@@ -45,8 +45,8 @@ export function UploadResearchForm() {
 
   useEffect(() => {
     Promise.all([
-      clientPublicGet<Option[]>("/categories"),
-      clientPublicGet<Option[]>("/keywords"),
+      getCategories(),
+      getKeywords(),
     ])
       .then(([cats, kws]) => {
         setCategories(cats)
@@ -84,13 +84,13 @@ export function UploadResearchForm() {
         const categoryIds = form.getAll("categoryIds").map(String)
         const keywordIds = form.getAll("keywordIds").map(String)
 
-        const created = await clientAction<CreatedResearch>("/research", "POST", {
-          title: form.get("title"),
-          abstract: form.get("abstract"),
-          publishDate: form.get("publishDate") || undefined,
+        const created: CreatedResearch = await createOwnedResearch({
+          title: String(form.get("title")),
+          abstract: String(form.get("abstract")),
+          publishDate: String(form.get("publishDate") || ""),
           authors,
-          categoryIds: categoryIds.length ? categoryIds : undefined,
-          keywordIds: keywordIds.length ? keywordIds : undefined,
+          categoryIds,
+          keywordIds,
         })
 
         await runUpload(created.id, file)

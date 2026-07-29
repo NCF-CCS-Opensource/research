@@ -247,7 +247,7 @@ type PublicResearchRow = Record<string, unknown> & {
   keywords?: Keyword[]
 }
 
-function mapResearch(row: PublicResearchRow): ResearchDetail {
+export function mapResearch(row: PublicResearchRow): ResearchDetail {
   return {
     id: row.id,
     title: row.title,
@@ -303,4 +303,68 @@ function positiveNumber(value: string | number | undefined, fallback: number) {
 function optionalString(value: string | number | undefined) {
   const result = value === undefined ? "" : String(value).trim()
   return result || undefined
+}
+
+export async function createOwnedResearch(input: {
+  title: string
+  abstract: string
+  publishDate?: string
+  authors: Array<{ name: string; email?: string }>
+  categoryIds: string[]
+  keywordIds: string[]
+}) {
+  const { data, error } = await getSupabase().rpc("create_research_record", {
+    research_title: input.title,
+    research_abstract: input.abstract,
+    research_publish_date: input.publishDate || undefined,
+    research_authors: input.authors,
+    category_ids: input.categoryIds,
+    keyword_ids: input.keywordIds,
+  })
+  if (error) throw new ApiError(error.message, 400)
+  return { id: data as string }
+}
+
+export async function getMyResearches() {
+  const { data, error } = await getSupabase()
+    .from("public_research")
+    .select("*")
+    .order("created_at", { ascending: false })
+  if (error) throw new ApiError(error.message, 500)
+  return data.map(mapResearch)
+}
+
+export async function getMyResearch(id: string) {
+  const { data, error } = await getSupabase()
+    .from("public_research")
+    .select("*")
+    .eq("id", id)
+    .single()
+  if (error) throw new ApiError(error.message, 404)
+  return mapResearch(data)
+}
+
+export async function updateOwnedResearch(
+  id: string,
+  input: { title: string; abstract: string; publishDate?: string }
+) {
+  const { error } = await getSupabase().rpc("update_research_record", {
+    target_id: id,
+    research_title: input.title,
+    research_abstract: input.abstract,
+    research_publish_date: input.publishDate || undefined,
+  })
+  if (error) throw new ApiError(error.message, 400)
+}
+
+export async function deleteOwnedResearch(id: string) {
+  const { error } = await getSupabase().from("researches").delete().eq("id", id)
+  if (error) throw new ApiError(error.message, 400)
+}
+
+export async function callR2<T>(body: Record<string, unknown>) {
+  const { data, error } = await getSupabase().functions.invoke("r2", { body })
+  if (error) throw error
+  if (data?.error) throw new Error(data.error)
+  return data as T
 }
