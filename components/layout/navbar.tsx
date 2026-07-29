@@ -16,18 +16,27 @@ export async function Navbar() {
   const { data } = await supabase.auth.getClaims()
   const userId = data?.claims?.sub
   const profile = userId
-    ? await supabase.from("profiles").select("role").eq("id", userId).maybeSingle()
+    ? await supabase
+        .from("profiles")
+        .select("role")
+        .eq("id", userId)
+        .maybeSingle()
     : null
   const role = profile?.data?.role ?? null
 
   return (
     <header className="sticky top-0 z-40 border-b bg-background/90 backdrop-blur">
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
-        <Link href="/" className="flex items-center gap-2 transition-opacity duration-200 hover:opacity-80">
+        <Link
+          href="/"
+          className="flex items-center gap-2 transition-opacity duration-200 hover:opacity-80"
+        >
           <span className="flex size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
             <BookOpen className="size-4" />
           </span>
-          <span className="font-heading font-semibold tracking-tight">CCS Research Hub</span>
+          <span className="font-heading font-semibold tracking-tight">
+            CCS Research Hub
+          </span>
         </Link>
 
         <nav className="hidden items-center gap-1 md:flex">
@@ -48,10 +57,14 @@ export async function Navbar() {
           {role ? (
             <>
               <Button variant="ghost" asChild>
-                <Link href={role === "admin" ? "/admin" : "/dashboard"}>Dashboard</Link>
+                <Link href={role === "admin" ? "/admin" : "/dashboard"}>
+                  Dashboard
+                </Link>
               </Button>
               <form action="/api/auth/logout" method="POST">
-                <Button variant="outline" type="submit">Sign Out</Button>
+                <Button variant="outline" type="submit">
+                  Sign Out
+                </Button>
               </form>
             </>
           ) : (

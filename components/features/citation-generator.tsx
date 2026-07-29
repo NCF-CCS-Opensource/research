@@ -17,8 +17,11 @@ const FORMATS = {
 
 function buildBibtex(authors: string, year: string, title: string): string {
   const safeYear = year === "n.d." ? new Date().getFullYear().toString() : year
-  const entryKey = `${authors.split(",")[0]?.replace(/\s+/g, "") ?? "Unknown"}${safeYear}`
-    .replace(/[^a-zA-Z0-9_]/g, "")
+  const entryKey =
+    `${authors.split(",")[0]?.replace(/\s+/g, "") ?? "Unknown"}${safeYear}`.replace(
+      /[^a-zA-Z0-9_]/g,
+      ""
+    )
 
   return [
     `@techreport{${entryKey},`,
@@ -36,7 +39,10 @@ function downloadBibtex(authors: string, year: string, title: string) {
   const blob = new Blob([content], { type: "text/plain" })
   const url = URL.createObjectURL(blob)
   const a = document.createElement("a")
-  const safeTitle = title.slice(0, 40).replace(/[^a-z0-9]/gi, "-").toLowerCase()
+  const safeTitle = title
+    .slice(0, 40)
+    .replace(/[^a-z0-9]/gi, "-")
+    .toLowerCase()
   a.href = url
   a.download = `${safeTitle}.bib`
   a.click()
@@ -84,7 +90,7 @@ export function CitationGenerator({
       </div>
 
       {/* Citation text */}
-      <pre className="rounded-xl border bg-muted/30 p-4 text-sm leading-6 whitespace-pre-wrap font-mono">
+      <pre className="rounded-xl border bg-muted/30 p-4 font-mono text-sm leading-6 whitespace-pre-wrap">
         {citation}
       </pre>
 

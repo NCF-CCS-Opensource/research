@@ -1,21 +1,30 @@
-# Next.js template
+# NCF Research Nexus
 
-This is a Next.js template with shadcn/ui.
+The NCF College of Computer Studies research hub. This Next.js application uses Supabase for Postgres, Auth, Row Level Security, and Edge Functions; Cloudflare R2 for private Research PDFs; and Resend for email.
 
-## Adding components
+## Local development
 
-To add components to your app, run the following command:
+Requirements: Node.js 20+, pnpm, Docker, and the Supabase CLI.
 
 ```bash
-npx shadcn@latest add button
+pnpm install
+pnpm exec supabase start
+pnpm exec supabase db reset
+pnpm dev
 ```
 
-This will place the ui components in the `components` directory.
+Copy `.env.example` to `.env.local` and use the API URL and publishable key printed by `supabase status -o json`.
 
-## Using components
+## Verification
 
-To use the components in your app, import them as follows:
-
-```tsx
-import { Button } from "@/components/ui/button";
+```bash
+pnpm test
+pnpm test:integration
+pnpm typecheck
+pnpm lint
+pnpm build
 ```
+
+Database changes belong in `supabase/migrations/`. `supabase/seed.sql` contains only public discovery fixtures; integration tests create their own users and private records.
+
+See [DEPLOYMENT.md](./DEPLOYMENT.md) for production setup, secrets, first-Admin bootstrap, pause recovery, and backups.

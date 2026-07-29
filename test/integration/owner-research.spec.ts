@@ -31,8 +31,14 @@ describe("Owner Research Records", () => {
 
     const owner = createClient(status.API_URL, status.PUBLISHABLE_KEY)
     const other = createClient(status.API_URL, status.PUBLISHABLE_KEY)
-    await owner.auth.signInWithPassword({ email: ownerEmail, password: "password123" })
-    await other.auth.signInWithPassword({ email: otherEmail, password: "password123" })
+    await owner.auth.signInWithPassword({
+      email: ownerEmail,
+      password: "password123",
+    })
+    await other.auth.signInWithPassword({
+      email: otherEmail,
+      password: "password123",
+    })
 
     const created = await owner.rpc("create_research_record", {
       research_title: "Owner-only Draft",
@@ -45,8 +51,14 @@ describe("Owner Research Records", () => {
     expect(created.error).toBeNull()
     const researchId = created.data as string
 
-    const ownerRead = await owner.from("public_research").select("id").eq("id", researchId)
-    const otherRead = await other.from("public_research").select("id").eq("id", researchId)
+    const ownerRead = await owner
+      .from("public_research")
+      .select("id")
+      .eq("id", researchId)
+    const otherRead = await other
+      .from("public_research")
+      .select("id")
+      .eq("id", researchId)
     expect(ownerRead.data).toEqual([{ id: researchId }])
     expect(otherRead.data).toEqual([])
 
@@ -64,10 +76,13 @@ describe("Owner Research Records", () => {
     })
     expect(directConfirm.error).not.toBeNull()
 
-    await service.from("researches").update({
-      pending_file_key: `pdfs/${researchId}/paper.pdf`,
-      pending_file_name: "paper.pdf",
-    }).eq("id", researchId)
+    await service
+      .from("researches")
+      .update({
+        pending_file_key: `pdfs/${researchId}/paper.pdf`,
+        pending_file_name: "paper.pdf",
+      })
+      .eq("id", researchId)
     const confirmed = await service.rpc("confirm_research_upload", {
       target_id: researchId,
       owner_id: ownerAuth.data.user!.id,

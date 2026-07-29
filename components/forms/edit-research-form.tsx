@@ -2,7 +2,6 @@
 
 import { useEffect, useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
-import { ArrowLeft } from "lucide-react"
 import Link from "next/link"
 
 import { Button } from "@/components/ui/button"
@@ -19,7 +18,9 @@ export function EditResearchForm({ id }: { id: string }) {
   useEffect(() => {
     getMyResearch(id)
       .then(setResearch)
-      .catch((err: unknown) => setLoadError(err instanceof Error ? err.message : "Failed to load"))
+      .catch((err: unknown) =>
+        setLoadError(err instanceof Error ? err.message : "Failed to load")
+      )
   }, [id])
 
   function onSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -53,7 +54,8 @@ export function EditResearchForm({ id }: { id: string }) {
   if (research.status === "approved") {
     return (
       <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">
-        Approved papers cannot be edited. Contact an admin if changes are needed.
+        Approved papers cannot be edited. Contact an admin if changes are
+        needed.
       </div>
     )
   }
@@ -70,7 +72,7 @@ export function EditResearchForm({ id }: { id: string }) {
           name="title"
           required
           defaultValue={research.title}
-          className="h-10 rounded-lg border bg-background px-3 text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-ring"
+          className="h-10 rounded-lg border bg-background px-3 text-sm transition-colors focus:ring-2 focus:ring-ring focus:outline-none"
         />
       </label>
 
@@ -81,7 +83,7 @@ export function EditResearchForm({ id }: { id: string }) {
           required
           rows={7}
           defaultValue={research.abstract ?? ""}
-          className="rounded-lg border bg-background p-3 text-sm leading-6 transition-colors focus:outline-none focus:ring-2 focus:ring-ring resize-y"
+          className="resize-y rounded-lg border bg-background p-3 text-sm leading-6 transition-colors focus:ring-2 focus:ring-ring focus:outline-none"
         />
       </label>
 
@@ -91,7 +93,7 @@ export function EditResearchForm({ id }: { id: string }) {
           name="publishDate"
           type="date"
           defaultValue={publishDateValue}
-          className="h-10 rounded-lg border bg-background px-3 text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-ring"
+          className="h-10 rounded-lg border bg-background px-3 text-sm transition-colors focus:ring-2 focus:ring-ring focus:outline-none"
         />
       </label>
 

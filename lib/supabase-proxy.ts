@@ -49,10 +49,7 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(new URL("/dashboard", request.url))
   }
 
-  if (
-    profile &&
-    (pathname === "/login" || pathname === "/register")
-  ) {
+  if (profile && (pathname === "/login" || pathname === "/register")) {
     return NextResponse.redirect(
       new URL(profile.role === "admin" ? "/admin" : "/dashboard", request.url)
     )

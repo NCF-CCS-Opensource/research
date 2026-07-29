@@ -30,7 +30,10 @@ async function loadRecentResearch() {
   try {
     return await getRecentResearch(6)
   } catch {
-    return { data: [] as ResearchSummary[], meta: { total: 0, page: 1, totalPages: 0 } }
+    return {
+      data: [] as ResearchSummary[],
+      meta: { total: 0, page: 1, totalPages: 0 },
+    }
   }
 }
 
@@ -43,22 +46,25 @@ export default async function Page() {
       <section className="bg-gradient-to-br from-primary to-primary/85 text-primary-foreground">
         <div className="mx-auto max-w-7xl px-4 py-20 sm:px-6 lg:px-8 lg:py-28">
           <p
-            className="animate-fade-up mb-5 text-xs font-semibold uppercase tracking-widest text-primary-foreground/50"
+            className="animate-fade-up mb-5 text-xs font-semibold tracking-widest text-primary-foreground/50 uppercase"
             style={{ animationDelay: "0ms" }}
           >
             Naga College Foundation · College of Computer Studies
           </p>
           <h1
-            className="animate-fade-up font-heading max-w-3xl text-5xl font-bold tracking-tight sm:text-6xl lg:text-7xl"
+            className="animate-fade-up max-w-3xl font-heading text-5xl font-bold tracking-tight sm:text-6xl lg:text-7xl"
             style={{ animationDelay: "80ms" }}
           >
-            CCS Research,<br className="hidden sm:block" /> centralized.
+            CCS Research,
+            <br className="hidden sm:block" /> centralized.
           </h1>
           <p
             className="animate-fade-up mt-6 max-w-xl text-base leading-7 text-primary-foreground/70 sm:text-lg"
             style={{ animationDelay: "160ms" }}
           >
-            Discover and cite approved theses and papers from NCF's College of Computer Studies. Public PDFs open instantly — private files available on request.
+            Discover and cite approved theses and papers from NCF&apos;s College
+            of Computer Studies. Research PDFs are available by Owner-approved
+            request.
           </p>
           <div
             className="animate-fade-up mt-10 max-w-2xl"
@@ -70,7 +76,11 @@ export default async function Page() {
             className="animate-fade-up mt-6"
             style={{ animationDelay: "320ms" }}
           >
-            <Button variant="ghost" className="text-primary-foreground/70 hover:text-primary-foreground hover:bg-primary-foreground/10 px-0 transition-colors duration-200" asChild>
+            <Button
+              variant="ghost"
+              className="px-0 text-primary-foreground/70 transition-colors duration-200 hover:bg-primary-foreground/10 hover:text-primary-foreground"
+              asChild
+            >
               <Link href="/search">
                 Browse all papers <ArrowRight className="ml-1 size-4" />
               </Link>
@@ -109,10 +119,10 @@ export default async function Page() {
           style={{ animationDelay: "200ms" }}
         >
           <div>
-            <p className="font-mono text-xs font-medium uppercase tracking-widest text-muted-foreground">
+            <p className="font-mono text-xs font-medium tracking-widest text-muted-foreground uppercase">
               Latest from the archive
             </p>
-            <h2 className="font-heading mt-2 text-3xl font-bold tracking-tight">
+            <h2 className="mt-2 font-heading text-3xl font-bold tracking-tight">
               Recently approved papers
             </h2>
           </div>
@@ -136,9 +146,14 @@ export default async function Page() {
             ))}
           </div>
         ) : (
-          <div className="animate-fade-in rounded-xl border border-dashed p-12 text-center" style={{ animationDelay: "300ms" }}>
+          <div
+            className="animate-fade-in rounded-xl border border-dashed p-12 text-center"
+            style={{ animationDelay: "300ms" }}
+          >
             <BookMarked className="mx-auto mb-3 size-8 text-muted-foreground/40" />
-            <p className="text-sm text-muted-foreground">No approved papers yet. Submit the first one.</p>
+            <p className="text-sm text-muted-foreground">
+              No approved papers yet. Submit the first one.
+            </p>
             <Button variant="outline" className="mt-4" asChild>
               <Link href="/upload">Submit a paper</Link>
             </Button>

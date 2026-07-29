@@ -12,9 +12,14 @@ export async function GET(request: NextRequest) {
 
   if (tokenHash && type) {
     const supabase = await createServerSupabase()
-    const { error } = await supabase.auth.verifyOtp({ type, token_hash: tokenHash })
+    const { error } = await supabase.auth.verifyOtp({
+      type,
+      token_hash: tokenHash,
+    })
     if (!error) return NextResponse.redirect(new URL(destination, request.url))
   }
 
-  return NextResponse.redirect(new URL("/login?error=confirmation", request.url))
+  return NextResponse.redirect(
+    new URL("/login?error=confirmation", request.url)
+  )
 }

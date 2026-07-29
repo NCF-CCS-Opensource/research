@@ -41,7 +41,7 @@ const defaultDeps: UploadResearchPdfDeps = {
 // Owns the retryable presign -> PUT -> confirm sequence for an existing
 // Research Record. Research Record creation is a separate, preceding step.
 // Pass `skipUpload: true` (after a prior `confirm-failed` outcome) to retry
-// only the confirm step — the backend already has the pending file key on
+// only the confirm step — the trusted function already has the pending file key on
 // file, so the frontend never needs to track or resend it.
 export async function uploadResearchPdf(
   researchId: string,
@@ -63,7 +63,10 @@ export async function uploadResearchPdf(
       putOk = false
     }
     if (!putOk) {
-      return { status: "storage-failed", message: "PDF upload to storage failed" }
+      return {
+        status: "storage-failed",
+        message: "PDF upload to storage failed",
+      }
     }
   }
 
@@ -72,7 +75,8 @@ export async function uploadResearchPdf(
   } catch (err) {
     return {
       status: "confirm-failed",
-      message: err instanceof Error ? err.message : "Upload confirmation failed",
+      message:
+        err instanceof Error ? err.message : "Upload confirmation failed",
     }
   }
 

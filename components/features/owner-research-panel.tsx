@@ -4,7 +4,12 @@ import Link from "next/link"
 import { useEffect, useState, useTransition } from "react"
 
 import { Button } from "@/components/ui/button"
-import { callR2, deleteOwnedResearch, getMyResearches, resubmitResearch } from "@/lib/api"
+import {
+  callR2,
+  deleteOwnedResearch,
+  getMyResearches,
+  resubmitResearch,
+} from "@/lib/api"
 import { uploadResearchPdf } from "@/lib/upload-research-pdf"
 import type { ResearchDetail } from "@/types/api"
 
@@ -14,7 +19,9 @@ export function OwnerResearchPanel() {
   const [isPending, startTransition] = useTransition()
 
   function load() {
-    getMyResearches().then(setPapers).catch((reason) => setError(reason.message))
+    getMyResearches()
+      .then(setPapers)
+      .catch((reason) => setError(reason.message))
   }
 
   useEffect(load, [])
@@ -33,7 +40,10 @@ export function OwnerResearchPanel() {
   function download(id: string) {
     startTransition(async () => {
       try {
-        const { url } = await callR2<{ url: string }>({ action: "owner-download", researchId: id })
+        const { url } = await callR2<{ url: string }>({
+          action: "owner-download",
+          researchId: id,
+        })
         window.open(url, "_blank", "noopener,noreferrer")
       } catch (reason) {
         setError(reason instanceof Error ? reason.message : "Download failed")
@@ -45,37 +55,95 @@ export function OwnerResearchPanel() {
     <section className="rounded-3xl border bg-card p-8">
       <div className="flex justify-between gap-4">
         <h1 className="text-3xl font-semibold">My Research Records</h1>
-        <Button asChild><Link href="/upload">Submit new</Link></Button>
+        <Button asChild>
+          <Link href="/upload">Submit new</Link>
+        </Button>
       </div>
       {error ? <p className="mt-4 text-sm text-destructive">{error}</p> : null}
       <div className="mt-6 grid gap-3">
         {papers.map((paper) => (
-          <div key={paper.id} className="flex items-center justify-between gap-4 rounded-xl border p-4">
+          <div
+            key={paper.id}
+            className="flex items-center justify-between gap-4 rounded-xl border p-4"
+          >
             <div>
-              <Link href={`/research/${paper.id}`} className="font-medium">{paper.title}</Link>
-              <p className="mt-1 text-xs capitalize text-muted-foreground">{paper.status} · {paper.uploadComplete ? "Completed Upload" : "Upload incomplete"}</p>
+              <Link href={`/research/${paper.id}`} className="font-medium">
+                {paper.title}
+              </Link>
+              <p className="mt-1 text-xs text-muted-foreground capitalize">
+                {paper.status} ·{" "}
+                {paper.uploadComplete
+                  ? "Completed Upload"
+                  : "Upload incomplete"}
+              </p>
             </div>
             <div className="flex gap-2">
-              {paper.status !== "approved" ? <Button variant="outline" size="sm" asChild><Link href={`/dashboard/papers/${paper.id}/edit`}>Edit</Link></Button> : null}
-              {paper.status === "rejected" ? <Button variant="outline" size="sm" disabled={isPending} onClick={() => startTransition(async () => { await resubmitResearch(paper.id); load() })}>Resubmit</Button> : null}
-              {paper.uploadComplete ? <Button variant="outline" size="sm" disabled={isPending} onClick={() => download(paper.id)}>Download</Button> : null}
-              {paper.uploadComplete ? <label className="inline-flex h-7 cursor-pointer items-center rounded-lg border px-2.5 text-[0.8rem] font-medium hover:bg-muted">
-                Replace PDF
-                <input className="sr-only" type="file" accept="application/pdf" disabled={isPending} onChange={(event) => {
-                  const file = event.target.files?.[0]
-                  if (!file) return
-                  startTransition(async () => {
-                    const result = await uploadResearchPdf(paper.id, file)
-                    if (result.status !== "ok") setError(result.message)
-                    load()
-                  })
-                }} />
-              </label> : null}
-              <Button variant="outline" size="sm" disabled={isPending} onClick={() => remove(paper.id)}>Delete</Button>
+              {paper.status !== "approved" ? (
+                <Button variant="outline" size="sm" asChild>
+                  <Link href={`/dashboard/papers/${paper.id}/edit`}>Edit</Link>
+                </Button>
+              ) : null}
+              {paper.status === "rejected" ? (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={isPending}
+                  onClick={() =>
+                    startTransition(async () => {
+                      await resubmitResearch(paper.id)
+                      load()
+                    })
+                  }
+                >
+                  Resubmit
+                </Button>
+              ) : null}
+              {paper.uploadComplete ? (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={isPending}
+                  onClick={() => download(paper.id)}
+                >
+                  Download
+                </Button>
+              ) : null}
+              {paper.uploadComplete ? (
+                <label className="inline-flex h-7 cursor-pointer items-center rounded-lg border px-2.5 text-[0.8rem] font-medium hover:bg-muted">
+                  Replace PDF
+                  <input
+                    className="sr-only"
+                    type="file"
+                    accept="application/pdf"
+                    disabled={isPending}
+                    onChange={(event) => {
+                      const file = event.target.files?.[0]
+                      if (!file) return
+                      startTransition(async () => {
+                        const result = await uploadResearchPdf(paper.id, file)
+                        if (result.status !== "ok") setError(result.message)
+                        load()
+                      })
+                    }}
+                  />
+                </label>
+              ) : null}
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={isPending}
+                onClick={() => remove(paper.id)}
+              >
+                Delete
+              </Button>
             </div>
           </div>
         ))}
-        {!papers.length && !error ? <p className="text-sm text-muted-foreground">No Research Records yet.</p> : null}
+        {!papers.length && !error ? (
+          <p className="text-sm text-muted-foreground">
+            No Research Records yet.
+          </p>
+        ) : null}
       </div>
     </section>
   )

@@ -23,10 +23,14 @@ export function ResearchActions({
   const trackedView = useRef(false)
   const [message, setMessage] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [accessState, setAccessState] = useState<PdfAccessState["state"] | null>(null)
+  const [accessState, setAccessState] = useState<
+    PdfAccessState["state"] | null
+  >(null)
   const [requestId, setRequestId] = useState<string | null>(null)
   const [availableAt, setAvailableAt] = useState<string | null>(null)
-  const [cooldownReason, setCooldownReason] = useState<PdfAccessState["reason"] | null>(null)
+  const [cooldownReason, setCooldownReason] = useState<
+    PdfAccessState["reason"] | null
+  >(null)
   const [isPending, startTransition] = useTransition()
 
   useEffect(() => {
@@ -44,7 +48,9 @@ export function ResearchActions({
         setCooldownReason(reason ?? null)
       })
       .catch((err: unknown) =>
-        setError(err instanceof Error ? err.message : "Unable to load PDF access"),
+        setError(
+          err instanceof Error ? err.message : "Unable to load PDF access"
+        )
       )
   }
 
@@ -58,7 +64,9 @@ export function ResearchActions({
         await transitionPdfRequest(requestId, "cancel")
         loadAccessState()
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Unable to cancel request")
+        setError(
+          err instanceof Error ? err.message : "Unable to cancel request"
+        )
       }
     })
   }
@@ -68,7 +76,10 @@ export function ResearchActions({
     setError(null)
     startTransition(async () => {
       try {
-        const { url } = await callR2<{ url: string }>({ action: "granted-download", requestId })
+        const { url } = await callR2<{ url: string }>({
+          action: "granted-download",
+          requestId,
+        })
         window.open(url, "_blank", "noopener,noreferrer")
       } catch (err) {
         setError(err instanceof Error ? err.message : "Unable to download PDF")
@@ -84,7 +95,9 @@ export function ResearchActions({
         await saveToCollection(researchId)
         setMessage("Saved to Collection")
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Unable to add to collection")
+        setError(
+          err instanceof Error ? err.message : "Unable to add to collection"
+        )
       }
     })
   }
@@ -108,18 +121,27 @@ export function ResearchActions({
       <div className="mt-6 flex flex-wrap gap-3">
         {accessState === "guest" && (
           <Button asChild>
-            <Link href={`/login?next=/research/${researchId}`}>Sign in to request PDF</Link>
+            <Link href={`/login?next=/research/${researchId}`}>
+              Sign in to request PDF
+            </Link>
           </Button>
         )}
         {accessState === "requestable" && (
           <Button asChild>
-            <Link href={`/research/${researchId}/request-pdf`}>Request PDF</Link>
+            <Link href={`/research/${researchId}/request-pdf`}>
+              Request PDF
+            </Link>
           </Button>
         )}
         {accessState === "pending" && (
           <>
             <Button disabled>Request pending</Button>
-            <Button type="button" variant="outline" disabled={isPending} onClick={cancel}>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={isPending}
+              onClick={cancel}
+            >
               Cancel request
             </Button>
           </>
@@ -141,14 +163,26 @@ export function ResearchActions({
               : "you can request again later"}
           </Button>
         )}
-        <Button type="button" variant="outline" disabled={isPending} onClick={cite}>
+        <Button
+          type="button"
+          variant="outline"
+          disabled={isPending}
+          onClick={cite}
+        >
           Cite
         </Button>
-        <Button type="button" variant="outline" disabled={isPending} onClick={addToCollection}>
+        <Button
+          type="button"
+          variant="outline"
+          disabled={isPending}
+          onClick={addToCollection}
+        >
           Add to Collection
         </Button>
       </div>
-      {message ? <p className="mt-3 rounded-lg bg-secondary p-3 text-sm">{message}</p> : null}
+      {message ? (
+        <p className="mt-3 rounded-lg bg-secondary p-3 text-sm">{message}</p>
+      ) : null}
       {error ? <p className="mt-3 text-sm text-destructive">{error}</p> : null}
     </>
   )

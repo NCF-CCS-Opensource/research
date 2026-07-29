@@ -48,13 +48,29 @@ describe("Supabase Auth Boundary", () => {
     const adminId = createdAdmin.data.user!.id
     const user = createClient(status.API_URL, status.PUBLISHABLE_KEY)
     const trusted = createClient(status.API_URL, status.PUBLISHABLE_KEY)
-    await user.auth.signInWithPassword({ email: userEmail, password: "password123" })
-    await trusted.auth.signInWithPassword({ email: adminEmail, password: "password123" })
+    await user.auth.signInWithPassword({
+      email: userEmail,
+      password: "password123",
+    })
+    await trusted.auth.signInWithPassword({
+      email: adminEmail,
+      password: "password123",
+    })
 
-    const ownProfile = await user.from("profiles").select("id,role,status").single()
-    expect(ownProfile.data).toEqual({ id: userId, role: "user", status: "active" })
+    const ownProfile = await user
+      .from("profiles")
+      .select("id,role,status")
+      .single()
+    expect(ownProfile.data).toEqual({
+      id: userId,
+      role: "user",
+      status: "active",
+    })
 
-    const escalation = await user.from("profiles").update({ role: "admin" }).eq("id", userId)
+    const escalation = await user
+      .from("profiles")
+      .update({ role: "admin" })
+      .eq("id", userId)
     expect(escalation.error).not.toBeNull()
 
     const bootstrap = await admin.rpc("bootstrap_first_admin", {
@@ -62,7 +78,9 @@ describe("Supabase Auth Boundary", () => {
     })
     expect(bootstrap.error).toBeNull()
     const listed = await trusted.from("profiles").select("id")
-    expect(listed.data?.map(({ id }) => id)).toEqual(expect.arrayContaining([userId, adminId]))
+    expect(listed.data?.map(({ id }) => id)).toEqual(
+      expect.arrayContaining([userId, adminId])
+    )
 
     const suspend = await trusted.rpc("admin_update_account", {
       target_id: userId,

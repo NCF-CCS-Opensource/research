@@ -1,5 +1,4 @@
 import type {
-  ApiEnvelope,
   Author,
   Category,
   Keyword,
@@ -10,13 +9,6 @@ import type {
 } from "@/types/api"
 import { getSupabase } from "@/lib/supabase"
 
-export const API_ROOT = `${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001"}/api`
-
-type RequestOptions = RequestInit & {
-  token?: string
-  query?: Record<string, string | number | undefined | null>
-}
-
 export class ApiError extends Error {
   constructor(
     message: string,
@@ -24,60 +16,6 @@ export class ApiError extends Error {
   ) {
     super(message)
   }
-}
-
-function buildUrl(path: string, query?: RequestOptions["query"]) {
-  const url = new URL(`${API_ROOT}${path}`)
-
-  for (const [key, value] of Object.entries(query ?? {})) {
-    if (value !== undefined && value !== null && value !== "") {
-      url.searchParams.set(key, String(value))
-    }
-  }
-
-  return url.toString()
-}
-
-async function parseError(response: Response) {
-  try {
-    const payload = (await response.json()) as { message?: string | string[] }
-    if (Array.isArray(payload.message)) {
-      return payload.message.join(" ")
-    }
-    return payload.message ?? response.statusText
-  } catch {
-    return response.statusText
-  }
-}
-
-export async function apiRequest<T>(
-  path: string,
-  options: RequestOptions = {}
-) {
-  const { token, query, headers, ...init } = options
-  const response = await fetch(buildUrl(path, query), {
-    ...init,
-    headers: {
-      "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      ...headers,
-    },
-  })
-
-  if (!response.ok) {
-    throw new ApiError(await parseError(response), response.status)
-  }
-
-  return (await response.json()) as T
-}
-
-export async function getEnvelope<T>(path: string, options?: RequestOptions) {
-  const response = await apiRequest<ApiEnvelope<T>>(path, options)
-  return response.data
-}
-
-export async function getPaginated<T>(path: string, options?: RequestOptions) {
-  return apiRequest<PaginatedResponse<T>>(path, options)
 }
 
 export async function getRecentResearch(limit = 6) {
@@ -120,12 +58,7 @@ export async function searchResearch(
     if (probe.error) throw new ApiError(probe.error.message, 500)
     total = Number(probe.data?.[0]?.total_count ?? 0)
   }
-  return paginated(
-    rows.map(mapResearch),
-    total,
-    page,
-    limit
-  )
+  return paginated(rows.map(mapResearch), total, page, limit)
 }
 
 export async function getResearch(id: string) {
@@ -423,21 +356,37 @@ export async function updateAccount(
   if (error) throw new ApiError(error.message, 400)
 }
 
-export type MetadataTable = "categories" | "keywords" | "institutions" | "programs"
+export type MetadataTable =
+  | "categories"
+  | "keywords"
+  | "institutions"
+  | "programs"
 
 export async function getMetadata(table: MetadataTable) {
-  const { data, error } = await getSupabase().from(table).select("id,name").order("name")
+  const { data, error } = await getSupabase()
+    .from(table)
+    .select("id,name")
+    .order("name")
   if (error) throw new ApiError(error.message, 500)
   return data as Array<{ id: string; name: string }>
 }
 
 export async function createMetadata(table: MetadataTable, name: string) {
-  const { error } = await getSupabase().from(table).insert({ name: name.trim() })
+  const { error } = await getSupabase()
+    .from(table)
+    .insert({ name: name.trim() })
   if (error) throw new ApiError(error.message, 400)
 }
 
-export async function renameMetadata(table: MetadataTable, id: string, name: string) {
-  const { error } = await getSupabase().from(table).update({ name: name.trim() }).eq("id", id)
+export async function renameMetadata(
+  table: MetadataTable,
+  id: string,
+  name: string
+) {
+  const { error } = await getSupabase()
+    .from(table)
+    .update({ name: name.trim() })
+    .eq("id", id)
   if (error) throw new ApiError(error.message, 400)
 }
 
@@ -459,7 +408,10 @@ export async function addToCollection(researchId: string) {
 }
 
 export async function removeFromCollection(researchId: string) {
-  const { error } = await getSupabase().from("collections").delete().eq("research_id", researchId)
+  const { error } = await getSupabase()
+    .from("collections")
+    .delete()
+    .eq("research_id", researchId)
   if (error) throw new ApiError(error.message, 400)
 }
 
@@ -479,7 +431,15 @@ export async function getCollection() {
   const byId = new Map(research.map((row) => [row.id, mapResearch(row)]))
   return saved.flatMap((item) => {
     const record = byId.get(item.research_id)
-    return record ? [{ researchId: item.research_id, createdAt: item.created_at, research: record }] : []
+    return record
+      ? [
+          {
+            researchId: item.research_id,
+            createdAt: item.created_at,
+            research: record,
+          },
+        ]
+      : []
   })
 }
 
@@ -540,7 +500,11 @@ export async function createPdfRequest(researchId: string, note: string) {
     note,
   })
   if (error) throw new ApiError(error.message, 400)
-  void callR2({ action: "email-pdf-access", event: "requested", requestId: data }).catch(() => {})
+  void callR2({
+    action: "email-pdf-access",
+    event: "requested",
+    requestId: data,
+  }).catch(() => {})
   return { id: data as string, status: "pending" }
 }
 
@@ -553,7 +517,9 @@ export async function transitionPdfRequest(
     action,
   })
   if (error) throw new ApiError(error.message, 400)
-  void callR2({ action: "email-pdf-access", event: action, requestId }).catch(() => {})
+  void callR2({ action: "email-pdf-access", event: action, requestId }).catch(
+    () => {}
+  )
   return data as string
 }
 
@@ -581,7 +547,10 @@ export async function markNotificationsRead() {
   if (error) throw new ApiError(error.message, 400)
 }
 
-export async function recordEngagement(researchId: string, kind: "view" | "citation") {
+export async function recordEngagement(
+  researchId: string,
+  kind: "view" | "citation"
+) {
   const { error } = await getSupabase().rpc("record_engagement", {
     target_research_id: researchId,
     kind,
@@ -599,4 +568,55 @@ export async function getEngagementOverview() {
     totalCitations: number
     totalUsers: number | null
   }
+}
+
+export async function getRegistrationOptions() {
+  const [institutions, programs] = await Promise.all([
+    getMetadata("institutions"),
+    getMetadata("programs"),
+  ])
+  return { institutions, programs }
+}
+
+export async function getProfileAccess(id: string) {
+  const { data, error } = await getSupabase()
+    .from("profiles")
+    .select("role,status")
+    .eq("id", id)
+    .single()
+  if (error) throw new ApiError(error.message, 500)
+  return data as { role: "user" | "admin"; status: "active" | "suspended" }
+}
+
+export async function getProfileSettings() {
+  const supabase = getSupabase()
+  const [{ data: profile, error }, options] = await Promise.all([
+    supabase
+      .from("profiles")
+      .select(
+        "first_name,middle_name,last_name,suffix,institution_id,program_id"
+      )
+      .single(),
+    getRegistrationOptions(),
+  ])
+  if (error) throw new ApiError(error.message, 500)
+  return { profile, ...options }
+}
+
+export async function updateProfileSettings(input: {
+  first_name: string
+  middle_name: string | null
+  last_name: string
+  suffix: string | null
+  institution_id: string | null
+  program_id: string | null
+}) {
+  const supabase = getSupabase()
+  const user = (await supabase.auth.getUser()).data.user
+  if (!user) throw new ApiError("Authentication required", 401)
+  const { error } = await supabase
+    .from("profiles")
+    .update({ ...input, updated_at: new Date().toISOString() })
+    .eq("id", user.id)
+  if (error) throw new ApiError(error.message, 400)
 }

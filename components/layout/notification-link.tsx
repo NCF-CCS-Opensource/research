@@ -15,7 +15,10 @@ export function NotificationLink() {
   }, [])
 
   return (
-    <Link href="/dashboard/notifications" className="flex items-center justify-between rounded-xl px-3 py-2 text-sm text-muted-foreground hover:bg-muted hover:text-foreground">
+    <Link
+      href="/dashboard/notifications"
+      className="flex items-center justify-between rounded-xl px-3 py-2 text-sm text-muted-foreground hover:bg-muted hover:text-foreground"
+    >
       <span>Notifications</span>
       {count != null && count > 0 && (
         <span className="flex size-5 items-center justify-center rounded-full bg-primary text-[10px] font-semibold text-primary-foreground">

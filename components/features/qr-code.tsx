@@ -1,14 +1,14 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useSyncExternalStore } from "react"
 import { QRCodeSVG } from "qrcode.react"
 
 export function QrCode({ researchId }: { researchId: string }) {
-  const [url, setUrl] = useState<string | null>(null)
-
-  useEffect(() => {
-    setUrl(`${window.location.origin}/research/${researchId}`)
-  }, [researchId])
+  const url = useSyncExternalStore(
+    () => () => {},
+    () => `${window.location.origin}/research/${researchId}`,
+    () => ""
+  )
 
   if (!url) return null
 

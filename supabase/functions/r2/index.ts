@@ -1,4 +1,9 @@
-import { HeadObjectCommand, GetObjectCommand, PutObjectCommand, S3Client } from "npm:@aws-sdk/client-s3"
+import {
+  HeadObjectCommand,
+  GetObjectCommand,
+  PutObjectCommand,
+  S3Client,
+} from "npm:@aws-sdk/client-s3"
 import { getSignedUrl } from "npm:@aws-sdk/s3-request-presigner"
 import { createClient } from "npm:@supabase/supabase-js"
 
@@ -16,14 +21,15 @@ Deno.serve(async (request) => {
     const publicClient = createClient(
       supabaseUrl,
       Deno.env.get("SUPABASE_ANON_KEY")!,
-      { global: { headers: { Authorization: authorization } } },
+      { global: { headers: { Authorization: authorization } } }
     )
     const service = createClient(
       supabaseUrl,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     )
     const { data: auth, error: authError } = await publicClient.auth.getUser()
-    if (authError || !auth.user) return json({ error: "Authentication required" }, 401)
+    if (authError || !auth.user)
+      return json({ error: "Authentication required" }, 401)
 
     const body = await request.json()
     let researchId = String(body.researchId ?? "")
@@ -61,28 +67,46 @@ Deno.serve(async (request) => {
 
     if (body.action === "presign-upload") {
       if (!isOwner) return json({ error: "Research Record not found" }, 404)
-      if (body.contentType !== "application/pdf") return json({ error: "Only PDF files are accepted" }, 400)
-      const filename = String(body.filename ?? "research.pdf").replace(/[^a-zA-Z0-9._-]/g, "_")
+      if (body.contentType !== "application/pdf")
+        return json({ error: "Only PDF files are accepted" }, 400)
+      const filename = String(body.filename ?? "research.pdf").replace(
+        /[^a-zA-Z0-9._-]/g,
+        "_"
+      )
       const key = `pdfs/${researchId}/${Date.now()}-${filename}`
-      await service.from("researches").update({
-        pending_file_key: key,
-        pending_file_name: filename,
-        updated_at: new Date().toISOString(),
-      }).eq("id", researchId)
+      await service
+        .from("researches")
+        .update({
+          pending_file_key: key,
+          pending_file_name: filename,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", researchId)
       const uploadUrl = await getSignedUrl(
         s3,
-        new PutObjectCommand({ Bucket: bucket, Key: key, ContentType: "application/pdf" }),
-        { expiresIn: 300 },
+        new PutObjectCommand({
+          Bucket: bucket,
+          Key: key,
+          ContentType: "application/pdf",
+        }),
+        { expiresIn: 300 }
       )
       return json({ uploadUrl, key })
     }
 
     if (body.action === "confirm-upload") {
       if (!isOwner) return json({ error: "Research Record not found" }, 404)
-      if (!research.pending_file_key && research.upload_complete) return json({ message: "Upload confirmed" })
-      if (!research.pending_file_key) return json({ error: "No pending upload to confirm" }, 404)
+      if (!research.pending_file_key && research.upload_complete)
+        return json({ message: "Upload confirmed" })
+      if (!research.pending_file_key)
+        return json({ error: "No pending upload to confirm" }, 404)
       try {
-        await s3.send(new HeadObjectCommand({ Bucket: bucket, Key: research.pending_file_key }))
+        await s3.send(
+          new HeadObjectCommand({
+            Bucket: bucket,
+            Key: research.pending_file_key,
+          })
+        )
       } catch {
         return json({ error: "File not found in storage" }, 404)
       }
@@ -96,22 +120,24 @@ Deno.serve(async (request) => {
 
     if (body.action === "owner-download") {
       if (!isOwner) return json({ error: "Research Record not found" }, 404)
-      if (!research.upload_complete || !research.file_key) return json({ error: "Research PDF not found" }, 404)
+      if (!research.upload_complete || !research.file_key)
+        return json({ error: "Research PDF not found" }, 404)
       const url = await getSignedUrl(
         s3,
         new GetObjectCommand({ Bucket: bucket, Key: research.file_key }),
-        { expiresIn: 300 },
+        { expiresIn: 300 }
       )
       return json({ url })
     }
 
     if (body.action === "moderation-download") {
       if (!isAdmin) return json({ error: "Admin access required" }, 403)
-      if (!research.upload_complete || !research.file_key) return json({ error: "Research PDF not found" }, 404)
+      if (!research.upload_complete || !research.file_key)
+        return json({ error: "Research PDF not found" }, 404)
       const url = await getSignedUrl(
         s3,
         new GetObjectCommand({ Bucket: bucket, Key: research.file_key }),
-        { expiresIn: 300 },
+        { expiresIn: 300 }
       )
       await service.from("audit_logs").insert({
         admin_id: auth.user.id,
@@ -133,7 +159,7 @@ Deno.serve(async (request) => {
       const url = await getSignedUrl(
         s3,
         new GetObjectCommand({ Bucket: bucket, Key: grant.file_key }),
-        { expiresIn: 300 },
+        { expiresIn: 300 }
       )
       return json({ url })
     }
@@ -163,16 +189,19 @@ Deno.serve(async (request) => {
       if (access.status !== expectedStatus[event])
         return json({ error: "PDF Access event is stale" }, 409)
       if (
-        (isRequest && auth.user.id !== access.requester_id)
-        || (!isRequest && auth.user.id !== owner?.uploader_id)
-      ) return json({ error: "PDF Access request not found" }, 404)
+        (isRequest && auth.user.id !== access.requester_id) ||
+        (!isRequest && auth.user.id !== owner?.uploader_id)
+      )
+        return json({ error: "PDF Access request not found" }, 404)
       if (!Deno.env.get("RESEND_API_KEY") || !Deno.env.get("EMAIL_FROM"))
         return json({ message: "Application email is not configured" })
 
       const recipientId = isRequest ? owner?.uploader_id : access.requester_id
       if (!recipientId) return json({ message: "Recipient is unavailable" })
-      const { data: recipient } = await service.auth.admin.getUserById(recipientId)
-      if (!recipient.user?.email) return json({ message: "Recipient is unavailable" })
+      const { data: recipient } =
+        await service.auth.admin.getUserById(recipientId)
+      if (!recipient.user?.email)
+        return json({ message: "Recipient is unavailable" })
       const subject = isRequest
         ? `PDF access ${event}: ${access.research_title}`
         : `PDF access ${access.status}: ${access.research_title}`
@@ -195,7 +224,10 @@ Deno.serve(async (request) => {
 
     return json({ error: "Unsupported action" }, 400)
   } catch (error) {
-    return json({ error: error instanceof Error ? error.message : "Request failed" }, 500)
+    return json(
+      { error: error instanceof Error ? error.message : "Request failed" },
+      500
+    )
   }
 })
 

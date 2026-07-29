@@ -16,22 +16,36 @@ export default function LoginPage() {
               <BookOpen className="size-5" />
             </span>
             <div>
-              <h1 className="font-heading text-2xl font-bold tracking-tight">CCS Research Hub</h1>
-              <p className="mt-1 text-sm text-muted-foreground">Sign in to your account</p>
+              <h1 className="font-heading text-2xl font-bold tracking-tight">
+                CCS Research Hub
+              </h1>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Sign in to your account
+              </p>
             </div>
           </div>
 
           <div className="rounded-xl border bg-card p-8 shadow-sm">
-            <Suspense fallback={<div className="text-sm text-muted-foreground">Loading…</div>}>
+            <Suspense
+              fallback={
+                <div className="text-sm text-muted-foreground">Loading…</div>
+              }
+            >
               <LoginForm />
             </Suspense>
           </div>
 
           <div className="mt-5 flex justify-between text-sm">
-            <Link href="/forgot-password" className="text-muted-foreground transition-colors duration-150 hover:text-foreground">
+            <Link
+              href="/forgot-password"
+              className="text-muted-foreground transition-colors duration-150 hover:text-foreground"
+            >
               Forgot password?
             </Link>
-            <Link href="/register" className="font-medium transition-colors duration-150 hover:text-primary">
+            <Link
+              href="/register"
+              className="font-medium transition-colors duration-150 hover:text-primary"
+            >
               Register
             </Link>
           </div>

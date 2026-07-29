@@ -14,7 +14,9 @@ export function CollectionPanel() {
   const [isPending, startTransition] = useTransition()
 
   function load() {
-    getCollection().then(setItems).catch((reason) => setError(reason.message))
+    getCollection()
+      .then(setItems)
+      .catch((reason) => setError(reason.message))
   }
   useEffect(load, [])
 
@@ -24,12 +26,32 @@ export function CollectionPanel() {
       {error ? <p className="mt-4 text-sm text-destructive">{error}</p> : null}
       <div className="mt-6 grid gap-3">
         {items.map((item) => (
-          <div key={item.researchId} className="flex items-center justify-between rounded-xl border p-4">
-            <Link href={`/research/${item.researchId}`} className="font-medium">{item.research.title}</Link>
-            <Button variant="outline" disabled={isPending} onClick={() => startTransition(async () => { await removeFromCollection(item.researchId); load() })}>Remove</Button>
+          <div
+            key={item.researchId}
+            className="flex items-center justify-between rounded-xl border p-4"
+          >
+            <Link href={`/research/${item.researchId}`} className="font-medium">
+              {item.research.title}
+            </Link>
+            <Button
+              variant="outline"
+              disabled={isPending}
+              onClick={() =>
+                startTransition(async () => {
+                  await removeFromCollection(item.researchId)
+                  load()
+                })
+              }
+            >
+              Remove
+            </Button>
           </div>
         ))}
-        {!items.length && !error ? <p className="text-sm text-muted-foreground">No saved Research Records.</p> : null}
+        {!items.length && !error ? (
+          <p className="text-sm text-muted-foreground">
+            No saved Research Records.
+          </p>
+        ) : null}
       </div>
     </section>
   )

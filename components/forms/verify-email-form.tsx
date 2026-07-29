@@ -7,7 +7,9 @@ import { Button } from "@/components/ui/button"
 import { getSupabase } from "@/lib/supabase"
 
 export function VerifyEmailForm({ initialEmail }: { initialEmail: string }) {
-  const [message, setMessage] = useState("Use the confirmation link sent to your email.")
+  const [message, setMessage] = useState(
+    "Use the confirmation link sent to your email."
+  )
   const [isPending, startTransition] = useTransition()
 
   function resend() {
@@ -27,7 +29,9 @@ export function VerifyEmailForm({ initialEmail }: { initialEmail: string }) {
       <Button onClick={resend} disabled={isPending || !initialEmail}>
         {isPending ? "Sending..." : "Resend confirmation email"}
       </Button>
-      <Link href="/login" className="text-center text-sm font-medium underline">Back to sign in</Link>
+      <Link href="/login" className="text-center text-sm font-medium underline">
+        Back to sign in
+      </Link>
     </div>
   )
 }

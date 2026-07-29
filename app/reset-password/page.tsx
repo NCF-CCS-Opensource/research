@@ -6,7 +6,9 @@ export default function ResetPasswordPage() {
     <PublicShell>
       <section className="mx-auto max-w-md px-4 py-16">
         <h1 className="text-2xl font-semibold">Reset Password</h1>
-        <div className="mt-6"><ResetPasswordForm /></div>
+        <div className="mt-6">
+          <ResetPasswordForm />
+        </div>
       </section>
     </PublicShell>
   )

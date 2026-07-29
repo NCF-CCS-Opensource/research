@@ -22,9 +22,12 @@ export default async function EditPaperPage({
         </Link>
 
         <div className="rounded-xl border bg-card p-8 shadow-sm">
-          <h1 className="font-heading text-2xl font-bold tracking-tight">Edit Research</h1>
+          <h1 className="font-heading text-2xl font-bold tracking-tight">
+            Edit Research
+          </h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Changes apply immediately. Approved papers retain their status after edits.
+            Changes apply immediately. Approved papers retain their status after
+            edits.
           </p>
           <div className="mt-8">
             <EditResearchForm id={id} />

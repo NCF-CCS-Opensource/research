@@ -18,7 +18,10 @@ export default async function AuthorsPage({ searchParams }: PageProps) {
   const raw = await searchParams
   const page = Number(value(raw.page) ?? 1)
   const search = value(raw.search) ?? ""
-  let authors = { data: [] as Author[], meta: { total: 0, page, totalPages: 0 } }
+  let authors = {
+    data: [] as Author[],
+    meta: { total: 0, page, totalPages: 0 },
+  }
 
   try {
     authors = await getAuthors({ page, limit: 20, search })
@@ -29,7 +32,12 @@ export default async function AuthorsPage({ searchParams }: PageProps) {
       <section className="mx-auto max-w-6xl px-4 py-10 sm:px-6 lg:px-8">
         <h1 className="text-4xl font-semibold tracking-tight">Authors</h1>
         <form className="mt-6 flex max-w-xl gap-2">
-          <input name="search" defaultValue={search} placeholder="Search authors" className="h-10 flex-1 rounded-lg border bg-background px-3" />
+          <input
+            name="search"
+            defaultValue={search}
+            placeholder="Search authors"
+            className="h-10 flex-1 rounded-lg border bg-background px-3"
+          />
           <Button type="submit">Search</Button>
         </form>
 
@@ -46,17 +54,25 @@ export default async function AuthorsPage({ searchParams }: PageProps) {
               {authors.data.map((author) => (
                 <tr key={author.id} className="border-t">
                   <td className="px-4 py-3 font-medium">
-                    <Link href={`/authors/${author.id}`} className="hover:text-primary">
+                    <Link
+                      href={`/authors/${author.id}`}
+                      className="hover:text-primary"
+                    >
                       {author.name}
                     </Link>
                   </td>
                   <td className="px-4 py-3">{author.paperCount ?? 0}</td>
-                  <td className="px-4 py-3 text-muted-foreground">{author.email ?? "-"}</td>
+                  <td className="px-4 py-3 text-muted-foreground">
+                    {author.email ?? "-"}
+                  </td>
                 </tr>
               ))}
               {!authors.data.length ? (
                 <tr>
-                  <td colSpan={3} className="px-4 py-10 text-center text-muted-foreground">
+                  <td
+                    colSpan={3}
+                    className="px-4 py-10 text-center text-muted-foreground"
+                  >
                     No authors found.
                   </td>
                 </tr>
@@ -65,7 +81,13 @@ export default async function AuthorsPage({ searchParams }: PageProps) {
           </table>
         </div>
 
-        <Pagination page={authors.meta.page} totalPages={authors.meta.totalPages} getHref={(target) => `/authors?search=${encodeURIComponent(search)}&page=${target}`} />
+        <Pagination
+          page={authors.meta.page}
+          totalPages={authors.meta.totalPages}
+          getHref={(target) =>
+            `/authors?search=${encodeURIComponent(search)}&page=${target}`
+          }
+        />
       </section>
     </PublicShell>
   )

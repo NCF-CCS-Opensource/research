@@ -16,7 +16,9 @@ type PageProps = {
   params: Promise<{ id: string }>
 }
 
-export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+export async function generateMetadata({
+  params,
+}: PageProps): Promise<Metadata> {
   try {
     const { id } = await params
     const research = await getResearch(id)
@@ -31,7 +33,9 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
 function formatDate(value?: string | null) {
   if (!value) return "Undated"
-  return new Intl.DateTimeFormat("en", { dateStyle: "medium" }).format(new Date(value))
+  return new Intl.DateTimeFormat("en", { dateStyle: "medium" }).format(
+    new Date(value)
+  )
 }
 
 async function loadRelated(categoryId: string, excludeId: string) {
@@ -61,7 +65,8 @@ export default async function ResearchDetailPage({ params }: PageProps) {
     : []
 
   const authorList = research.authors ?? []
-  const authorLine = authorList.map((a) => a.name).join(", ") || "Unknown authors"
+  const authorLine =
+    authorList.map((a) => a.name).join(", ") || "Unknown authors"
   const citationYear = research.publishDate?.slice(0, 4) ?? "n.d."
 
   return (
@@ -76,38 +81,51 @@ export default async function ResearchDetailPage({ params }: PageProps) {
         <div className="mt-8 rounded-3xl border bg-card p-6 sm:p-8">
           <div className="flex flex-wrap gap-2">
             {research.categories?.map((category) => (
-              <Link key={category.id} href={`/categories/${category.id}`} className="rounded-full bg-secondary px-3 py-1 text-xs font-medium">
+              <Link
+                key={category.id}
+                href={`/categories/${category.id}`}
+                className="rounded-full bg-secondary px-3 py-1 text-xs font-medium"
+              >
                 {category.name}
               </Link>
             ))}
           </div>
-          <h1 className="mt-5 text-3xl font-semibold tracking-tight sm:text-5xl">{research.title}</h1>
+          <h1 className="mt-5 text-3xl font-semibold tracking-tight sm:text-5xl">
+            {research.title}
+          </h1>
           <p className="mt-4 text-muted-foreground">
             Authors:{" "}
-            {authorList.length > 0 ? (
-              authorList.map((a, i) => (
-                <span key={a.id}>
-                  {i > 0 && ", "}
-                  <Link href={`/authors/${a.id}`} className="hover:text-foreground hover:underline">
-                    {a.name}
-                  </Link>
-                </span>
-              ))
-            ) : (
-              "Unknown authors"
-            )}
+            {authorList.length > 0
+              ? authorList.map((a, i) => (
+                  <span key={a.id}>
+                    {i > 0 && ", "}
+                    <Link
+                      href={`/authors/${a.id}`}
+                      className="hover:text-foreground hover:underline"
+                    >
+                      {a.name}
+                    </Link>
+                  </span>
+                ))
+              : "Unknown authors"}
           </p>
-          <p className="mt-1 text-sm text-muted-foreground">Published: {formatDate(research.publishDate)}</p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Published: {formatDate(research.publishDate)}
+          </p>
 
           {research.rejectionReason && (
             <div className="mt-4 rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">
-              <span className="font-medium">Rejected:</span> {research.rejectionReason}
+              <span className="font-medium">Rejected:</span>{" "}
+              {research.rejectionReason}
             </div>
           )}
 
           <div className="mt-6 flex flex-wrap gap-2">
             {research.keywords?.map((keyword) => (
-              <span key={keyword.id} className="rounded-full border px-3 py-1 text-xs text-muted-foreground">
+              <span
+                key={keyword.id}
+                className="rounded-full border px-3 py-1 text-xs text-muted-foreground"
+              >
                 {keyword.name}
               </span>
             ))}
@@ -118,10 +136,12 @@ export default async function ResearchDetailPage({ params }: PageProps) {
               <Eye className="size-4" /> Views: {research.viewCount ?? 0}
             </div>
             <div className="flex items-center gap-2">
-              <FileDown className="size-4" /> Downloads: {research.downloadCount ?? 0}
+              <FileDown className="size-4" /> Downloads:{" "}
+              {research.downloadCount ?? 0}
             </div>
             <div className="flex items-center gap-2">
-              <Quote className="size-4" /> Citations: {research.citationCount ?? 0}
+              <Quote className="size-4" /> Citations:{" "}
+              {research.citationCount ?? 0}
             </div>
             {(() => {
               const mins = estimateReadTime(research.abstract)
@@ -133,23 +153,34 @@ export default async function ResearchDetailPage({ params }: PageProps) {
             })()}
           </div>
 
-          <ResearchActions researchId={research.id} citation={`${authorLine}. (${citationYear}). ${research.title}.`} />
+          <ResearchActions
+            researchId={research.id}
+            citation={`${authorLine}. (${citationYear}). ${research.title}.`}
+          />
         </div>
 
         <section className="mt-8 rounded-3xl border bg-card p-6 sm:p-8">
           <h2 className="text-xl font-semibold">Abstract</h2>
-          <p className="mt-4 leading-8 text-muted-foreground">{research.abstract ?? "No abstract provided."}</p>
+          <p className="mt-4 leading-8 text-muted-foreground">
+            {research.abstract ?? "No abstract provided."}
+          </p>
         </section>
 
         <section className="mt-8 rounded-3xl border bg-card p-6 sm:p-8">
           <h2 className="text-xl font-semibold">Citation Generator</h2>
           <div className="mt-4">
-            <CitationGenerator authors={authorLine} year={citationYear} title={research.title} />
+            <CitationGenerator
+              authors={authorLine}
+              year={citationYear}
+              title={research.title}
+            />
           </div>
         </section>
 
         <section className="mt-8 rounded-3xl border bg-card p-6 sm:p-8">
-          <h2 className="font-heading text-xl font-semibold tracking-tight">Share</h2>
+          <h2 className="font-heading text-xl font-semibold tracking-tight">
+            Share
+          </h2>
           <div className="mt-4">
             <QrCode researchId={research.id} />
           </div>

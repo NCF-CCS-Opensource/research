@@ -15,7 +15,9 @@ export function ResetPasswordForm() {
     event.preventDefault()
     const password = String(new FormData(event.currentTarget).get("password"))
     startTransition(async () => {
-      const { error: updateError } = await getSupabase().auth.updateUser({ password })
+      const { error: updateError } = await getSupabase().auth.updateUser({
+        password,
+      })
       if (updateError) setError(updateError.message)
       else router.push("/dashboard")
     })
@@ -25,7 +27,13 @@ export function ResetPasswordForm() {
     <form className="grid gap-4" onSubmit={onSubmit}>
       <label className="grid gap-2 text-sm">
         New password
-        <input name="password" type="password" minLength={8} required className="h-10 rounded-lg border bg-background px-3" />
+        <input
+          name="password"
+          type="password"
+          minLength={8}
+          required
+          className="h-10 rounded-lg border bg-background px-3"
+        />
       </label>
       <Button disabled={isPending}>Set password</Button>
       {error ? <p className="text-sm text-destructive">{error}</p> : null}

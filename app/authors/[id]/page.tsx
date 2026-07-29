@@ -14,7 +14,9 @@ type PageProps = {
   searchParams: Promise<Record<string, string | string[] | undefined>>
 }
 
-export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+export async function generateMetadata({
+  params,
+}: PageProps): Promise<Metadata> {
   try {
     const { id } = await params
     const author = await getAuthor(id)
@@ -24,14 +26,20 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   }
 }
 
-export default async function AuthorProfilePage({ params, searchParams }: PageProps) {
+export default async function AuthorProfilePage({
+  params,
+  searchParams,
+}: PageProps) {
   const [{ id }, raw] = await Promise.all([params, searchParams])
   const page = Number(Array.isArray(raw.page) ? raw.page[0] : (raw.page ?? 1))
   let author
   let papers
 
   try {
-    ;[author, papers] = await Promise.all([getAuthor(id), getAuthorPapers(id, page)])
+    ;[author, papers] = await Promise.all([
+      getAuthor(id),
+      getAuthorPapers(id, page),
+    ])
   } catch {
     notFound()
   }
@@ -51,10 +59,15 @@ export default async function AuthorProfilePage({ params, searchParams }: PagePr
             <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary">
               <User className="size-8" />
             </div>
-            <div className="flex-1 min-w-0">
-              <h1 className="text-3xl font-semibold tracking-tight">{author.name}</h1>
+            <div className="min-w-0 flex-1">
+              <h1 className="text-3xl font-semibold tracking-tight">
+                {author.name}
+              </h1>
               {author.email && (
-                <a href={`mailto:${author.email}`} className="mt-2 flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground">
+                <a
+                  href={`mailto:${author.email}`}
+                  className="mt-2 flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
+                >
                   <Mail className="size-3.5" /> {author.email}
                 </a>
               )}
@@ -66,7 +79,9 @@ export default async function AuthorProfilePage({ params, searchParams }: PagePr
               <BookOpen className="size-4 text-muted-foreground" />
               <div>
                 <p className="text-xl font-semibold">{papers.meta.total}</p>
-                <p className="text-xs text-muted-foreground">Published papers</p>
+                <p className="text-xs text-muted-foreground">
+                  Published papers
+                </p>
               </div>
             </div>
           </div>
@@ -74,7 +89,9 @@ export default async function AuthorProfilePage({ params, searchParams }: PagePr
 
         {/* Papers */}
         <div className="mt-10">
-          <h2 className="text-2xl font-semibold tracking-tight">Research Papers</h2>
+          <h2 className="text-2xl font-semibold tracking-tight">
+            Research Papers
+          </h2>
           <p className="mt-1 text-sm text-muted-foreground">
             All approved papers authored or co-authored by {author.name}
           </p>

@@ -11,7 +11,9 @@ export function EngagementPanel({ admin = false }: { admin?: boolean }) {
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    getEngagementOverview().then(setOverview).catch((reason) => setError(reason.message))
+    getEngagementOverview()
+      .then(setOverview)
+      .catch((reason) => setError(reason.message))
   }, [])
 
   const stats = [
@@ -24,8 +26,13 @@ export function EngagementPanel({ admin = false }: { admin?: boolean }) {
 
   return (
     <section className="rounded-3xl border bg-card p-8">
-      <h1 className="text-3xl font-semibold">{admin ? "Admin Dashboard" : "My Engagement"}</h1>
-      <p className="mt-2 text-sm text-muted-foreground">Cumulative counts for {admin ? "the Research Hub" : "your Research Records"}.</p>
+      <h1 className="text-3xl font-semibold">
+        {admin ? "Admin Dashboard" : "My Engagement"}
+      </h1>
+      <p className="mt-2 text-sm text-muted-foreground">
+        Cumulative counts for{" "}
+        {admin ? "the Research Hub" : "your Research Records"}.
+      </p>
       {error ? <p className="mt-4 text-sm text-destructive">{error}</p> : null}
       <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
         {stats.map(([label, value]) => (

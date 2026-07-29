@@ -5,10 +5,10 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 
 import { Button } from "@/components/ui/button"
+import { getRegistrationOptions } from "@/lib/api"
 import { getSupabase } from "@/lib/supabase"
-import type { Category } from "@/types/api"
 
-type Option = Pick<Category, "id" | "name">
+type Option = { id: string; name: string }
 
 export function RegisterForm() {
   const router = useRouter()
@@ -19,14 +19,10 @@ export function RegisterForm() {
   const [isPending, startTransition] = useTransition()
 
   useEffect(() => {
-    const supabase = getSupabase()
-    Promise.all([
-      supabase.from("institutions").select("id,name").order("name"),
-      supabase.from("programs").select("id,name").order("name"),
-    ])
-      .then(([institutionResult, programResult]) => {
-        setInstitutions((institutionResult.data ?? []) as Option[])
-        setPrograms((programResult.data ?? []) as Option[])
+    getRegistrationOptions()
+      .then(({ institutions, programs }) => {
+        setInstitutions(institutions)
+        setPrograms(programs)
       })
       .catch(() => {})
   }, [])
@@ -74,35 +70,110 @@ export function RegisterForm() {
   return (
     <form onSubmit={onSubmit} className="grid gap-4">
       <div className="grid gap-4 sm:grid-cols-2">
-        <label className="grid gap-2 text-sm">First Name<input name="firstName" required className="h-10 rounded-lg border bg-background px-3" /></label>
-        <label className="grid gap-2 text-sm">Last Name<input name="lastName" required className="h-10 rounded-lg border bg-background px-3" /></label>
-        <label className="grid gap-2 text-sm">Middle Name<input name="middleName" className="h-10 rounded-lg border bg-background px-3" /></label>
-        <label className="grid gap-2 text-sm">Suffix<input name="suffix" className="h-10 rounded-lg border bg-background px-3" /></label>
+        <label className="grid gap-2 text-sm">
+          First Name
+          <input
+            name="firstName"
+            required
+            className="h-10 rounded-lg border bg-background px-3"
+          />
+        </label>
+        <label className="grid gap-2 text-sm">
+          Last Name
+          <input
+            name="lastName"
+            required
+            className="h-10 rounded-lg border bg-background px-3"
+          />
+        </label>
+        <label className="grid gap-2 text-sm">
+          Middle Name
+          <input
+            name="middleName"
+            className="h-10 rounded-lg border bg-background px-3"
+          />
+        </label>
+        <label className="grid gap-2 text-sm">
+          Suffix
+          <input
+            name="suffix"
+            className="h-10 rounded-lg border bg-background px-3"
+          />
+        </label>
       </div>
-      <label className="grid gap-2 text-sm">Email<input name="email" type="email" required className="h-10 rounded-lg border bg-background px-3" /></label>
+      <label className="grid gap-2 text-sm">
+        Email
+        <input
+          name="email"
+          type="email"
+          required
+          className="h-10 rounded-lg border bg-background px-3"
+        />
+      </label>
       <div className="grid gap-4 sm:grid-cols-2">
-        <label className="grid gap-2 text-sm">Password<input name="password" type="password" required minLength={8} className="h-10 rounded-lg border bg-background px-3" /></label>
-        <label className="grid gap-2 text-sm">Confirm<input name="confirmPassword" type="password" required minLength={8} className="h-10 rounded-lg border bg-background px-3" /></label>
+        <label className="grid gap-2 text-sm">
+          Password
+          <input
+            name="password"
+            type="password"
+            required
+            minLength={8}
+            className="h-10 rounded-lg border bg-background px-3"
+          />
+        </label>
+        <label className="grid gap-2 text-sm">
+          Confirm
+          <input
+            name="confirmPassword"
+            type="password"
+            required
+            minLength={8}
+            className="h-10 rounded-lg border bg-background px-3"
+          />
+        </label>
       </div>
       <div className="grid gap-4 sm:grid-cols-2">
         <label className="grid gap-2 text-sm">
           Institution
-          <select name="institutionId" className="h-10 rounded-lg border bg-background px-3">
+          <select
+            name="institutionId"
+            className="h-10 rounded-lg border bg-background px-3"
+          >
             <option value="">External / not listed</option>
-            {institutions.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
+            {institutions.map((item) => (
+              <option key={item.id} value={item.id}>
+                {item.name}
+              </option>
+            ))}
           </select>
         </label>
         <label className="grid gap-2 text-sm">
           Program
-          <select name="programId" className="h-10 rounded-lg border bg-background px-3">
+          <select
+            name="programId"
+            className="h-10 rounded-lg border bg-background px-3"
+          >
             <option value="">Not applicable</option>
-            {programs.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
+            {programs.map((item) => (
+              <option key={item.id} value={item.id}>
+                {item.name}
+              </option>
+            ))}
           </select>
         </label>
       </div>
       {error ? <p className="text-sm text-destructive">{error}</p> : null}
-      {message ? <p className="rounded-lg bg-secondary p-3 text-sm">{message} <Link href="/login" className="font-medium underline">Sign in</Link></p> : null}
-      <Button type="submit" disabled={isPending}>{isPending ? "Creating..." : "Create Account"}</Button>
+      {message ? (
+        <p className="rounded-lg bg-secondary p-3 text-sm">
+          {message}{" "}
+          <Link href="/login" className="font-medium underline">
+            Sign in
+          </Link>
+        </p>
+      ) : null}
+      <Button type="submit" disabled={isPending}>
+        {isPending ? "Creating..." : "Create Account"}
+      </Button>
     </form>
   )
 }

@@ -24,7 +24,10 @@ async function loadSearch(params: Record<string, string | number | undefined>) {
   try {
     return await searchResearch(params)
   } catch {
-    return { data: [] as ResearchSummary[], meta: { total: 0, page: Number(params.page ?? 1), totalPages: 0 } }
+    return {
+      data: [] as ResearchSummary[],
+      meta: { total: 0, page: Number(params.page ?? 1), totalPages: 0 },
+    }
   }
 }
 
@@ -63,7 +66,11 @@ export default async function SearchPage({ searchParams }: PageProps) {
     if (val !== undefined && val !== "") queryString.set(key, String(val))
   })
 
-  const [results, categories, keywords] = await Promise.all([loadSearch(params), loadCategories(), loadKeywords()])
+  const [results, categories, keywords] = await Promise.all([
+    loadSearch(params),
+    loadCategories(),
+    loadKeywords(),
+  ])
 
   return (
     <PublicShell>
@@ -80,7 +87,11 @@ export default async function SearchPage({ searchParams }: PageProps) {
             <input type="hidden" name="q" value={params.q ?? ""} />
             <label className="grid gap-2 text-sm">
               Category
-              <select name="category" defaultValue={params.category ?? ""} className="h-10 rounded-lg border bg-background px-3">
+              <select
+                name="category"
+                defaultValue={params.category ?? ""}
+                className="h-10 rounded-lg border bg-background px-3"
+              >
                 <option value="">All categories</option>
                 {categories.map((category) => (
                   <option key={category.id} value={category.id}>
@@ -91,7 +102,11 @@ export default async function SearchPage({ searchParams }: PageProps) {
             </label>
             <label className="grid gap-2 text-sm">
               Keyword
-              <select name="keyword" defaultValue={params.keyword ?? ""} className="h-10 rounded-lg border bg-background px-3">
+              <select
+                name="keyword"
+                defaultValue={params.keyword ?? ""}
+                className="h-10 rounded-lg border bg-background px-3"
+              >
                 <option value="">All keywords</option>
                 {keywords.map((kw) => (
                   <option key={kw.id} value={kw.id}>
@@ -102,15 +117,29 @@ export default async function SearchPage({ searchParams }: PageProps) {
             </label>
             <label className="grid gap-2 text-sm">
               Date from
-              <input name="dateFrom" type="date" defaultValue={params.dateFrom ?? ""} className="h-10 rounded-lg border bg-background px-3" />
+              <input
+                name="dateFrom"
+                type="date"
+                defaultValue={params.dateFrom ?? ""}
+                className="h-10 rounded-lg border bg-background px-3"
+              />
             </label>
             <label className="grid gap-2 text-sm">
               Date to
-              <input name="dateTo" type="date" defaultValue={params.dateTo ?? ""} className="h-10 rounded-lg border bg-background px-3" />
+              <input
+                name="dateTo"
+                type="date"
+                defaultValue={params.dateTo ?? ""}
+                className="h-10 rounded-lg border bg-background px-3"
+              />
             </label>
             <label className="grid gap-2 text-sm">
               Sort
-              <select name="sort" defaultValue={params.sort} className="h-10 rounded-lg border bg-background px-3">
+              <select
+                name="sort"
+                defaultValue={params.sort}
+                className="h-10 rounded-lg border bg-background px-3"
+              >
                 <option value="relevance">Relevance</option>
                 <option value="date">Date</option>
                 <option value="views">Views</option>
@@ -128,9 +157,13 @@ export default async function SearchPage({ searchParams }: PageProps) {
           <div className="mb-6 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
             <div>
               <h1 className="text-3xl font-semibold tracking-tight">
-                {results.meta.total} results{params.q ? ` for "${params.q}"` : ""}
+                {results.meta.total} results
+                {params.q ? ` for "${params.q}"` : ""}
               </h1>
-              <p className="mt-2 text-sm text-muted-foreground">Search by title, abstract, author, keyword, category, or date range.</p>
+              <p className="mt-2 text-sm text-muted-foreground">
+                Search by title, abstract, author, keyword, category, or date
+                range.
+              </p>
             </div>
           </div>
 
@@ -141,10 +174,16 @@ export default async function SearchPage({ searchParams }: PageProps) {
               ))}
             </div>
           ) : (
-            <div className="rounded-3xl border border-dashed p-10 text-center text-muted-foreground">No matching research found.</div>
+            <div className="rounded-3xl border border-dashed p-10 text-center text-muted-foreground">
+              No matching research found.
+            </div>
           )}
 
-          <Pagination page={results.meta.page} totalPages={results.meta.totalPages} getHref={(target) => hrefWith(queryString, target)} />
+          <Pagination
+            page={results.meta.page}
+            totalPages={results.meta.totalPages}
+            getHref={(target) => hrefWith(queryString, target)}
+          />
         </section>
       </div>
     </PublicShell>

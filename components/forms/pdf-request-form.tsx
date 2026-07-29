@@ -20,11 +20,16 @@ export function PdfRequestForm({ researchId }: { researchId: string }) {
 
     startTransition(async () => {
       try {
-        const response = await createPdfRequest(researchId, String(form.get("requestNote") ?? ""))
+        const response = await createPdfRequest(
+          researchId,
+          String(form.get("requestNote") ?? "")
+        )
         setMessage(`Request submitted. Status: ${response.status}.`)
         formElement.reset()
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Unable to submit PDF request")
+        setError(
+          err instanceof Error ? err.message : "Unable to submit PDF request"
+        )
       }
     })
   }
@@ -44,11 +49,19 @@ export function PdfRequestForm({ researchId }: { researchId: string }) {
       </label>
       {message ? (
         <p className="rounded-lg bg-secondary p-3 text-sm">
-          {message} <Link href={`/research/${researchId}`} className="font-medium underline">Back to research</Link>
+          {message}{" "}
+          <Link
+            href={`/research/${researchId}`}
+            className="font-medium underline"
+          >
+            Back to research
+          </Link>
         </p>
       ) : null}
       {error ? <p className="text-sm text-destructive">{error}</p> : null}
-      <Button type="submit" disabled={isPending}>{isPending ? "Submitting..." : "Submit request"}</Button>
+      <Button type="submit" disabled={isPending}>
+        {isPending ? "Submitting..." : "Submit request"}
+      </Button>
     </form>
   )
 }

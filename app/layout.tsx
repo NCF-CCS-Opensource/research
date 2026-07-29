@@ -14,8 +14,11 @@ export const metadata: Metadata = {
   robots: { index: true, follow: true },
 }
 
-const geist = Geist({ subsets: ['latin'], variable: '--font-sans' })
-const spaceGrotesk = Space_Grotesk({ subsets: ['latin'], variable: '--font-display' })
+const geist = Geist({ subsets: ["latin"], variable: "--font-sans" })
+const spaceGrotesk = Space_Grotesk({
+  subsets: ["latin"],
+  variable: "--font-display",
+})
 
 const fontMono = Geist_Mono({
   subsets: ["latin"],
@@ -31,7 +34,13 @@ export default function RootLayout({
     <html
       lang="en"
       suppressHydrationWarning
-      className={cn("antialiased", fontMono.variable, geist.variable, spaceGrotesk.variable, "font-sans")}
+      className={cn(
+        "antialiased",
+        fontMono.variable,
+        geist.variable,
+        spaceGrotesk.variable,
+        "font-sans"
+      )}
     >
       <body>
         <ThemeProvider>{children}</ThemeProvider>

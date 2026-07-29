@@ -1,6 +1,5 @@
 import Link from "next/link"
 
-import { AdminChatbot } from "@/components/features/admin-chatbot"
 import { Navbar } from "@/components/layout/navbar"
 import { NotificationLink } from "@/components/layout/notification-link"
 
@@ -24,7 +23,13 @@ const adminLinks = [
   ["/admin/programs", "Programs"],
 ]
 
-export function DashboardShell({ children, admin = false }: { children: React.ReactNode; admin?: boolean }) {
+export function DashboardShell({
+  children,
+  admin = false,
+}: {
+  children: React.ReactNode
+  admin?: boolean
+}) {
   const links = admin ? adminLinks : userLinks
 
   return (
@@ -34,7 +39,11 @@ export function DashboardShell({ children, admin = false }: { children: React.Re
         <aside className="h-fit rounded-xl border bg-card p-3">
           <nav className="grid gap-1">
             {links.map(([href, label]) => (
-              <Link key={href} href={href} className="rounded-xl px-3 py-2 text-sm text-muted-foreground hover:bg-muted hover:text-foreground">
+              <Link
+                key={href}
+                href={href}
+                className="rounded-xl px-3 py-2 text-sm text-muted-foreground hover:bg-muted hover:text-foreground"
+              >
                 {label}
               </Link>
             ))}
@@ -43,7 +52,6 @@ export function DashboardShell({ children, admin = false }: { children: React.Re
         </aside>
         <main>{children}</main>
       </div>
-      {admin && <AdminChatbot />}
     </div>
   )
 }
