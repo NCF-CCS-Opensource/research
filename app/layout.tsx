@@ -1,5 +1,5 @@
 import type { Metadata } from "next"
-import { Geist, Geist_Mono, Space_Grotesk } from "next/font/google"
+import { Fraunces, IBM_Plex_Mono, Manrope } from "next/font/google"
 
 import "./globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
@@ -14,13 +14,13 @@ export const metadata: Metadata = {
   robots: { index: true, follow: true },
 }
 
-const geist = Geist({ subsets: ["latin"], variable: "--font-sans" })
-const spaceGrotesk = Space_Grotesk({
+const manrope = Manrope({ subsets: ["latin"], variable: "--font-sans" })
+const fraunces = Fraunces({
   subsets: ["latin"],
   variable: "--font-display",
 })
-
-const fontMono = Geist_Mono({
+const plexMono = IBM_Plex_Mono({
+  weight: ["400", "500", "600"],
   subsets: ["latin"],
   variable: "--font-mono",
 })
@@ -36,9 +36,9 @@ export default function RootLayout({
       suppressHydrationWarning
       className={cn(
         "antialiased",
-        fontMono.variable,
-        geist.variable,
-        spaceGrotesk.variable,
+        plexMono.variable,
+        manrope.variable,
+        fraunces.variable,
         "font-sans"
       )}
     >

@@ -3,9 +3,10 @@
 import Link from "next/link"
 import { useEffect, useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
-import { Mic, Search } from "lucide-react"
+import { ArrowRight, Search } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 import { getSuggestions } from "@/lib/api"
 import type { SearchSuggestions } from "@/types/api"
 
@@ -54,42 +55,41 @@ export function SearchForm({
 
   return (
     <form onSubmit={onSubmit} className="relative w-full">
-      <div className="flex gap-2 rounded-2xl border bg-background p-2 shadow-lg shadow-black/5">
+      <div className="group flex items-center gap-2 border border-foreground/20 bg-card p-2 shadow-[6px_6px_0_var(--accent)] transition-shadow focus-within:shadow-[3px_3px_0_var(--accent)]">
         <label
           className="sr-only"
           htmlFor={compact ? "compact-search" : "hero-search"}
         >
           Search research
         </label>
-        <div className="flex flex-1 items-center gap-2 px-3">
-          <Search className="size-4 text-muted-foreground" />
-          <input
+        <div className="flex min-w-0 flex-1 items-center gap-2 px-2 sm:px-3">
+          <Search className="size-4 shrink-0 text-primary" />
+          <Input
             id={compact ? "compact-search" : "hero-search"}
             value={query}
             onChange={(event) => setQuery(event.target.value)}
-            className="h-10 w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground"
-            placeholder="Search by title, author, keyword..."
+            className="h-11 border-0 bg-transparent px-0 text-sm shadow-none focus-visible:ring-0 dark:bg-transparent"
+            placeholder="Title, author, keyword, or field"
+            autoComplete="off"
           />
         </div>
-        {!compact ? (
-          <Button
-            type="button"
-            variant="outline"
-            size="lg"
-            aria-label="Voice search"
-          >
-            <Mic className="size-4" />
-          </Button>
-        ) : null}
-        <Button type="submit" size="lg" disabled={isPending}>
-          Search
+        <Button
+          type="submit"
+          size="lg"
+          className="h-11 px-4 sm:px-5"
+          disabled={isPending}
+        >
+          <span className="hidden sm:inline">
+            {isPending ? "Searching" : "Search index"}
+          </span>
+          <ArrowRight />
         </Button>
       </div>
 
       {query.trim().length >= 2 &&
       suggestions &&
       (suggestions.researches.length || suggestions.authors.length) ? (
-        <div className="absolute inset-x-0 top-full z-20 mt-2 overflow-hidden rounded-2xl border bg-popover p-2 text-left shadow-xl">
+        <div className="mt-3 overflow-hidden border bg-popover p-2 text-left shadow-xl">
           {suggestions.researches.slice(0, 4).map((item) => (
             <Link
               key={item.id}

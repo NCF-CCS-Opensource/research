@@ -2,6 +2,7 @@ import Link from "next/link"
 
 import { Navbar } from "@/components/layout/navbar"
 import { NotificationLink } from "@/components/layout/notification-link"
+import { Card } from "@/components/ui/card"
 
 const userLinks = [
   ["/dashboard", "Overview"],
@@ -33,24 +34,32 @@ export function DashboardShell({
   const links = admin ? adminLinks : userLinks
 
   return (
-    <div className="min-h-svh bg-muted/20">
+    <div className="min-h-svh">
       <Navbar />
-      <div className="mx-auto grid max-w-7xl gap-6 px-4 py-6 sm:px-6 lg:grid-cols-[240px_1fr] lg:px-8">
-        <aside className="h-fit rounded-xl border bg-card p-3">
-          <nav className="grid gap-1">
+      <div className="mx-auto grid max-w-7xl gap-8 px-4 py-8 sm:px-6 lg:grid-cols-[240px_1fr] lg:px-8 lg:py-10">
+        <Card className="h-fit gap-0 py-0">
+          <div className="border-b px-4 py-4">
+            <p className="font-mono text-[10px] tracking-[0.16em] text-muted-foreground uppercase">
+              {admin ? "Administration" : "Workspace"}
+            </p>
+            <p className="mt-1 font-heading text-xl">
+              {admin ? "Archive control" : "Your research"}
+            </p>
+          </div>
+          <nav className="grid p-2">
             {links.map(([href, label]) => (
               <Link
                 key={href}
                 href={href}
-                className="rounded-xl px-3 py-2 text-sm text-muted-foreground hover:bg-muted hover:text-foreground"
+                className="border-l-2 border-transparent px-3 py-2.5 text-sm text-muted-foreground hover:border-primary hover:bg-muted hover:text-foreground focus-visible:border-primary focus-visible:bg-muted focus-visible:outline-none"
               >
                 {label}
               </Link>
             ))}
             {!admin && <NotificationLink />}
           </nav>
-        </aside>
-        <main>{children}</main>
+        </Card>
+        <main className="min-w-0">{children}</main>
       </div>
     </div>
   )

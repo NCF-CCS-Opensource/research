@@ -7,10 +7,12 @@ import {
 import { getSignedUrl } from "npm:@aws-sdk/s3-request-presigner"
 import { createClient } from "npm:@supabase/supabase-js"
 
-const cors = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, apikey, content-type",
-}
+  const cors = {
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Headers":
+      "authorization, x-client-info, apikey, content-type",
+  }
+
 
 Deno.serve(async (request) => {
   if (request.method === "OPTIONS") return new Response("ok", { headers: cors })
