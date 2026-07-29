@@ -2,7 +2,10 @@ import { SearchForm } from "@/components/forms/search-form"
 import { Pagination } from "@/components/features/pagination"
 import { ResearchCard } from "@/components/features/research-card"
 import { PublicShell } from "@/components/layout/public-shell"
+import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { Card } from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
 import { getCategories, getKeywords, searchResearch } from "@/lib/api"
 import type { Category, Keyword, ResearchSummary } from "@/types/api"
 
@@ -74,16 +77,21 @@ export default async function SearchPage({ searchParams }: PageProps) {
 
   return (
     <PublicShell>
-      <div className="border-b bg-muted/20">
+      <div className="archive-grid border-b border-foreground/15">
         <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
           <SearchForm compact defaultValue={params.q ?? ""} />
         </div>
       </div>
 
       <div className="mx-auto grid max-w-7xl gap-8 px-4 py-10 sm:px-6 lg:grid-cols-[280px_1fr] lg:px-8">
-        <aside className="h-fit rounded-3xl border bg-card p-5">
-          <h2 className="font-semibold">Filters</h2>
-          <form className="mt-5 grid gap-4">
+        <Card className="h-fit gap-0 py-0">
+          <div className="border-b px-5 py-4">
+            <p className="font-mono text-[10px] tracking-[0.16em] text-muted-foreground uppercase">
+              Refine index
+            </p>
+            <h2 className="mt-1 font-heading text-2xl">Filters</h2>
+          </div>
+          <form className="grid gap-4 p-5">
             <input type="hidden" name="q" value={params.q ?? ""} />
             <label className="grid gap-2 text-sm">
               Category
@@ -117,20 +125,20 @@ export default async function SearchPage({ searchParams }: PageProps) {
             </label>
             <label className="grid gap-2 text-sm">
               Date from
-              <input
+              <Input
                 name="dateFrom"
                 type="date"
                 defaultValue={params.dateFrom ?? ""}
-                className="h-10 rounded-lg border bg-background px-3"
+                className="h-10"
               />
             </label>
             <label className="grid gap-2 text-sm">
               Date to
-              <input
+              <Input
                 name="dateTo"
                 type="date"
                 defaultValue={params.dateTo ?? ""}
-                className="h-10 rounded-lg border bg-background px-3"
+                className="h-10"
               />
             </label>
             <label className="grid gap-2 text-sm">
@@ -151,13 +159,16 @@ export default async function SearchPage({ searchParams }: PageProps) {
               <a href="/search">Clear</a>
             </Button>
           </form>
-        </aside>
+        </Card>
 
         <section>
           <div className="mb-6 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
             <div>
-              <h1 className="text-3xl font-semibold tracking-tight">
-                {results.meta.total} results
+              <Badge variant="secondary" className="rounded-sm font-mono">
+                {results.meta.total} records
+              </Badge>
+              <h1 className="mt-3 font-heading text-4xl font-semibold tracking-tight">
+                Search results
                 {params.q ? ` for "${params.q}"` : ""}
               </h1>
               <p className="mt-2 text-sm text-muted-foreground">
@@ -174,9 +185,9 @@ export default async function SearchPage({ searchParams }: PageProps) {
               ))}
             </div>
           ) : (
-            <div className="rounded-3xl border border-dashed p-10 text-center text-muted-foreground">
+            <Card className="border-dashed p-10 text-center text-muted-foreground">
               No matching research found.
-            </div>
+            </Card>
           )}
 
           <Pagination

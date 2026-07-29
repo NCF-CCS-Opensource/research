@@ -4,6 +4,7 @@ import { useState, useTransition } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 import { getProfileAccess } from "@/lib/api"
 import { safeNextPath } from "@/lib/safe-next-path"
 import { getSupabase } from "@/lib/supabase"
@@ -52,21 +53,11 @@ export function LoginForm() {
     <form onSubmit={onSubmit} className="grid gap-4">
       <label className="grid gap-2 text-sm">
         Email
-        <input
-          name="email"
-          type="email"
-          required
-          className="h-10 rounded-lg border bg-background px-3"
-        />
+        <Input name="email" type="email" required className="h-10" />
       </label>
       <label className="grid gap-2 text-sm">
         Password
-        <input
-          name="password"
-          type="password"
-          required
-          className="h-10 rounded-lg border bg-background px-3"
-        />
+        <Input name="password" type="password" required className="h-10" />
       </label>
       {error ? <p className="text-sm text-destructive">{error}</p> : null}
       <Button type="submit" disabled={isPending}>
