@@ -1,10 +1,41 @@
 # Deployment
 
-NCF Research Nexus deploys as one Next.js application backed by Supabase Free, Cloudflare R2, and Resend.
+NCF Research Nexus runs as a Next.js application on Vercel, with Supabase for
+Postgres, Auth, and Edge Functions, Cloudflare R2 for private PDFs, and Resend
+for email. Use Node.js 20 or newer and pnpm.
 
-## 1. Supabase
+## Environment keys
 
-Create a Supabase project, then link and apply the committed SQL migrations:
+### Vercel
+
+Set these for the Production environment before building:
+
+| Key | Required | Value |
+| --- | --- | --- |
+| `NEXT_PUBLIC_SUPABASE_URL` | Yes | Supabase project URL |
+| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Yes | Supabase publishable key |
+
+These values are intentionally public and are embedded at build time. Redeploy
+after changing either value. Never add service-role, R2, or Resend secrets to
+Vercel variables prefixed with `NEXT_PUBLIC_`.
+
+### Supabase Edge Function
+
+| Key | Required | Value |
+| --- | --- | --- |
+| `R2_ENDPOINT` | Yes | `https://ACCOUNT_ID.r2.cloudflarestorage.com` |
+| `R2_ACCESS_KEY_ID` | Yes | R2 API-token access key |
+| `R2_SECRET_ACCESS_KEY` | Yes | R2 API-token secret |
+| `R2_BUCKET_NAME` | Yes | Private bucket name |
+| `RESEND_API_KEY` | No | Enables PDF-access notification email |
+| `EMAIL_FROM` | With Resend | Verified sender, such as `NCF Research Nexus <research@example.edu>` |
+
+Supabase provides `SUPABASE_URL`, `SUPABASE_ANON_KEY`, and
+`SUPABASE_SERVICE_ROLE_KEY`; do not set or expose them manually.
+
+## 1. Prepare Supabase
+
+Create a project, then apply the committed migrations:
 
 ```bash
 pnpm exec supabase login
@@ -12,15 +43,16 @@ pnpm exec supabase link --project-ref YOUR_PROJECT_REF
 pnpm exec supabase db push
 ```
 
-Add the production application origin under **Authentication → URL Configuration** as the Site URL and add `/auth/confirm` as a redirect URL.
+Under **Authentication → URL Configuration**, set the Site URL to the
+production origin and add `https://YOUR_DOMAIN/auth/confirm` as a redirect URL.
+Configure Resend SMTP under **Authentication → SMTP Settings** so signup
+confirmation and password recovery work in production.
 
-Configure Resend SMTP under **Authentication → SMTP Settings** for signup confirmation and password recovery. Use the Resend SMTP host, port, username, API key, sender name, and verified sender domain.
+## 2. Configure R2 and the Edge Function
 
-## 2. Private R2 storage
-
-Create a private R2 bucket and an API token that can read and write that bucket. Configure bucket CORS to allow the production application origin to `PUT` `application/pdf`.
-
-Set Edge Function secrets:
+Create a private R2 bucket and an API token with object read/write access to
+that bucket. Its CORS policy must allow the production origin to send `PUT`
+requests with the `Content-Type` header.
 
 ```bash
 pnpm exec supabase secrets set \
@@ -30,39 +62,53 @@ pnpm exec supabase secrets set \
   R2_BUCKET_NAME=... \
   RESEND_API_KEY=... \
   EMAIL_FROM="NCF Research Nexus <research@example.edu>"
+
 pnpm exec supabase functions deploy r2 --no-verify-jwt
 ```
 
-Supabase supplies `SUPABASE_URL`, `SUPABASE_ANON_KEY`, and `SUPABASE_SERVICE_ROLE_KEY` to the function. Keep the R2, Resend, and service-role secrets out of browser environment variables. Application email is best effort and contains no Request Note, Requester Identity, or download URL.
+Omit the two Resend values if application notifications are not required. The
+function validates the caller itself; keep `--no-verify-jwt` as configured in
+`supabase/config.toml`.
 
-## 3. Next.js
+## 3. Verify and deploy Next.js
 
-Deploy this repository to Vercel with:
+Run the production checks locally:
 
-- Install command: `pnpm install --frozen-lockfile`
-- Build command: `pnpm build`
-- `NEXT_PUBLIC_SUPABASE_URL`: the project URL
-- `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`: the project publishable key
+```bash
+pnpm install --frozen-lockfile
+pnpm test
+pnpm typecheck
+pnpm lint
+pnpm build
+```
 
-## 4. First Admin
+Import the repository into Vercel. `vercel.json` already sets the framework,
+install command, and build command. Add the two Vercel environment keys above,
+then deploy.
 
-After the intended Admin has confirmed their email and a Profile exists, run once in the Supabase SQL editor:
+## 4. Create the first Admin
+
+After the intended Admin confirms their email and receives a Profile, run once
+in the Supabase SQL editor:
 
 ```sql
 select public.bootstrap_first_admin('admin@example.edu');
 ```
 
-The function refuses to run after an Admin already exists. Later role and account-status changes belong in the Admin dashboard.
+The function refuses to run after an Admin exists. Manage later role and
+account-status changes in the Admin dashboard.
 
-## 5. Operations
+## Post-deploy checks
 
-Supabase Free projects can pause after inactivity. Resume the project manually from the Supabase dashboard, wait for the database to report healthy, then reload the application. No data migration is required after a normal resume.
+Confirm signup and login, public discovery, Owner PDF upload/download, Admin
+moderation, and PDF-access request, approval, download, and revocation. If
+uploads fail in the browser, check R2 CORS first.
 
-Create a manual logical backup before risky schema changes:
+Supabase Free projects may pause after inactivity. Resume the project in the
+Supabase dashboard and wait for a healthy database before retrying the app.
+Before risky schema changes, create a logical backup and store it outside Git:
 
 ```bash
 mkdir -p supabase/backups
 pnpm exec supabase db dump --linked --file supabase/backups/$(date +%Y-%m-%d).sql
 ```
-
-Store dumps outside the repository in approved secure storage. Periodically verify login, public discovery, Owner upload, Admin moderation, PDF Access approval/download/revocation, and PDF Replacement.
