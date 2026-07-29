@@ -331,6 +331,7 @@ type R2Request =
       event: "requested" | "cancel" | "approve" | "reject" | "revoke"
       requestId: string
     }
+  | { action: "email-research-moderation"; researchId: string }
 
 export async function callR2<T>(body: R2Request) {
   const { data, error } = await getSupabase().functions.invoke("r2", { body })
@@ -361,6 +362,10 @@ export async function moderateResearch(
     reason,
   })
   if (error) throw new ApiError(error.message, 400)
+  await callR2({
+    action: "email-research-moderation",
+    researchId: id,
+  })
 }
 
 export async function resubmitResearch(id: string) {

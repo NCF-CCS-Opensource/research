@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-describe("Guest discovery", () => {
+describe("API client", () => {
   beforeEach(() => {
     vi.resetModules()
     process.env.NEXT_PUBLIC_SUPABASE_URL = "http://supabase.test"
@@ -49,5 +49,31 @@ describe("Guest discovery", () => {
       expect.stringContaining("/rest/v1/public_research"),
       expect.any(Object)
     )
+  })
+
+  it("emails the owner after a successful moderation decision", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(new Response(null, { status: 204 }))
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ message: "Email sent" }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        })
+      )
+    vi.stubGlobal("fetch", fetchMock)
+
+    const { moderateResearch } = await import("./api")
+    await moderateResearch("research-1", "rejected", "Needs revision")
+
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+    expect(String(fetchMock.mock.calls[0][0])).toContain(
+      "/rest/v1/rpc/moderate_research"
+    )
+    expect(String(fetchMock.mock.calls[1][0])).toContain("/functions/v1/r2")
+    expect(JSON.parse(String(fetchMock.mock.calls[1][1]?.body))).toEqual({
+      action: "email-research-moderation",
+      researchId: "research-1",
+    })
   })
 })
