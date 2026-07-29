@@ -10,14 +10,16 @@ type CreatedResearch = { id: string }
 type Option = { id: string; name: string }
 type FailedUpload = { researchId: string; file: File; skipUpload: boolean }
 
-function MultiCheckbox({
+export function MultiCheckbox({
   legend,
   items,
   name,
+  selectedIds = [],
 }: {
   legend: string
   items: Option[]
   name: string
+  selectedIds?: string[]
 }) {
   if (!items.length) return null
   return (
@@ -33,6 +35,7 @@ function MultiCheckbox({
               type="checkbox"
               name={name}
               value={item.id}
+              defaultChecked={selectedIds.includes(item.id)}
               className="accent-primary"
             />
             {item.name}

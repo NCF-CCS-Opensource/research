@@ -33,7 +33,10 @@ Deno.serve(async (request) => {
 
     const body = await request.json()
     let researchId = String(body.researchId ?? "")
-    if (body.action === "email-pdf-access") {
+    if (
+      body.action === "email-pdf-access" ||
+      body.action === "granted-download"
+    ) {
       const request = await service
         .from("pdf_requests")
         .select("research_id")
@@ -53,6 +56,8 @@ Deno.serve(async (request) => {
       .select("role,status")
       .eq("id", auth.user.id)
       .single()
+    if (profile?.status !== "active")
+      return json({ error: "Account is not active" }, 403)
     const isAdmin = profile?.role === "admin" && profile.status === "active"
 
     const s3 = new S3Client({
@@ -139,11 +144,12 @@ Deno.serve(async (request) => {
         new GetObjectCommand({ Bucket: bucket, Key: research.file_key }),
         { expiresIn: 300 }
       )
-      await service.from("audit_logs").insert({
+      const audit = await service.from("audit_logs").insert({
         admin_id: auth.user.id,
         research_id: researchId,
         action: "moderate",
       })
+      if (audit.error) throw audit.error
       return json({ url })
     }
 

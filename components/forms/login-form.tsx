@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation"
 
 import { Button } from "@/components/ui/button"
 import { getProfileAccess } from "@/lib/api"
+import { safeNextPath } from "@/lib/safe-next-path"
 import { getSupabase } from "@/lib/supabase"
 
 export function LoginForm() {
@@ -27,16 +28,19 @@ export function LoginForm() {
             password: String(form.get("password")),
           })
         if (loginError) throw loginError
-        const profile = await getProfileAccess(data.user.id)
+        const profile = await getProfileAccess(data.user.id).catch(
+          async (error) => {
+            await supabase.auth.signOut()
+            throw error
+          }
+        )
         if (!profile || profile.status !== "active") {
           await supabase.auth.signOut()
           throw new Error("This account is suspended")
         }
         const next = searchParams.get("next")
         const fallback = profile.role === "admin" ? "/admin" : "/dashboard"
-        router.push(
-          next?.startsWith("/") && !next.startsWith("//") ? next : fallback
-        )
+        router.push(safeNextPath(next, fallback))
         router.refresh()
       } catch (err) {
         setError(err instanceof Error ? err.message : "Unable to sign in")

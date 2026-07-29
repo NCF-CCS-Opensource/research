@@ -67,8 +67,31 @@ describe("Owner Research Records", () => {
       research_title: "Stolen",
       research_abstract: "No",
       research_publish_date: "2026-07-29",
+      research_authors: [{ name: "Other Author" }],
+      category_ids: [],
+      keyword_ids: [],
     })
     expect(crossOwnerEdit.error).not.toBeNull()
+
+    const ownerEdit = await owner.rpc("update_research_record", {
+      target_id: researchId,
+      research_title: "Owner-only Draft",
+      research_abstract: "Updated relationships.",
+      research_publish_date: "2026-07-29",
+      research_authors: [{ name: "Updated Author" }],
+      category_ids: [],
+      keyword_ids: [],
+    })
+    expect(ownerEdit.error).toBeNull()
+    expect(
+      (
+        await owner
+          .from("public_research")
+          .select("authors")
+          .eq("id", researchId)
+          .single()
+      ).data?.authors
+    ).toEqual([expect.objectContaining({ name: "Updated Author" })])
 
     const directConfirm = await owner.rpc("confirm_research_upload", {
       target_id: researchId,
@@ -95,5 +118,10 @@ describe("Owner Research Records", () => {
       .eq("id", researchId)
       .single()
     expect(completed.data).toEqual({ upload_complete: true, status: "pending" })
+
+    const crossOwnerDownload = await other.functions.invoke("r2", {
+      body: { action: "owner-download", researchId },
+    })
+    expect(crossOwnerDownload.error).not.toBeNull()
   })
 })

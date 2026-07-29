@@ -237,7 +237,13 @@ export function MetadataManager({
   title: string
   table: MetadataTable
 }) {
-  const [items, setItems] = useState<Array<{ id: string; name: string }>>([])
+  const [items, setItems] = useState<
+    Array<{ id: string; name: string; institutionId: string | null }>
+  >([])
+  const [institutions, setInstitutions] = useState<
+    Array<{ id: string; name: string }>
+  >([])
+  const [institutionId, setInstitutionId] = useState("")
   const [name, setName] = useState("")
   const [error, setError] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
@@ -246,6 +252,12 @@ export function MetadataManager({
     getMetadata(table)
       .then(setItems)
       .catch((reason) => setError(message(reason)))
+    if (table === "programs") {
+      getMetadata("institutions").then((options) => {
+        setInstitutions(options)
+        setInstitutionId((current) => current || options[0]?.id || "")
+      })
+    }
   }
 
   useEffect(load, [table])
@@ -260,7 +272,7 @@ export function MetadataManager({
           if (!name.trim()) return
           startTransition(async () => {
             try {
-              await createMetadata(table, name)
+              await createMetadata(table, name, institutionId)
               setName("")
               load()
             } catch (cause) {
@@ -276,6 +288,22 @@ export function MetadataManager({
           value={name}
           onChange={(event) => setName(event.target.value)}
         />
+        {table === "programs" ? (
+          <select
+            aria-label="Institution"
+            required
+            className="rounded-lg border bg-background px-3 py-2 text-sm"
+            value={institutionId}
+            onChange={(event) => setInstitutionId(event.target.value)}
+          >
+            <option value="">Select Institution</option>
+            {institutions.map((institution) => (
+              <option key={institution.id} value={institution.id}>
+                {institution.name}
+              </option>
+            ))}
+          </select>
+        ) : null}
         <Button disabled={isPending}>Add</Button>
       </form>
       {error ? <p className="mt-4 text-sm text-destructive">{error}</p> : null}
@@ -287,6 +315,36 @@ export function MetadataManager({
           >
             <span>{item.name}</span>
             <div className="flex gap-2">
+              {table === "programs" ? (
+                <select
+                  aria-label={`Institution for ${item.name}`}
+                  disabled={isPending}
+                  className="rounded-lg border bg-background px-3 py-1 text-sm"
+                  value={item.institutionId ?? ""}
+                  onChange={(event) =>
+                    startTransition(async () => {
+                      try {
+                        await renameMetadata(
+                          table,
+                          item.id,
+                          item.name,
+                          event.target.value
+                        )
+                        load()
+                      } catch (cause) {
+                        setError(message(cause))
+                      }
+                    })
+                  }
+                >
+                  <option value="">No Institution</option>
+                  {institutions.map((institution) => (
+                    <option key={institution.id} value={institution.id}>
+                      {institution.name}
+                    </option>
+                  ))}
+                </select>
+              ) : null}
               <Button
                 variant="outline"
                 size="sm"
@@ -296,7 +354,12 @@ export function MetadataManager({
                   if (!next?.trim() || next.trim() === item.name) return
                   startTransition(async () => {
                     try {
-                      await renameMetadata(table, item.id, next)
+                      await renameMetadata(
+                        table,
+                        item.id,
+                        next,
+                        item.institutionId ?? undefined
+                      )
                       load()
                     } catch (cause) {
                       setError(message(cause))

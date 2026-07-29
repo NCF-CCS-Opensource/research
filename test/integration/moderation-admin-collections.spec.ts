@@ -82,6 +82,13 @@ describe("moderation and administration", () => {
       decision: "approved",
     })
     expect(denied.error).not.toBeNull()
+    expect(
+      (
+        await reader.functions.invoke("r2", {
+          body: { action: "moderation-download", researchId: approvedId },
+        })
+      ).error
+    ).not.toBeNull()
 
     const approved = await admin.rpc("moderate_research", {
       target_id: approvedId,
@@ -127,6 +134,28 @@ describe("moderation and administration", () => {
     expect(
       (await admin.from("categories").insert({ name: "Admin Category" })).error
     ).toBeNull()
+    const institution = await admin
+      .from("institutions")
+      .insert({ name: `Admin Institution ${Date.now()}` })
+      .select("id")
+      .single()
+    const program = await admin
+      .from("programs")
+      .insert({
+        name: `Admin Program ${Date.now()}`,
+        institution_id: institution.data!.id,
+      })
+      .select("institution_id")
+      .single()
+    expect(program.data?.institution_id).toBe(institution.data!.id)
+    expect(
+      (
+        await reader.from("programs").insert({
+          name: "Denied Program",
+          institution_id: institution.data!.id,
+        })
+      ).error
+    ).not.toBeNull()
     expect((await reader.from("profiles").select("id")).data).toEqual([
       expect.objectContaining({ id: expect.any(String) }),
     ])

@@ -260,19 +260,27 @@ export async function createOwnedResearch(input: {
 }
 
 export async function getMyResearches() {
-  const { data, error } = await getSupabase()
+  const supabase = getSupabase()
+  const user = (await supabase.auth.getUser()).data.user
+  if (!user) throw new ApiError("Authentication required", 401)
+  const { data, error } = await supabase
     .from("public_research")
     .select("*")
+    .eq("uploader_id", user.id)
     .order("created_at", { ascending: false })
   if (error) throw new ApiError(error.message, 500)
   return data.map(mapResearch)
 }
 
 export async function getMyResearch(id: string) {
-  const { data, error } = await getSupabase()
+  const supabase = getSupabase()
+  const user = (await supabase.auth.getUser()).data.user
+  if (!user) throw new ApiError("Authentication required", 401)
+  const { data, error } = await supabase
     .from("public_research")
     .select("*")
     .eq("id", id)
+    .eq("uploader_id", user.id)
     .single()
   if (error) throw new ApiError(error.message, 404)
   return mapResearch(data)
@@ -280,13 +288,23 @@ export async function getMyResearch(id: string) {
 
 export async function updateOwnedResearch(
   id: string,
-  input: { title: string; abstract: string; publishDate?: string }
+  input: {
+    title: string
+    abstract: string
+    publishDate?: string
+    authors: Array<{ name: string; email?: string }>
+    categoryIds: string[]
+    keywordIds: string[]
+  }
 ) {
   const { error } = await getSupabase().rpc("update_research_record", {
     target_id: id,
     research_title: input.title,
     research_abstract: input.abstract,
     research_publish_date: input.publishDate || null,
+    research_authors: input.authors,
+    category_ids: input.categoryIds,
+    keyword_ids: input.keywordIds,
   })
   if (error) throw new ApiError(error.message, 400)
 }
@@ -296,7 +314,25 @@ export async function deleteOwnedResearch(id: string) {
   if (error) throw new ApiError(error.message, 400)
 }
 
-export async function callR2<T>(body: Record<string, unknown>) {
+type R2Request =
+  | {
+      action: "presign-upload"
+      researchId: string
+      filename: string
+      contentType: string
+    }
+  | {
+      action: "confirm-upload" | "owner-download" | "moderation-download"
+      researchId: string
+    }
+  | { action: "granted-download"; requestId: string }
+  | {
+      action: "email-pdf-access"
+      event: "requested" | "cancel" | "approve" | "reject" | "revoke"
+      requestId: string
+    }
+
+export async function callR2<T>(body: R2Request) {
   const { data, error } = await getSupabase().functions.invoke("r2", { body })
   if (error) throw error
   if (data?.error) throw new Error(data.error)
@@ -363,29 +399,58 @@ export type MetadataTable =
   | "programs"
 
 export async function getMetadata(table: MetadataTable) {
+  if (table === "programs") {
+    const { data, error } = await getSupabase()
+      .from("programs")
+      .select("id,name,institution_id")
+      .order("name")
+    if (error) throw new ApiError(error.message, 500)
+    return data.map((item) => ({
+      id: item.id,
+      name: item.name,
+      institutionId: item.institution_id,
+    }))
+  }
   const { data, error } = await getSupabase()
     .from(table)
     .select("id,name")
     .order("name")
   if (error) throw new ApiError(error.message, 500)
-  return data as Array<{ id: string; name: string }>
+  return data.map((item) => ({
+    id: item.id,
+    name: item.name,
+    institutionId: null,
+  }))
 }
 
-export async function createMetadata(table: MetadataTable, name: string) {
+export async function createMetadata(
+  table: MetadataTable,
+  name: string,
+  institutionId?: string
+) {
   const { error } = await getSupabase()
     .from(table)
-    .insert({ name: name.trim() })
+    .insert(
+      table === "programs"
+        ? { name: name.trim(), institution_id: institutionId || null }
+        : { name: name.trim() }
+    )
   if (error) throw new ApiError(error.message, 400)
 }
 
 export async function renameMetadata(
   table: MetadataTable,
   id: string,
-  name: string
+  name: string,
+  institutionId?: string
 ) {
   const { error } = await getSupabase()
     .from(table)
-    .update({ name: name.trim() })
+    .update(
+      table === "programs"
+        ? { name: name.trim(), institution_id: institutionId || null }
+        : { name: name.trim() }
+    )
     .eq("id", id)
   if (error) throw new ApiError(error.message, 400)
 }
