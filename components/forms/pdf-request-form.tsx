@@ -4,12 +4,7 @@ import Link from "next/link"
 import { useState, useTransition } from "react"
 
 import { Button } from "@/components/ui/button"
-import { clientAction } from "@/lib/client-api"
-
-type PdfRequestResponse = {
-  id: string
-  status: string
-}
+import { createPdfRequest } from "@/lib/api"
 
 export function PdfRequestForm({ researchId }: { researchId: string }) {
   const [message, setMessage] = useState<string | null>(null)
@@ -25,10 +20,7 @@ export function PdfRequestForm({ researchId }: { researchId: string }) {
 
     startTransition(async () => {
       try {
-        const response = await clientAction<PdfRequestResponse>("/pdf-requests", "POST", {
-          researchId,
-          requestNote: form.get("requestNote"),
-        })
+        const response = await createPdfRequest(researchId, String(form.get("requestNote") ?? ""))
         setMessage(`Request submitted. Status: ${response.status}.`)
         formElement.reset()
       } catch (err) {

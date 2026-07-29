@@ -5,6 +5,7 @@ import { useEffect, useState, useTransition } from "react"
 
 import { Button } from "@/components/ui/button"
 import { callR2, deleteOwnedResearch, getMyResearches, resubmitResearch } from "@/lib/api"
+import { uploadResearchPdf } from "@/lib/upload-research-pdf"
 import type { ResearchDetail } from "@/types/api"
 
 export function OwnerResearchPanel() {
@@ -58,6 +59,18 @@ export function OwnerResearchPanel() {
               {paper.status !== "approved" ? <Button variant="outline" size="sm" asChild><Link href={`/dashboard/papers/${paper.id}/edit`}>Edit</Link></Button> : null}
               {paper.status === "rejected" ? <Button variant="outline" size="sm" disabled={isPending} onClick={() => startTransition(async () => { await resubmitResearch(paper.id); load() })}>Resubmit</Button> : null}
               {paper.uploadComplete ? <Button variant="outline" size="sm" disabled={isPending} onClick={() => download(paper.id)}>Download</Button> : null}
+              {paper.uploadComplete ? <label className="inline-flex h-7 cursor-pointer items-center rounded-lg border px-2.5 text-[0.8rem] font-medium hover:bg-muted">
+                Replace PDF
+                <input className="sr-only" type="file" accept="application/pdf" disabled={isPending} onChange={(event) => {
+                  const file = event.target.files?.[0]
+                  if (!file) return
+                  startTransition(async () => {
+                    const result = await uploadResearchPdf(paper.id, file)
+                    if (result.status !== "ok") setError(result.message)
+                    load()
+                  })
+                }} />
+              </label> : null}
               <Button variant="outline" size="sm" disabled={isPending} onClick={() => remove(paper.id)}>Delete</Button>
             </div>
           </div>

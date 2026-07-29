@@ -1,4 +1,4 @@
-import { PdfRequestsPanel } from "@/components/features/protected-panels"
+import { PdfRequestsPanel } from "@/components/features/pdf-access-panels"
 import { DashboardShell } from "@/components/layout/dashboard-shell"
 
 export default function PdfRequestsPage() {

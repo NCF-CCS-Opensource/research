@@ -4,8 +4,13 @@ import Link from "next/link"
 import { useEffect, useRef, useState, useTransition } from "react"
 
 import { Button } from "@/components/ui/button"
-import { clientAction, clientPublicGet } from "@/lib/client-api"
-import { addToCollection as saveToCollection } from "@/lib/api"
+import {
+  addToCollection as saveToCollection,
+  callR2,
+  getPdfAccessState,
+  recordEngagement,
+  transitionPdfRequest,
+} from "@/lib/api"
 import type { PdfAccessState } from "@/types/api"
 
 export function ResearchActions({
@@ -27,11 +32,11 @@ export function ResearchActions({
   useEffect(() => {
     if (trackedView.current) return
     trackedView.current = true
-    void clientAction<{ message: string }>(`/research/${researchId}/view`, "POST").catch(() => {})
+    void recordEngagement(researchId, "view").catch(() => {})
   }, [researchId])
 
   function loadAccessState() {
-    clientPublicGet<PdfAccessState>(`/pdf-requests/${researchId}/access-state`)
+    getPdfAccessState(researchId)
       .then(({ state, requestId, availableAt, reason }) => {
         setAccessState(state)
         setRequestId(requestId ?? null)
@@ -50,7 +55,7 @@ export function ResearchActions({
     setError(null)
     startTransition(async () => {
       try {
-        await clientAction(`/pdf-requests/${requestId}/cancel`, "POST")
+        await transitionPdfRequest(requestId, "cancel")
         loadAccessState()
       } catch (err) {
         setError(err instanceof Error ? err.message : "Unable to cancel request")
@@ -63,8 +68,8 @@ export function ResearchActions({
     setError(null)
     startTransition(async () => {
       try {
-        const { url } = await clientAction<{ url: string }>(`/pdf-requests/${requestId}/download`, "POST")
-        window.open(url, "_blank")
+        const { url } = await callR2<{ url: string }>({ action: "granted-download", requestId })
+        window.open(url, "_blank", "noopener,noreferrer")
       } catch (err) {
         setError(err instanceof Error ? err.message : "Unable to download PDF")
       }
@@ -89,7 +94,7 @@ export function ResearchActions({
     setMessage(null)
     startTransition(async () => {
       try {
-        void clientAction<{ message: string }>(`/research/${researchId}/cite`, "POST").catch(() => {})
+        void recordEngagement(researchId, "citation").catch(() => {})
         await navigator.clipboard.writeText(citation)
         setMessage("Citation copied")
       } catch (err) {

@@ -3,14 +3,14 @@
 import Link from "next/link"
 import { useEffect, useState } from "react"
 
-import { clientEnvelope } from "@/lib/client-api"
+import { getNotifications } from "@/lib/api"
 
 export function NotificationLink() {
   const [count, setCount] = useState<number | null>(null)
 
   useEffect(() => {
-    clientEnvelope<{ count: number }>("/notifications/unread-count")
-      .then((data) => setCount(data.count))
+    getNotifications()
+      .then((data) => setCount(data.filter((item) => !item.read).length))
       .catch(() => {})
   }, [])
 

@@ -491,3 +491,112 @@ export async function getAuditLogs() {
   if (error) throw new ApiError(error.message, 500)
   return data
 }
+
+export type PdfAccessDashboard = {
+  mine: Array<{
+    id: string
+    researchId: string | null
+    researchTitle: string
+    ownerName: string
+    requestNote: string
+    status: string
+    createdAt: string
+  }>
+  pending: Array<{
+    id: string
+    researchId: string
+    researchTitle: string
+    requesterName: string
+    requesterInstitution: string
+    requesterProgram: string | null
+    requestNote: string
+    status: string
+    createdAt: string
+  }>
+  grants: Array<{
+    id: string
+    researchId: string
+    researchTitle: string
+    requesterName: string
+    requesterInstitution: string
+    requesterProgram: string | null
+    status: string
+    createdAt: string
+    grantedAt: string
+  }>
+}
+
+export async function getPdfAccessState(researchId: string) {
+  const { data, error } = await getSupabase().rpc("get_pdf_access_state", {
+    target_research_id: researchId,
+  })
+  if (error) throw new ApiError(error.message, 400)
+  return data as import("@/types/api").PdfAccessState
+}
+
+export async function createPdfRequest(researchId: string, note: string) {
+  const { data, error } = await getSupabase().rpc("create_pdf_request", {
+    target_research_id: researchId,
+    note,
+  })
+  if (error) throw new ApiError(error.message, 400)
+  void callR2({ action: "email-pdf-access", event: "requested", requestId: data }).catch(() => {})
+  return { id: data as string, status: "pending" }
+}
+
+export async function transitionPdfRequest(
+  requestId: string,
+  action: "cancel" | "approve" | "reject" | "revoke"
+) {
+  const { data, error } = await getSupabase().rpc("transition_pdf_request", {
+    target_request_id: requestId,
+    action,
+  })
+  if (error) throw new ApiError(error.message, 400)
+  void callR2({ action: "email-pdf-access", event: action, requestId }).catch(() => {})
+  return data as string
+}
+
+export async function getPdfAccessDashboard() {
+  const { data, error } = await getSupabase().rpc("get_pdf_access_dashboard")
+  if (error) throw new ApiError(error.message, 500)
+  return data as PdfAccessDashboard
+}
+
+export async function getNotifications() {
+  const { data, error } = await getSupabase().rpc("get_notifications")
+  if (error) throw new ApiError(error.message, 500)
+  return data as Array<{
+    id: string
+    user_id: string
+    research_id: string | null
+    message: string
+    read: boolean
+    created_at: string
+  }>
+}
+
+export async function markNotificationsRead() {
+  const { error } = await getSupabase().rpc("mark_notifications_read")
+  if (error) throw new ApiError(error.message, 400)
+}
+
+export async function recordEngagement(researchId: string, kind: "view" | "citation") {
+  const { error } = await getSupabase().rpc("record_engagement", {
+    target_research_id: researchId,
+    kind,
+  })
+  if (error) throw new ApiError(error.message, 400)
+}
+
+export async function getEngagementOverview() {
+  const { data, error } = await getSupabase().rpc("get_engagement_overview")
+  if (error) throw new ApiError(error.message, 500)
+  return data as {
+    totalResearches: number
+    totalViews: number
+    totalDownloads: number
+    totalCitations: number
+    totalUsers: number | null
+  }
+}

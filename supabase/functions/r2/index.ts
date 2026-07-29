@@ -26,7 +26,15 @@ Deno.serve(async (request) => {
     if (authError || !auth.user) return json({ error: "Authentication required" }, 401)
 
     const body = await request.json()
-    const researchId = String(body.researchId ?? "")
+    let researchId = String(body.researchId ?? "")
+    if (body.action === "email-pdf-access") {
+      const request = await service
+        .from("pdf_requests")
+        .select("research_id")
+        .eq("id", String(body.requestId ?? ""))
+        .single()
+      researchId = request.data?.research_id ?? ""
+    }
     const { data: research } = await service
       .from("researches")
       .select("id,uploader_id,file_key,pending_file_key,upload_complete")
@@ -111,6 +119,78 @@ Deno.serve(async (request) => {
         action: "moderate",
       })
       return json({ url })
+    }
+
+    if (body.action === "granted-download") {
+      const requestId = String(body.requestId ?? "")
+      const authorized = await service.rpc("authorize_granted_download", {
+        target_request_id: requestId,
+        requester: auth.user.id,
+      })
+      if (authorized.error) throw authorized.error
+      const grant = authorized.data?.[0]
+      if (!grant) return json({ error: "PDF Access Grant not found" }, 404)
+      const url = await getSignedUrl(
+        s3,
+        new GetObjectCommand({ Bucket: bucket, Key: grant.file_key }),
+        { expiresIn: 300 },
+      )
+      return json({ url })
+    }
+
+    if (body.action === "email-pdf-access") {
+      const requestId = String(body.requestId ?? "")
+      const { data: access } = await service
+        .from("pdf_requests")
+        .select("requester_id,research_id,research_title,status")
+        .eq("id", requestId)
+        .single()
+      if (!access) return json({ error: "PDF Access request not found" }, 404)
+      const { data: owner } = await service
+        .from("researches")
+        .select("uploader_id")
+        .eq("id", access.research_id)
+        .single()
+      const event = String(body.event ?? "")
+      const isRequest = event === "requested" || event === "cancel"
+      const expectedStatus: Record<string, string> = {
+        requested: "pending",
+        cancel: "canceled",
+        approve: "granted",
+        reject: "rejected",
+        revoke: "revoked",
+      }
+      if (access.status !== expectedStatus[event])
+        return json({ error: "PDF Access event is stale" }, 409)
+      if (
+        (isRequest && auth.user.id !== access.requester_id)
+        || (!isRequest && auth.user.id !== owner?.uploader_id)
+      ) return json({ error: "PDF Access request not found" }, 404)
+      if (!Deno.env.get("RESEND_API_KEY") || !Deno.env.get("EMAIL_FROM"))
+        return json({ message: "Application email is not configured" })
+
+      const recipientId = isRequest ? owner?.uploader_id : access.requester_id
+      if (!recipientId) return json({ message: "Recipient is unavailable" })
+      const { data: recipient } = await service.auth.admin.getUserById(recipientId)
+      if (!recipient.user?.email) return json({ message: "Recipient is unavailable" })
+      const subject = isRequest
+        ? `PDF access ${event}: ${access.research_title}`
+        : `PDF access ${access.status}: ${access.research_title}`
+      const response = await fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${Deno.env.get("RESEND_API_KEY")}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          from: Deno.env.get("EMAIL_FROM"),
+          to: [recipient.user.email],
+          subject,
+          text: subject,
+        }),
+      })
+      if (!response.ok) return json({ message: "Email delivery failed" })
+      return json({ message: "Email sent" })
     }
 
     return json({ error: "Unsupported action" }, 400)

@@ -1,6 +1,6 @@
-import { AnalyticsPanel } from "@/components/features/protected-panels"
+import { EngagementPanel } from "@/components/features/engagement-panel"
 import { DashboardShell } from "@/components/layout/dashboard-shell"
 
 export default function DashboardPage() {
-  return <DashboardShell><AnalyticsPanel /></DashboardShell>
+  return <DashboardShell><EngagementPanel /></DashboardShell>
 }
