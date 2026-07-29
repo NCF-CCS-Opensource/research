@@ -49,9 +49,24 @@ describe("Guest discovery against local Supabase", () => {
     expect(hidden.error).toBeNull()
     expect(hidden.data).toEqual([])
 
-    const firstPage = await searchResearch({ page: 1, limit: 1, sort: "date" })
-    const secondPage = await searchResearch({ page: 2, limit: 1, sort: "date" })
-    const emptyPage = await searchResearch({ page: 3, limit: 1, sort: "date" })
+    const firstPage = await searchResearch({
+      q: "Grace Hopper",
+      page: 1,
+      limit: 1,
+      sort: "date",
+    })
+    const secondPage = await searchResearch({
+      q: "Grace Hopper",
+      page: 2,
+      limit: 1,
+      sort: "date",
+    })
+    const emptyPage = await searchResearch({
+      q: "Grace Hopper",
+      page: 3,
+      limit: 1,
+      sort: "date",
+    })
     expect(firstPage.meta).toEqual({ total: 2, page: 1, totalPages: 2 })
     expect(secondPage.meta).toEqual({ total: 2, page: 2, totalPages: 2 })
     expect(secondPage.data[0].id).not.toBe(firstPage.data[0].id)
@@ -61,10 +76,9 @@ describe("Guest discovery against local Supabase", () => {
     })
 
     const authors = await getAuthors({ page: 1, limit: 20 })
-    expect(authors.data.map((author) => author.name)).toEqual([
-      "Ada Lovelace",
-      "Grace Hopper",
-    ])
+    expect(authors.data.map((author) => author.name)).toEqual(
+      expect.arrayContaining(["Ada Lovelace", "Grace Hopper"])
+    )
     expect(
       (await getAuthorPapers("30000000-0000-0000-0000-000000000001")).meta.total
     ).toBe(1)

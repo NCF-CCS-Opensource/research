@@ -56,6 +56,14 @@ export function DashboardShell({
                 {label}
               </Link>
             ))}
+            {admin ? (
+              <Link
+                href="/dashboard"
+                className="mt-2 border-t border-l-2 border-l-transparent px-3 pt-4 pb-2.5 text-sm font-medium text-primary hover:border-l-primary hover:bg-muted focus-visible:border-l-primary focus-visible:bg-muted focus-visible:outline-none"
+              >
+                My Research Workspace
+              </Link>
+            ) : null}
             {!admin && <NotificationLink />}
           </nav>
         </Card>

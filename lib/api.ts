@@ -1,6 +1,7 @@
 import type {
   Author,
   Category,
+  DashboardData,
   Keyword,
   PaginatedResponse,
   ResearchDetail,
@@ -191,7 +192,7 @@ export function mapResearch(row: PublicResearchRow): ResearchDetail {
     uploadComplete: row.upload_complete as boolean | undefined,
     viewCount: row.view_count as number,
     downloadCount: row.download_count as number,
-    citationCount: row.citation_count as number,
+    citationExportCount: row.citation_export_count as number,
     rejectionReason: row.rejection_reason as string | null,
     createdAt: row.created_at as string,
     updatedAt: row.updated_at as string,
@@ -619,7 +620,7 @@ export async function markNotificationsRead() {
 
 export async function recordEngagement(
   researchId: string,
-  kind: "view" | "citation"
+  kind: "view" | "citation_export"
 ) {
   const { error } = await getSupabase().rpc("record_engagement", {
     target_research_id: researchId,
@@ -628,16 +629,16 @@ export async function recordEngagement(
   if (error) throw new ApiError(error.message, 400)
 }
 
-export async function getEngagementOverview() {
-  const { data, error } = await getSupabase().rpc("get_engagement_overview")
+export async function getDashboard(
+  scope: "personal" | "admin",
+  period: 30 | 90
+) {
+  const { data, error } = await getSupabase().rpc("get_dashboard", {
+    requested_scope: scope,
+    requested_period: period,
+  })
   if (error) throw new ApiError(error.message, 500)
-  return data as {
-    totalResearches: number
-    totalViews: number
-    totalDownloads: number
-    totalCitations: number
-    totalUsers: number | null
-  }
+  return data as DashboardData
 }
 
 export async function getRegistrationOptions() {

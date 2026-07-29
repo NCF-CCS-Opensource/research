@@ -6,6 +6,7 @@ import {
 } from "npm:@aws-sdk/client-s3"
 import { getSignedUrl } from "npm:@aws-sdk/s3-request-presigner"
 import { createClient } from "npm:@supabase/supabase-js"
+import { countsDownloadEngagement } from "../_shared/engagement.ts"
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -156,7 +157,7 @@ Deno.serve(async (request) => {
       return json({ url })
     }
 
-    if (body.action === "granted-download") {
+    if (countsDownloadEngagement(body.action)) {
       const requestId = String(body.requestId ?? "")
       const authorized = await service.rpc("authorize_granted_download", {
         target_request_id: requestId,

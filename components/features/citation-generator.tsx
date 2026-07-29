@@ -1,8 +1,10 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useTransition } from "react"
 
 import { Button } from "@/components/ui/button"
+import { recordEngagement } from "@/lib/api"
+import { trackSuccessfulCitationExport } from "@/lib/citation-export"
 
 const FORMATS = {
   APA: (authors: string, year: string, title: string) =>
@@ -50,23 +52,60 @@ function downloadBibtex(authors: string, year: string, title: string) {
 }
 
 export function CitationGenerator({
+  researchId,
   authors,
   year,
   title,
 }: {
+  researchId: string
   authors: string
   year: string
   title: string
 }) {
   const [format, setFormat] = useState<keyof typeof FORMATS>("APA")
   const [copied, setCopied] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [isPending, startTransition] = useTransition()
 
   const citation = FORMATS[format](authors, year, title)
 
   function copy() {
-    navigator.clipboard.writeText(citation).then(() => {
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
+    setError(null)
+    startTransition(async () => {
+      try {
+        const tracked = await trackSuccessfulCitationExport(
+          () => navigator.clipboard.writeText(citation),
+          () => recordEngagement(researchId, "citation_export")
+        )
+        setCopied(true)
+        if (!tracked)
+          setError("Citation copied, but its activity could not be recorded")
+        setTimeout(() => setCopied(false), 2000)
+      } catch (reason) {
+        setError(
+          reason instanceof Error ? reason.message : "Citation export failed"
+        )
+      }
+    })
+  }
+
+  function exportBibtex() {
+    setError(null)
+    startTransition(async () => {
+      try {
+        const tracked = await trackSuccessfulCitationExport(
+          () => downloadBibtex(authors, year, title),
+          () => recordEngagement(researchId, "citation_export")
+        )
+        if (!tracked)
+          setError(
+            "Citation downloaded, but its activity could not be recorded"
+          )
+      } catch (reason) {
+        setError(
+          reason instanceof Error ? reason.message : "Citation export failed"
+        )
+      }
     })
   }
 
@@ -96,17 +135,23 @@ export function CitationGenerator({
 
       {/* Actions */}
       <div className="flex flex-wrap gap-2">
-        <Button variant="outline" size="sm" onClick={copy}>
+        <Button variant="outline" size="sm" disabled={isPending} onClick={copy}>
           {copied ? "Copied!" : "Copy citation"}
         </Button>
         <Button
           variant="outline"
           size="sm"
-          onClick={() => downloadBibtex(authors, year, title)}
+          disabled={isPending}
+          onClick={exportBibtex}
         >
           Download .bib
         </Button>
       </div>
+      {error ? (
+        <p role="alert" className="text-sm text-destructive">
+          {error}
+        </p>
+      ) : null}
     </div>
   )
 }

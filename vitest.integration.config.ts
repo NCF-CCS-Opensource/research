@@ -6,6 +6,7 @@ export default defineConfig({
   test: {
     include: ["test/integration/**/*.spec.ts"],
     globalSetup: ["test/integration/setup.ts"],
+    fileParallelism: false,
     testTimeout: 30_000,
   },
 })

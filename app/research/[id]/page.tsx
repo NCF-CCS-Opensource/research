@@ -140,8 +140,8 @@ export default async function ResearchDetailPage({ params }: PageProps) {
               {research.downloadCount ?? 0}
             </div>
             <div className="flex items-center gap-2">
-              <Quote className="size-4" /> Citations:{" "}
-              {research.citationCount ?? 0}
+              <Quote className="size-4" /> Citation Exports:{" "}
+              {research.citationExportCount ?? 0}
             </div>
             {(() => {
               const mins = estimateReadTime(research.abstract)
@@ -170,6 +170,7 @@ export default async function ResearchDetailPage({ params }: PageProps) {
           <h2 className="text-xl font-semibold">Citation Generator</h2>
           <div className="mt-4">
             <CitationGenerator
+              researchId={research.id}
               authors={authorLine}
               year={citationYear}
               title={research.title}

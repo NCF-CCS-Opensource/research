@@ -22,7 +22,7 @@ insert into public.authors (id, name, email) values
   ('30000000-0000-0000-0000-000000000003', 'Hidden Researcher', null);
 
 insert into public.researches (
-  id, title, abstract, publish_date, status, upload_complete, view_count, download_count, citation_count
+  id, title, abstract, publish_date, status, upload_complete, view_count, download_count, citation_export_count
 ) values
   (
     '40000000-0000-0000-0000-000000000001',
