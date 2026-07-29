@@ -1,10 +1,9 @@
 import Link from "next/link"
-import { cookies } from "next/headers"
 import { BookOpen, Search } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { ThemeToggle } from "@/components/layout/theme-toggle"
-import { USER_ROLE_COOKIE } from "@/lib/auth-cookies"
+import { createServerSupabase } from "@/lib/supabase-server"
 
 const navItems = [
   { href: "/search", label: "Search" },
@@ -13,7 +12,13 @@ const navItems = [
 ]
 
 export async function Navbar() {
-  const role = (await cookies()).get(USER_ROLE_COOKIE)?.value ?? null
+  const supabase = await createServerSupabase()
+  const { data } = await supabase.auth.getClaims()
+  const userId = data?.claims?.sub
+  const profile = userId
+    ? await supabase.from("profiles").select("role").eq("id", userId).maybeSingle()
+    : null
+  const role = profile?.data?.role ?? null
 
   return (
     <header className="sticky top-0 z-40 border-b bg-background/90 backdrop-blur">

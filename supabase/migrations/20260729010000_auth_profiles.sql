@@ -1,0 +1,186 @@
+create type public.user_role as enum ('user', 'admin');
+create type public.account_status as enum ('active', 'suspended');
+
+create table public.institutions (
+  id uuid primary key default gen_random_uuid(),
+  name varchar(255) not null unique
+);
+
+create table public.programs (
+  id uuid primary key default gen_random_uuid(),
+  name varchar(255) not null,
+  institution_id uuid references public.institutions (id) on delete restrict,
+  unique (name, institution_id)
+);
+
+create table public.profiles (
+  id uuid primary key references auth.users (id) on delete cascade,
+  email varchar(255) not null,
+  first_name varchar(100) not null,
+  middle_name varchar(100),
+  last_name varchar(100) not null,
+  suffix varchar(20),
+  institution_id uuid references public.institutions (id) on delete set null,
+  program_id uuid references public.programs (id) on delete set null,
+  role public.user_role not null default 'user',
+  status public.account_status not null default 'active',
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+alter table public.institutions enable row level security;
+alter table public.programs enable row level security;
+alter table public.profiles enable row level security;
+
+create function public.is_active_user()
+returns boolean
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select exists (
+    select 1 from public.profiles
+    where id = (select auth.uid()) and status = 'active'
+  );
+$$;
+
+create function public.is_admin()
+returns boolean
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select exists (
+    select 1 from public.profiles
+    where id = (select auth.uid()) and role = 'admin' and status = 'active'
+  );
+$$;
+
+create policy "Public reads Institutions"
+on public.institutions for select
+to anon, authenticated
+using (true);
+
+create policy "Public reads Programs"
+on public.programs for select
+to anon, authenticated
+using (true);
+
+create policy "Users read their Profile and Admins read Profiles"
+on public.profiles for select
+to authenticated
+using (
+  (id = (select auth.uid()) and status = 'active')
+  or (select public.is_admin())
+);
+
+create policy "Users update their active Profile"
+on public.profiles for update
+to authenticated
+using (id = (select auth.uid()) and status = 'active')
+with check (id = (select auth.uid()) and status = 'active');
+
+grant select on public.institutions, public.programs to anon, authenticated;
+grant select on public.profiles to authenticated;
+grant update (
+  first_name, middle_name, last_name, suffix, institution_id, program_id, updated_at
+) on public.profiles to authenticated;
+grant execute on function public.is_active_user(), public.is_admin() to authenticated;
+
+create function public.create_profile_for_auth_user()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  insert into public.profiles (
+    id,
+    email,
+    first_name,
+    middle_name,
+    last_name,
+    suffix,
+    institution_id,
+    program_id
+  )
+  values (
+    new.id,
+    new.email,
+    coalesce(nullif(trim(new.raw_user_meta_data ->> 'first_name'), ''), 'User'),
+    nullif(trim(new.raw_user_meta_data ->> 'middle_name'), ''),
+    coalesce(nullif(trim(new.raw_user_meta_data ->> 'last_name'), ''), 'Account'),
+    nullif(trim(new.raw_user_meta_data ->> 'suffix'), ''),
+    (
+      select id from public.institutions
+      where id::text = new.raw_user_meta_data ->> 'institution_id'
+      limit 1
+    ),
+    (
+      select id from public.programs
+      where id::text = new.raw_user_meta_data ->> 'program_id'
+      limit 1
+    )
+  );
+  return new;
+end;
+$$;
+
+create trigger create_profile_after_signup
+after insert on auth.users
+for each row execute function public.create_profile_for_auth_user();
+
+create function public.bootstrap_first_admin(target_email text)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  if exists (select 1 from public.profiles where role = 'admin') then
+    raise exception 'An Admin already exists';
+  end if;
+
+  update public.profiles
+  set role = 'admin', updated_at = now()
+  where lower(email) = lower(trim(target_email));
+
+  if not found then
+    raise exception 'Profile not found';
+  end if;
+end;
+$$;
+
+revoke all on function public.bootstrap_first_admin(text) from public, anon, authenticated;
+grant execute on function public.bootstrap_first_admin(text) to service_role;
+
+create function public.admin_update_account(
+  target_id uuid,
+  new_role public.user_role,
+  new_status public.account_status
+)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  if not public.is_admin() then
+    raise exception 'Admin access required' using errcode = '42501';
+  end if;
+
+  update public.profiles
+  set role = new_role, status = new_status, updated_at = now()
+  where id = target_id;
+
+  if not found then
+    raise exception 'Profile not found';
+  end if;
+end;
+$$;
+
+grant execute on function public.admin_update_account(
+  uuid, public.user_role, public.account_status
+) to authenticated;

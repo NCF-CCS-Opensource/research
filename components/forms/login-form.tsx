@@ -4,8 +4,7 @@ import { useState, useTransition } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 
 import { Button } from "@/components/ui/button"
-import { ApiError } from "@/lib/api"
-import type { ApiEnvelope, LoginResponse } from "@/types/api"
+import { getSupabase } from "@/lib/supabase"
 
 export function LoginForm() {
   const router = useRouter()
@@ -20,22 +19,25 @@ export function LoginForm() {
 
     startTransition(async () => {
       try {
-        const loginResponse = await fetch("/api/auth/login", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email: form.get("email"), password: form.get("password") }),
-          cache: "no-store",
+        const supabase = getSupabase()
+        const { data, error: loginError } = await supabase.auth.signInWithPassword({
+          email: String(form.get("email")),
+          password: String(form.get("password")),
         })
-
-        if (!loginResponse.ok) {
-          const payload = (await loginResponse.json()) as { message?: string }
-          throw new ApiError(payload.message ?? "Unable to sign in", loginResponse.status)
+        if (loginError) throw loginError
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("role,status")
+          .eq("id", data.user.id)
+          .single()
+        if (!profile || profile.status !== "active") {
+          await supabase.auth.signOut()
+          throw new Error("This account is suspended")
         }
-
-        const response = (await loginResponse.json()) as ApiEnvelope<LoginResponse>
         const next = searchParams.get("next")
-        const fallback = response.data.user.role === "admin" ? "/admin" : "/dashboard"
+        const fallback = profile.role === "admin" ? "/admin" : "/dashboard"
         router.push(next?.startsWith("/") && !next.startsWith("//") ? next : fallback)
+        router.refresh()
       } catch (err) {
         setError(err instanceof Error ? err.message : "Unable to sign in")
       }

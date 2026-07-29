@@ -2,6 +2,16 @@ insert into public.categories (id, name) values
   ('10000000-0000-0000-0000-000000000001', 'Software Engineering'),
   ('10000000-0000-0000-0000-000000000002', 'Data Science');
 
+insert into public.institutions (id, name) values
+  ('50000000-0000-0000-0000-000000000001', 'Naga College Foundation');
+
+insert into public.programs (id, name, institution_id) values
+  (
+    '60000000-0000-0000-0000-000000000001',
+    'Bachelor of Science in Computer Science',
+    '50000000-0000-0000-0000-000000000001'
+  );
+
 insert into public.keywords (id, name) values
   ('20000000-0000-0000-0000-000000000001', 'Accessibility'),
   ('20000000-0000-0000-0000-000000000002', 'Machine Learning');

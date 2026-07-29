@@ -1,6 +1,6 @@
-import { SettingsPanel } from "@/components/features/protected-panels"
+import { ProfileForm } from "@/components/forms/profile-form"
 import { DashboardShell } from "@/components/layout/dashboard-shell"
 
 export default function SettingsPage() {
-  return <DashboardShell><SettingsPanel /></DashboardShell>
+  return <DashboardShell><ProfileForm /></DashboardShell>
 }

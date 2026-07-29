@@ -5,7 +5,7 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 
 import { Button } from "@/components/ui/button"
-import { clientAction, clientPublicGet } from "@/lib/client-api"
+import { getSupabase } from "@/lib/supabase"
 import type { Category } from "@/types/api"
 
 type Option = Pick<Category, "id" | "name">
@@ -19,10 +19,14 @@ export function RegisterForm() {
   const [isPending, startTransition] = useTransition()
 
   useEffect(() => {
-    Promise.all([clientPublicGet<Option[]>("/institutions"), clientPublicGet<Option[]>("/programs")])
-      .then(([nextInstitutions, nextPrograms]) => {
-        setInstitutions(nextInstitutions)
-        setPrograms(nextPrograms)
+    const supabase = getSupabase()
+    Promise.all([
+      supabase.from("institutions").select("id,name").order("name"),
+      supabase.from("programs").select("id,name").order("name"),
+    ])
+      .then(([institutionResult, programResult]) => {
+        setInstitutions((institutionResult.data ?? []) as Option[])
+        setPrograms((programResult.data ?? []) as Option[])
       })
       .catch(() => {})
   }, [])
@@ -43,18 +47,23 @@ export function RegisterForm() {
     startTransition(async () => {
       try {
         const email = String(form.get("email") ?? "")
-        const payload = {
+        const { error: signupError } = await getSupabase().auth.signUp({
           email,
           password,
-          firstName: form.get("firstName"),
-          middleName: form.get("middleName") || undefined,
-          lastName: form.get("lastName"),
-          suffix: form.get("suffix") || undefined,
-          institutionId: form.get("institutionId") || undefined,
-          programId: form.get("programId") || undefined,
-        }
-        const response = await clientAction<{ message: string }>("/auth/register", "POST", payload)
-        setMessage(response.message)
+          options: {
+            emailRedirectTo: `${window.location.origin}/auth/confirm`,
+            data: {
+              first_name: form.get("firstName"),
+              middle_name: form.get("middleName") || undefined,
+              last_name: form.get("lastName"),
+              suffix: form.get("suffix") || undefined,
+              institution_id: form.get("institutionId") || undefined,
+              program_id: form.get("programId") || undefined,
+            },
+          },
+        })
+        if (signupError) throw signupError
+        setMessage("Check your email to confirm your account.")
         router.push(`/verify-email?email=${encodeURIComponent(email)}`)
       } catch (err) {
         setError(err instanceof Error ? err.message : "Unable to register")
