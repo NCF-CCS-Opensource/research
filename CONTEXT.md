@@ -21,7 +21,7 @@ An owner's attachment of a different research PDF to an existing research record
 _Avoid_: PDF edit, file update, grant transfer
 
 **PDF Access Request**:
-An authenticated user's request to download the research PDF of an approved research record with a completed upload, which the owner approves or rejects after notification. Only one request may be pending per user and research PDF; the requester may cancel it, and another attempt after cancellation, rejection, or revocation requires a 24-hour cooldown.
+A User's request to download the Research PDF of an approved Research Record with a Completed Upload, which the Owner approves or rejects after notification. Admins may see anonymous aggregate request counts and trends, but not individual requests, Request Notes, or Requester Identities. Only one request may be pending per User and Research PDF; the requester may cancel it, and another attempt after cancellation, rejection, or revocation requires a 24-hour cooldown.
 _Avoid_: PDF message, public PDF request, partial PDF request
 
 **Request Note**:
@@ -52,9 +52,13 @@ _Avoid_: Guest account, guest role, anonymous user
 A person with a registered, email-verified account who can authenticate, upload a research record, and submit a PDF Access Request for another owner's research PDF.
 _Avoid_: Guest, visitor, unverified account
 
+**Active Account**:
+A registered account whose administrative status permits authentication and normal User activity. It does not mean the User has logged in or interacted recently.
+_Avoid_: Active User, monthly active user, recent visitor
+
 **Admin**:
-An authenticated user with authority to moderate research records and exercise audited Moderation Access.
-_Avoid_: Owner, moderator account
+An authenticated User with authority to moderate Research Records and exercise audited Moderation Access. An Admin may separately be an Owner and switch to their personal research workspace; administrative and personal analytics remain distinct.
+_Avoid_: Owner-only role, moderator account
 
 **Owner**:
 The authenticated user who uploaded a research record and is stored as its uploader; ownership is separate from bibliographic authorship.
@@ -76,10 +80,26 @@ _Avoid_: Uploaded paper, PDF
 The state after a direct object upload succeeds and a trusted server-side component confirms the file exists in storage.
 _Avoid_: Metadata creation, approval
 
+**Ready for Moderation**:
+A pending Research Record with a Completed Upload that an Admin can approve or reject. A pending record with an incomplete upload still requires Owner action and is not part of the Admin moderation queue.
+_Avoid_: All pending records, stalled upload, pending approval
+
 **Collection**:
 A user's private saved-paper list containing references to research records; removing an item from a collection does not affect the research record.
 _Avoid_: Public folder, curated playlist, citation library
 
 **Engagement Count**:
-A research record's cumulative number of explicit views, authorized downloads, or citations. Passive renders and owner downloads are excluded; Moderation Access belongs only in the Audit Log.
+A Research Record's cumulative number of Research Views, authorized downloads, or Citation Exports. Passive renders and Owner downloads are excluded; Moderation Access belongs only in the Audit Log.
 _Avoid_: Analytics Event, trend history, page prefetch
+
+**Research View**:
+An opening of an approved Research Record's detail page. Repeat openings count separately; the measure does not identify unique visitors or claim audience reach.
+_Avoid_: Unique visitor, reach, search-result impression
+
+**Citation Export**:
+A successful copy or BibTeX download of a Research Record's generated citation. It measures citation intent, not a confirmed citation in another work.
+_Avoid_: Citation, citation impact, academic citation
+
+**Engagement Trend**:
+A daily, anonymous aggregate of Research Views, authorized downloads, and Citation Exports for a Research Record, used to compare activity over 30- or 90-day periods without identifying viewers.
+_Avoid_: Viewer history, raw clickstream, individual tracking
