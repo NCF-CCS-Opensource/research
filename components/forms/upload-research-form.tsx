@@ -3,12 +3,13 @@
 import { useState, useTransition, useEffect } from "react"
 
 import { Button } from "@/components/ui/button"
-import { createOwnedResearch, getCategories, getKeywords } from "@/lib/api"
-import { uploadResearchPdf } from "@/lib/upload-research-pdf"
+import { getCategories, getKeywords } from "@/lib/api"
+import {
+  submitResearchRecord,
+  type IngestOutcome,
+} from "@/lib/research-ingestion"
 
-type CreatedResearch = { id: string }
 type Option = { id: string; name: string }
-type FailedUpload = { researchId: string; file: File; skipUpload: boolean }
 
 export function MultiCheckbox({
   legend,
@@ -51,7 +52,9 @@ export function UploadResearchForm() {
   const [keywords, setKeywords] = useState<Option[]>([])
   const [message, setMessage] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [failedUpload, setFailedUpload] = useState<FailedUpload | null>(null)
+  const [retryClosure, setRetryClosure] = useState<
+    (() => Promise<IngestOutcome>) | null
+  >(null)
   const [isPending, startTransition] = useTransition()
 
   useEffect(() => {
@@ -63,62 +66,18 @@ export function UploadResearchForm() {
       .catch(() => {})
   }, [])
 
-  function onSubmit(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-    const form = new FormData(event.currentTarget)
-    const file = form.get("file")
-    setError(null)
-    setMessage(null)
-    setFailedUpload(null)
-
-    if (!(file instanceof File) || file.type !== "application/pdf") {
-      setError("Upload a PDF file.")
-      return
-    }
-
-    if (file.size > 50 * 1024 * 1024) {
-      setError("PDF must be 50 MB or smaller.")
-      return
-    }
-
-    startTransition(async () => {
-      try {
-        const authors = String(form.get("authors") ?? "")
-          .split("\n")
-          .map((line) => line.trim())
-          .filter(Boolean)
-          .map((name) => ({ name }))
-
-        const categoryIds = form.getAll("categoryIds").map(String)
-        const keywordIds = form.getAll("keywordIds").map(String)
-
-        const created: CreatedResearch = await createOwnedResearch({
-          title: String(form.get("title")),
-          abstract: String(form.get("abstract")),
-          publishDate: String(form.get("publishDate") || ""),
-          authors,
-          categoryIds,
-          keywordIds,
-        })
-
-        await runUpload(created.id, file)
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Upload failed")
-      }
-    })
-  }
-
-  async function runUpload(researchId: string, file: File, skipUpload = false) {
-    const outcome = await uploadResearchPdf(
-      researchId,
-      file,
-      undefined,
-      skipUpload
-    )
-
-    if (outcome.status === "ok") {
+  function handleOutcome(outcome: IngestOutcome) {
+    if (outcome.status === "completed") {
       setMessage("Research uploaded and submitted for approval.")
-      setFailedUpload(null)
+      setError(null)
+      setRetryClosure(null)
+      return
+    }
+
+    if (outcome.status === "invalid-input") {
+      setError(outcome.message)
+      setMessage(null)
+      setRetryClosure(null)
       return
     }
 
@@ -126,30 +85,65 @@ export function UploadResearchForm() {
       setError(
         "Upload to storage failed. Your research record was saved — retry to finish uploading the PDF."
       )
-      setFailedUpload({ researchId, file, skipUpload: false })
+      setMessage(null)
+      setRetryClosure(() => outcome.retry)
       return
     }
 
-    setError(
-      "The file reached storage but confirmation failed. Retry to finish submitting it."
-    )
-    setFailedUpload({ researchId, file, skipUpload: true })
+    if (outcome.status === "confirm-failed") {
+      setError(
+        "The file reached storage but confirmation failed. Retry to finish submitting it."
+      )
+      setMessage(null)
+      setRetryClosure(() => outcome.retry)
+      return
+    }
+  }
+
+  function onSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    const form = new FormData(event.currentTarget)
+    const file = form.get("file")
+    setError(null)
+    setMessage(null)
+    setRetryClosure(null)
+
+    if (!(file instanceof File)) {
+      setError("Upload a PDF file.")
+      return
+    }
+
+    startTransition(async () => {
+      const authors = String(form.get("authors") ?? "")
+        .split("\n")
+        .map((line) => line.trim())
+        .filter(Boolean)
+        .map((name) => ({ name }))
+
+      const categoryIds = form.getAll("categoryIds").map(String)
+      const keywordIds = form.getAll("keywordIds").map(String)
+
+      const outcome = await submitResearchRecord({
+        title: String(form.get("title")),
+        abstract: String(form.get("abstract")),
+        publishDate: String(form.get("publishDate") || ""),
+        authors,
+        categoryIds,
+        keywordIds,
+        file,
+      })
+
+      handleOutcome(outcome)
+    })
   }
 
   function onRetry() {
-    if (!failedUpload) return
+    if (!retryClosure) return
     setError(null)
     setMessage(null)
     startTransition(async () => {
-      try {
-        await runUpload(
-          failedUpload.researchId,
-          failedUpload.file,
-          failedUpload.skipUpload
-        )
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Upload failed")
-      }
+      const outcome = await retryClosure()
+      handleOutcome(outcome)
     })
   }
 
@@ -210,7 +204,7 @@ export function UploadResearchForm() {
         <p className="rounded-lg bg-secondary p-3 text-sm">{message}</p>
       ) : null}
       {error ? <p className="text-sm text-destructive">{error}</p> : null}
-      {failedUpload ? (
+      {retryClosure ? (
         <Button
           type="button"
           variant="outline"

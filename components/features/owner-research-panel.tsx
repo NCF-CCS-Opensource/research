@@ -10,7 +10,7 @@ import {
   getMyResearches,
   resubmitResearch,
 } from "@/lib/api"
-import { uploadResearchPdf } from "@/lib/upload-research-pdf"
+import { replaceResearchPdf } from "@/lib/research-ingestion"
 import type { ResearchDetail } from "@/types/api"
 
 export function OwnerResearchPanel() {
@@ -120,8 +120,14 @@ export function OwnerResearchPanel() {
                       const file = event.target.files?.[0]
                       if (!file) return
                       startTransition(async () => {
-                        const result = await uploadResearchPdf(paper.id, file)
-                        if (result.status !== "ok") setError(result.message)
+                        const outcome = await replaceResearchPdf(paper.id, file)
+                        if (outcome.status !== "completed") {
+                          setError(
+                            "message" in outcome
+                              ? outcome.message
+                              : "PDF replacement failed"
+                          )
+                        }
                         load()
                       })
                     }}
