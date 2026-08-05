@@ -240,26 +240,6 @@ function optionalString(value: string | number | undefined) {
   return result || undefined
 }
 
-export async function createOwnedResearch(input: {
-  title: string
-  abstract: string
-  publishDate?: string
-  authors: Array<{ name: string; email?: string }>
-  categoryIds: string[]
-  keywordIds: string[]
-}) {
-  const { data, error } = await getSupabase().rpc("create_research_record", {
-    research_title: input.title,
-    research_abstract: input.abstract,
-    research_publish_date: input.publishDate || null,
-    research_authors: input.authors,
-    category_ids: input.categoryIds,
-    keyword_ids: input.keywordIds,
-  })
-  if (error) throw new ApiError(error.message, 400)
-  return { id: data as string }
-}
-
 export async function getMyResearches() {
   const supabase = getSupabase()
   const user = (await supabase.auth.getUser()).data.user
