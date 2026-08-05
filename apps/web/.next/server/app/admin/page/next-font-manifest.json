@@ -1,0 +1,14 @@
+{
+  "pages": {},
+  "app": {
+    "[project]/apps/web/app/admin/page": [
+      "static/media/a343f882a40d2cc9-s.p.0kho-wj7-y-w1.woff2",
+      "static/media/03bda585a99c6450-s.p.0zzh68k1~whtc.woff2",
+      "static/media/99e609270109b47d-s.p.16-z~2sp29ex6.woff2",
+      "static/media/effe91970fc4db64-s.p.07ig5l8azj~hy.woff2",
+      "static/media/23b7a97ae3b5c134-s.p.0o14nraug8u5s.woff2"
+    ]
+  },
+  "appUsingSizeAdjust": true,
+  "pagesUsingSizeAdjust": false
+}
