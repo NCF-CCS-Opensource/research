@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest"
 import { createInMemoryTransport } from "./transport"
 import { NotFoundError } from "./errors"
-import { createDiscovery, createPublicQueries } from "./public-queries"
+import { createDiscovery } from "./discovery"
 
 const authors = [
   { id: "a1", name: "Ada Lovelace", email: "ada@example.com", paper_count: 2 },
@@ -82,17 +82,10 @@ function makeAdapter() {
   })
 }
 
-describe("createPublicQueries", () => {
-  it("exposes discovery alongside the compatibility factory", async () => {
-    const discovery = createDiscovery(makeAdapter())
-    await expect(discovery.getRecentResearch(1)).resolves.toMatchObject({
-      data: [expect.objectContaining({ id: "res_3" })],
-    })
-  })
-
+describe("createDiscovery", () => {
   it("returns recent research ordered by creation date", async () => {
-    const publicQueries = createPublicQueries(makeAdapter())
-    const result = await publicQueries.getRecentResearch(2)
+    const discovery = createDiscovery(makeAdapter())
+    const result = await discovery.getRecentResearch(2)
     expect(result.meta).toEqual({ total: 2, page: 1, totalPages: 1 })
     expect(result.data[0]).toMatchObject({
       id: "res_3",
@@ -102,37 +95,37 @@ describe("createPublicQueries", () => {
   })
 
   it("maps search RPC rows with total count", async () => {
-    const publicQueries = createPublicQueries(makeAdapter())
-    const result = await publicQueries.searchResearch({ q: "Ada", page: 1, limit: 10 })
+    const discovery = createDiscovery(makeAdapter())
+    const result = await discovery.searchResearch({ q: "Ada", page: 1, limit: 10 })
     expect(result.meta).toEqual({ total: 1, page: 1, totalPages: 1 })
     expect(result.data.map((row) => row.id)).toEqual(["res_1"])
   })
 
   it("throws NotFoundError when research is missing", async () => {
-    const publicQueries = createPublicQueries(makeAdapter())
-    await expect(publicQueries.getResearch("missing")).rejects.toBeInstanceOf(
+    const discovery = createDiscovery(makeAdapter())
+    await expect(discovery.getResearch("missing")).rejects.toBeInstanceOf(
       NotFoundError
     )
   })
 
   it("filters authors by search before paginating", async () => {
-    const publicQueries = createPublicQueries(makeAdapter())
-    const result = await publicQueries.getAuthors({ search: "ada", page: 1, limit: 1 })
+    const discovery = createDiscovery(makeAdapter())
+    const result = await discovery.getAuthors({ search: "ada", page: 1, limit: 1 })
     expect(result.meta).toEqual({ total: 1, page: 1, totalPages: 1 })
     expect(result.data.map((author) => author.name)).toEqual(["Ada Lovelace"])
   })
 
   it("returns only research in the requested category", async () => {
-    const publicQueries = createPublicQueries(makeAdapter())
-    const result = await publicQueries.getCategory("c1")
+    const discovery = createDiscovery(makeAdapter())
+    const result = await discovery.getCategory("c1")
     expect(result.meta.total).toBe(2)
     expect(result.data.name).toBe("Software Engineering")
     expect(result.data.researches.map((row) => row.id)).toEqual(["res_3", "res_1"])
   })
 
   it("returns only research by the requested author", async () => {
-    const publicQueries = createPublicQueries(makeAdapter())
-    const result = await publicQueries.getAuthorPapers("a2", 1)
+    const discovery = createDiscovery(makeAdapter())
+    const result = await discovery.getAuthorPapers("a2", 1)
     expect(result.meta.total).toBe(2)
     expect(result.data.map((row) => row.id)).toEqual(["res_3", "res_2"])
   })

@@ -3,11 +3,8 @@
 import { useState, useTransition, useEffect } from "react"
 
 import { Button } from "@/components/ui/button"
-import { discovery } from "@/lib/web-transport"
-import {
-  submitResearchRecord,
-  type IngestOutcome,
-} from "@/lib/research-ingestion"
+import { discovery, researchLifecycle } from "@/lib/web-transport"
+import type { IngestOutcome } from "@repo/api-client"
 
 type Option = { id: string; name: string }
 
@@ -123,7 +120,7 @@ export function UploadResearchForm() {
       const categoryIds = form.getAll("categoryIds").map(String)
       const keywordIds = form.getAll("keywordIds").map(String)
 
-      const outcome = await submitResearchRecord({
+      const outcome = await researchLifecycle.submitRecord({
         title: String(form.get("title")),
         abstract: String(form.get("abstract")),
         publishDate: String(form.get("publishDate") || ""),

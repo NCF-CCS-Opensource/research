@@ -8,7 +8,6 @@ import type {
 } from "./types"
 import { mapResearch } from "./types"
 import { DomainApiError } from "./errors"
-import type { DashboardData } from "./account-workspace"
 
 export type PaginatedResponse<T> = {
   data: T[]
@@ -72,13 +71,6 @@ export type Discovery = {
     researchId: string,
     kind: "view" | "citation_export"
   ): Promise<void>
-}
-
-export type PublicQueries = Discovery & {
-  getDashboard(
-    scope: "personal" | "admin",
-    period: 30 | 90
-  ): Promise<DashboardData>
 }
 
 function paginated<T>(
@@ -154,7 +146,7 @@ export function createDiscovery(adapter: TransportAdapter): Discovery {
   }
 
   async function getAuthors(
-    query: Record<string, string | number | undefined>
+    query: AuthorSearchParams
   ): Promise<PaginatedResponse<Author>> {
     const page = positiveNumber(query.page, 1)
     const limit = positiveNumber(query.limit, 20)
@@ -265,19 +257,6 @@ export function createDiscovery(adapter: TransportAdapter): Discovery {
       await adapter.rpc("record_engagement", {
         target_research_id: researchId,
         kind,
-      })
-    },
-
-  }
-}
-
-export function createPublicQueries(adapter: TransportAdapter): PublicQueries {
-  return {
-    ...createDiscovery(adapter),
-    async getDashboard(scope, period) {
-      return adapter.rpc<DashboardData>("get_dashboard", {
-        requested_scope: scope,
-        requested_period: period,
       })
     },
   }

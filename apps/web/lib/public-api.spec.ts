@@ -30,8 +30,8 @@ describe("API client", () => {
       )
     )
 
-    const { publicQueries } = await import("./web-transport")
-    const result = await publicQueries.getRecentResearch(6)
+    const { discovery } = await import("./web-transport")
+    const result = await discovery.getRecentResearch(6)
 
     expect(result).toEqual({
       data: [

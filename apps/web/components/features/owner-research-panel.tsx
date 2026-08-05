@@ -4,8 +4,7 @@ import Link from "next/link"
 import { useEffect, useState, useTransition } from "react"
 
 import { Button } from "@/components/ui/button"
-import { callR2, researchLifecycle } from "@/lib/web-transport"
-import { replaceResearchPdf } from "@/lib/research-ingestion"
+import { pdfAccess, researchLifecycle } from "@/lib/web-transport"
 import type { ResearchDetail } from "@repo/api-client"
 
 export function OwnerResearchPanel() {
@@ -35,10 +34,7 @@ export function OwnerResearchPanel() {
   function download(id: string) {
     startTransition(async () => {
       try {
-        const { url } = await callR2<{ url: string }>({
-          action: "owner-download",
-          researchId: id,
-        })
+        const { url } = await pdfAccess.getOwnerDownloadUrl(id)
         window.open(url, "_blank", "noopener,noreferrer")
       } catch (reason) {
         setError(reason instanceof Error ? reason.message : "Download failed")
@@ -115,7 +111,10 @@ export function OwnerResearchPanel() {
                       const file = event.target.files?.[0]
                       if (!file) return
                       startTransition(async () => {
-                        const outcome = await replaceResearchPdf(paper.id, file)
+                        const outcome = await researchLifecycle.replacePdf(
+                          paper.id,
+                          file
+                        )
                         if (outcome.status !== "completed") {
                           setError(
                             "message" in outcome

@@ -3,11 +3,7 @@
 import { useCallback, useEffect, useState, useTransition } from "react"
 
 import { Button } from "@/components/ui/button"
-import {
-  callR2,
-  accountWorkspace,
-  pdfAccess,
-} from "@/lib/web-transport"
+import { accountWorkspace, pdfAccess } from "@/lib/web-transport"
 import type { PdfAccessDashboard } from "@repo/api-client"
 
 function errorMessage(error: unknown) {
@@ -104,10 +100,7 @@ export function PdfRequestsPanel() {
   function download(id: string) {
     startTransition(async () => {
       try {
-        const { url } = await callR2<{ url: string }>({
-          action: "granted-download",
-          requestId: id,
-        })
+        const { url } = await pdfAccess.getAuthorizedDownloadUrl(id)
         window.open(url, "_blank", "noopener,noreferrer")
       } catch (reason) {
         setError(errorMessage(reason))

@@ -6,9 +6,8 @@ import { useEffect, useRef, useState, useTransition } from "react"
 import { Button } from "@/components/ui/button"
 import {
   accountWorkspace,
-  callR2,
-  pdfAccess,
   discovery,
+  pdfAccess,
 } from "@/lib/web-transport"
 import { trackSuccessfulCitationExport } from "@/lib/citation-export"
 import type { PdfAccessState } from "@repo/api-client"
@@ -76,10 +75,7 @@ export function ResearchActions({
     setError(null)
     startTransition(async () => {
       try {
-        const { url } = await callR2<{ url: string }>({
-          action: "granted-download",
-          requestId,
-        })
+        const { url } = await pdfAccess.getAuthorizedDownloadUrl(requestId)
         window.open(url, "_blank", "noopener,noreferrer")
       } catch (err) {
         setError(err instanceof Error ? err.message : "Unable to download PDF")
