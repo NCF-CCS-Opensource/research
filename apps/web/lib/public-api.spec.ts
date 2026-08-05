@@ -30,8 +30,8 @@ describe("API client", () => {
       )
     )
 
-    const { getRecentResearch } = await import("./api")
-    const result = await getRecentResearch(6)
+    const { publicQueries } = await import("./web-transport")
+    const result = await publicQueries.getRecentResearch(6)
 
     expect(result).toEqual({
       data: [
@@ -64,8 +64,8 @@ describe("API client", () => {
       )
     vi.stubGlobal("fetch", fetchMock)
 
-    const { moderateResearch } = await import("./api")
-    await moderateResearch("research-1", "rejected", "Needs revision")
+    const { researchLifecycle } = await import("./web-transport")
+    await researchLifecycle.moderate("research-1", "rejected", "Needs revision")
 
     expect(fetchMock).toHaveBeenCalledTimes(2)
     expect(String(fetchMock.mock.calls[0][0])).toContain(

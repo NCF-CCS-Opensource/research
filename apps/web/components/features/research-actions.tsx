@@ -5,14 +5,13 @@ import { useEffect, useRef, useState, useTransition } from "react"
 
 import { Button } from "@/components/ui/button"
 import {
-  addToCollection as saveToCollection,
+  accountWorkspace,
   callR2,
-  getPdfAccessState,
-  recordEngagement,
-  transitionPdfRequest,
-} from "@/lib/api"
+  pdfAccess,
+  publicQueries,
+} from "@/lib/web-transport"
 import { trackSuccessfulCitationExport } from "@/lib/citation-export"
-import type { PdfAccessState } from "@/types/api"
+import type { PdfAccessState } from "@repo/api-client"
 
 export function ResearchActions({
   researchId,
@@ -37,11 +36,11 @@ export function ResearchActions({
   useEffect(() => {
     if (trackedView.current) return
     trackedView.current = true
-    void recordEngagement(researchId, "view").catch(() => {})
+    void publicQueries.recordEngagement(researchId, "view").catch(() => {})
   }, [researchId])
 
   function loadAccessState() {
-    getPdfAccessState(researchId)
+    pdfAccess.getAccessState(researchId)
       .then(({ state, requestId, availableAt, reason }) => {
         setAccessState(state)
         setRequestId(requestId ?? null)
@@ -62,7 +61,7 @@ export function ResearchActions({
     setError(null)
     startTransition(async () => {
       try {
-        await transitionPdfRequest(requestId, "cancel")
+        await pdfAccess.transitionRequest(requestId, "cancel")
         loadAccessState()
       } catch (err) {
         setError(
@@ -93,7 +92,7 @@ export function ResearchActions({
     setMessage(null)
     startTransition(async () => {
       try {
-        await saveToCollection(researchId)
+        await accountWorkspace.addToCollection(researchId)
         setMessage("Saved to Collection")
       } catch (err) {
         setError(
@@ -110,7 +109,7 @@ export function ResearchActions({
       try {
         const tracked = await trackSuccessfulCitationExport(
           () => navigator.clipboard.writeText(citation),
-          () => recordEngagement(researchId, "citation_export")
+          () => publicQueries.recordEngagement(researchId, "citation_export")
         )
         setMessage("Citation copied")
         if (!tracked)

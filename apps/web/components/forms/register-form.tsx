@@ -5,7 +5,8 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 
 import { Button } from "@/components/ui/button"
-import { getRegistrationOptions } from "@/lib/api"
+import { accountWorkspace } from "@/lib/web-transport"
+import type { MetadataItem } from "@repo/api-client"
 import { getSupabase } from "@/lib/supabase"
 
 type Option = { id: string; name: string }
@@ -19,8 +20,11 @@ export function RegisterForm() {
   const [isPending, startTransition] = useTransition()
 
   useEffect(() => {
-    getRegistrationOptions()
-      .then(({ institutions, programs }) => {
+    Promise.all([
+      accountWorkspace.manageMetadata<MetadataItem[]>({ action: "list", table: "institutions" }),
+      accountWorkspace.manageMetadata<MetadataItem[]>({ action: "list", table: "programs" })
+    ])
+      .then(([institutions, programs]) => {
         setInstitutions(institutions)
         setPrograms(programs)
       })

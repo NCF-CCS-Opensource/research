@@ -5,12 +5,10 @@ import { useCallback, useEffect, useState, useTransition } from "react"
 import { Button } from "@/components/ui/button"
 import {
   callR2,
-  getNotifications,
-  getPdfAccessDashboard,
-  markNotificationsRead,
-  transitionPdfRequest,
-  type PdfAccessDashboard,
-} from "@/lib/api"
+  accountWorkspace,
+  pdfAccess,
+} from "@/lib/web-transport"
+import type { PdfAccessDashboard } from "@repo/api-client"
 
 function errorMessage(error: unknown) {
   return error instanceof Error ? error.message : "Something went wrong"
@@ -18,12 +16,12 @@ function errorMessage(error: unknown) {
 
 export function NotificationsPanel() {
   const [items, setItems] = useState<
-    Awaited<ReturnType<typeof getNotifications>>
+    Awaited<ReturnType<typeof accountWorkspace.getNotifications>>
   >([])
   const [error, setError] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
   const load = useCallback(() => {
-    getNotifications()
+    accountWorkspace.getNotifications()
       .then(setItems)
       .catch((reason) => setError(errorMessage(reason)))
   }, [])
@@ -43,7 +41,7 @@ export function NotificationsPanel() {
           disabled={isPending}
           onClick={() =>
             startTransition(async () => {
-              await markNotificationsRead()
+              await accountWorkspace.markNotificationsRead()
               load()
             })
           }
@@ -80,7 +78,7 @@ export function PdfRequestsPanel() {
   const [error, setError] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
   const load = useCallback(() => {
-    getPdfAccessDashboard()
+    pdfAccess.getAccessDashboard()
       .then(setData)
       .catch((reason) => setError(errorMessage(reason)))
   }, [])
@@ -95,7 +93,7 @@ export function PdfRequestsPanel() {
   function act(id: string, action: "cancel" | "approve" | "reject" | "revoke") {
     startTransition(async () => {
       try {
-        await transitionPdfRequest(id, action)
+        await pdfAccess.transitionRequest(id, action)
         load()
       } catch (reason) {
         setError(errorMessage(reason))

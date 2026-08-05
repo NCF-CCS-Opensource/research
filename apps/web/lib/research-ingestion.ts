@@ -6,7 +6,7 @@ import {
   type IngestionDeps,
   type IngestOutcome,
 } from "@repo/api-client"
-import { webTransport } from "@/lib/api"
+import { webTransport } from "@/lib/web-transport"
 
 const defaultDeps: IngestionDeps = makeDefaultIngestionDeps(webTransport)
 

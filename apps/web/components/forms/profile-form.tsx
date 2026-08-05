@@ -3,7 +3,7 @@
 import { useEffect, useState, useTransition } from "react"
 
 import { Button } from "@/components/ui/button"
-import { getProfileSettings, updateProfileSettings } from "@/lib/api"
+import { accountWorkspace } from "@/lib/web-transport"
 
 type Option = { id: string; name: string }
 type Profile = {
@@ -23,7 +23,7 @@ export function ProfileForm() {
   const [isPending, startTransition] = useTransition()
 
   useEffect(() => {
-    getProfileSettings().then(({ profile, institutions, programs }) => {
+    accountWorkspace.getProfileSettings().then(({ profile, institutions, programs }) => {
       setProfile(profile)
       setInstitutions(institutions)
       setPrograms(programs)
@@ -35,7 +35,7 @@ export function ProfileForm() {
     const form = new FormData(event.currentTarget)
     startTransition(async () => {
       try {
-        await updateProfileSettings({
+        await accountWorkspace.updateProfileSettings({
           first_name: String(form.get("firstName")),
           middle_name: String(form.get("middleName") || "") || null,
           last_name: String(form.get("lastName")),

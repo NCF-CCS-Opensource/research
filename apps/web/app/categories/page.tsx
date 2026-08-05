@@ -2,13 +2,13 @@ import Link from "next/link"
 import { FolderOpen } from "lucide-react"
 
 import { PublicShell } from "@/components/layout/public-shell"
-import { getCategories } from "@/lib/api"
-import type { Category } from "@/types/api"
+import { publicQueries } from "@/lib/web-transport"
+import type { Category } from "@repo/api-client"
 
 export default async function CategoriesPage() {
   let categories: Category[] = []
   try {
-    categories = await getCategories()
+    categories = await publicQueries.getCategories()
   } catch {}
 
   return (
