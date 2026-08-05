@@ -98,8 +98,15 @@ export async function submitResearchRecord(
 
   let created: { id: string }
   try {
-    const { file, ...metadata } = input
-    created = await deps.createRecord(metadata)
+    const { title, abstract, publishDate, authors, categoryIds, keywordIds } = input
+    created = await deps.createRecord({
+      title,
+      abstract,
+      publishDate,
+      authors,
+      categoryIds,
+      keywordIds,
+    })
   } catch (err) {
     return {
       status: "invalid-input",

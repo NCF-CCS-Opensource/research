@@ -23,6 +23,7 @@ export type ResearchSummary = {
   rejectionReason?: string | null
   authors?: Author[]
   categories?: Category[]
+  keywords?: Keyword[]
 }
 
 export type ResearchDetail = ResearchSummary & {
@@ -144,4 +145,38 @@ export type DashboardData = {
     earliestAvailableDate: string | null
     days: Array<{ date: string } & Record<DashboardMetric, number>>
   } | null
+}
+
+export type PdfAccessDashboard = {
+  mine: Array<{
+    id: string
+    researchId: string | null
+    researchTitle: string
+    ownerName: string
+    requestNote: string
+    status: string
+    createdAt: string
+  }>
+  pending: Array<{
+    id: string
+    researchId: string
+    researchTitle: string
+    requesterName: string
+    requesterInstitution: string
+    requesterProgram: string | null
+    requestNote: string
+    status: string
+    createdAt: string
+  }>
+  grants: Array<{
+    id: string
+    researchId: string
+    researchTitle: string
+    requesterName: string
+    requesterInstitution: string
+    requesterProgram: string | null
+    status: string
+    createdAt: string
+    grantedAt: string
+  }>
 }

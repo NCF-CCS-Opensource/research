@@ -1,14 +1,13 @@
 "use client"
 
 import Link from "next/link"
-import { useEffect, useState, useTransition } from "react"
+import { useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
 import { ArrowRight, Search } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { getSuggestions } from "@/lib/api"
-import type { SearchSuggestions } from "@/types/api"
 
 import { useQuery } from "@tanstack/react-query"
 import { useUIStore } from "@repo/store"
