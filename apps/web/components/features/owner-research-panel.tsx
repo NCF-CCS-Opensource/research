@@ -4,7 +4,7 @@ import Link from "next/link"
 import { useEffect, useState, useTransition } from "react"
 
 import { Button } from "@/components/ui/button"
-import { callR2, researchLifecycle } from "@/lib/web-transport"
+import { pdfAccess, researchLifecycle } from "@/lib/web-transport"
 import { replaceResearchPdf } from "@/lib/research-ingestion"
 import type { ResearchDetail } from "@repo/api-client"
 
@@ -35,10 +35,7 @@ export function OwnerResearchPanel() {
   function download(id: string) {
     startTransition(async () => {
       try {
-        const { url } = await callR2<{ url: string }>({
-          action: "owner-download",
-          researchId: id,
-        })
+        const { url } = await pdfAccess.getOwnerDownloadUrl(id)
         window.open(url, "_blank", "noopener,noreferrer")
       } catch (reason) {
         setError(reason instanceof Error ? reason.message : "Download failed")

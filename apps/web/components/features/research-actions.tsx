@@ -6,9 +6,8 @@ import { useEffect, useRef, useState, useTransition } from "react"
 import { Button } from "@/components/ui/button"
 import {
   accountWorkspace,
-  callR2,
+  discovery,
   pdfAccess,
-  publicQueries,
 } from "@/lib/web-transport"
 import { trackSuccessfulCitationExport } from "@/lib/citation-export"
 import type { PdfAccessState } from "@repo/api-client"
@@ -36,7 +35,7 @@ export function ResearchActions({
   useEffect(() => {
     if (trackedView.current) return
     trackedView.current = true
-    void publicQueries.recordEngagement(researchId, "view").catch(() => {})
+    void discovery.recordEngagement(researchId, "view").catch(() => {})
   }, [researchId])
 
   function loadAccessState() {
@@ -76,10 +75,7 @@ export function ResearchActions({
     setError(null)
     startTransition(async () => {
       try {
-        const { url } = await callR2<{ url: string }>({
-          action: "granted-download",
-          requestId,
-        })
+        const { url } = await pdfAccess.getAuthorizedDownloadUrl(requestId)
         window.open(url, "_blank", "noopener,noreferrer")
       } catch (err) {
         setError(err instanceof Error ? err.message : "Unable to download PDF")
@@ -109,7 +105,7 @@ export function ResearchActions({
       try {
         const tracked = await trackSuccessfulCitationExport(
           () => navigator.clipboard.writeText(citation),
-          () => publicQueries.recordEngagement(researchId, "citation_export")
+          () => discovery.recordEngagement(researchId, "citation_export")
         )
         setMessage("Citation copied")
         if (!tracked)

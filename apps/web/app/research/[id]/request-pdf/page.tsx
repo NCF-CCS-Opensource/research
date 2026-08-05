@@ -5,7 +5,7 @@ import { notFound } from "next/navigation"
 import { PdfRequestForm } from "@/components/forms/pdf-request-form"
 import { PublicShell } from "@/components/layout/public-shell"
 import { Button } from "@/components/ui/button"
-import { publicQueries } from "@/lib/web-transport"
+import { discovery } from "@/lib/web-transport"
 
 type PageProps = {
   params: Promise<{ id: string }>
@@ -16,7 +16,7 @@ export default async function RequestPdfPage({ params }: PageProps) {
   let research
 
   try {
-    research = await publicQueries.getResearch(id)
+    research = await discovery.getResearch(id)
   } catch {
     notFound()
   }

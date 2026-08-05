@@ -4,8 +4,8 @@ import { useEffect, useState, useTransition } from "react"
 
 import { Button } from "@/components/ui/button"
 import {
-  callR2,
   accountWorkspace,
+  pdfAccess,
   researchLifecycle,
 } from "@/lib/web-transport"
 import type { MetadataTable, MetadataItem, ResearchStatus } from "@repo/api-client"
@@ -50,10 +50,7 @@ export function AdminResearchPanel() {
   function viewPdf(id: string) {
     startTransition(async () => {
       try {
-        const { url } = await callR2<{ url: string }>({
-          action: "moderation-download",
-          researchId: id,
-        })
+        const { url } = await pdfAccess.getModerationDownloadUrl(id)
         window.open(url, "_blank", "noopener,noreferrer")
       } catch (cause) {
         setError(message(cause))

@@ -176,6 +176,19 @@ describe("accountWorkspace module", () => {
     expect(notifications[0].read).toBe(true)
   })
 
+  it("returns personal and Admin dashboards", async () => {
+    const getDashboard = vi.fn().mockReturnValue({ scope: "admin" })
+    const { accountWorkspace } = makeModule({ rpc: { get_dashboard: getDashboard } })
+
+    await expect(accountWorkspace.getDashboard("admin", 90)).resolves.toEqual({
+      scope: "admin",
+    })
+    expect(getDashboard).toHaveBeenCalledWith({
+      requested_scope: "admin",
+      requested_period: 90,
+    })
+  })
+
   it("manages category metadata", async () => {
     const { accountWorkspace, transport } = makeModule()
     await accountWorkspace.manageMetadata({
