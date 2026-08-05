@@ -25,7 +25,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
-import { publicQueries } from "@/lib/web-transport"
+import { accountWorkspace } from "@/lib/web-transport"
 import { chartPoints, comparisonLabel } from "@/lib/dashboard"
 import type { DashboardData, DashboardMetric } from "@repo/api-client"
 
@@ -55,7 +55,7 @@ export function DashboardPanel({ admin = false }: { admin?: boolean }) {
 
   useEffect(() => {
     let active = true
-    publicQueries.getDashboard(admin ? "admin" : "personal", period)
+    accountWorkspace.getDashboard(admin ? "admin" : "personal", period)
       .then((result) => {
         if (active) setData(result)
       })
