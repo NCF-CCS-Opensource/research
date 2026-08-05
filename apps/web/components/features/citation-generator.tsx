@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react"
 
 import { Button } from "@/components/ui/button"
-import { recordEngagement } from "@/lib/api"
+import { discovery } from "@/lib/web-transport"
 import { trackSuccessfulCitationExport } from "@/lib/citation-export"
 
 const FORMATS = {
@@ -75,7 +75,7 @@ export function CitationGenerator({
       try {
         const tracked = await trackSuccessfulCitationExport(
           () => navigator.clipboard.writeText(citation),
-          () => recordEngagement(researchId, "citation_export")
+          () => discovery.recordEngagement(researchId, "citation_export")
         )
         setCopied(true)
         if (!tracked)
@@ -95,7 +95,7 @@ export function CitationGenerator({
       try {
         const tracked = await trackSuccessfulCitationExport(
           () => downloadBibtex(authors, year, title),
-          () => recordEngagement(researchId, "citation_export")
+          () => discovery.recordEngagement(researchId, "citation_export")
         )
         if (!tracked)
           setError(

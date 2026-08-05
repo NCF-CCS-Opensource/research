@@ -3,13 +3,13 @@
 import Link from "next/link"
 import { useEffect, useState } from "react"
 
-import { getNotifications } from "@/lib/api"
+import { accountWorkspace } from "@/lib/web-transport"
 
 export function NotificationLink() {
   const [count, setCount] = useState<number | null>(null)
 
   useEffect(() => {
-    getNotifications()
+    accountWorkspace.getNotifications()
       .then((data) => setCount(data.filter((item) => !item.read).length))
       .catch(() => {})
   }, [])

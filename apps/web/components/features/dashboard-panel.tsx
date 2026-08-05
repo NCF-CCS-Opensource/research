@@ -25,9 +25,9 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
-import { getDashboard } from "@/lib/api"
+import { accountWorkspace } from "@/lib/web-transport"
 import { chartPoints, comparisonLabel } from "@/lib/dashboard"
-import type { DashboardData, DashboardMetric } from "@/types/api"
+import type { DashboardData, DashboardMetric } from "@repo/api-client"
 
 const metricLabels: Record<DashboardMetric, string> = {
   researchViews: "Research Views",
@@ -55,7 +55,7 @@ export function DashboardPanel({ admin = false }: { admin?: boolean }) {
 
   useEffect(() => {
     let active = true
-    getDashboard(admin ? "admin" : "personal", period)
+    accountWorkspace.getDashboard(admin ? "admin" : "personal", period)
       .then((result) => {
         if (active) setData(result)
       })

@@ -4,9 +4,9 @@ import Link from "next/link"
 import { useEffect, useState, useTransition } from "react"
 
 import { Button } from "@/components/ui/button"
-import { getCollection, removeFromCollection } from "@/lib/api"
+import { accountWorkspace } from "@/lib/web-transport"
 
-type Item = Awaited<ReturnType<typeof getCollection>>[number]
+type Item = Awaited<ReturnType<typeof accountWorkspace.getCollection>>[number]
 
 export function CollectionPanel() {
   const [items, setItems] = useState<Item[]>([])
@@ -14,7 +14,7 @@ export function CollectionPanel() {
   const [isPending, startTransition] = useTransition()
 
   function load() {
-    getCollection()
+    accountWorkspace.getCollection()
       .then(setItems)
       .catch((reason) => setError(reason.message))
   }
@@ -38,7 +38,7 @@ export function CollectionPanel() {
               disabled={isPending}
               onClick={() =>
                 startTransition(async () => {
-                  await removeFromCollection(item.researchId)
+                  await accountWorkspace.removeFromCollection(item.researchId)
                   load()
                 })
               }

@@ -7,7 +7,7 @@ import { ResearchCard } from "@/components/features/research-card"
 import { Pagination } from "@/components/features/pagination"
 import { PublicShell } from "@/components/layout/public-shell"
 import { Button } from "@/components/ui/button"
-import { getAuthor, getAuthorPapers } from "@/lib/api"
+import { discovery } from "@/lib/web-transport"
 
 type PageProps = {
   params: Promise<{ id: string }>
@@ -19,7 +19,7 @@ export async function generateMetadata({
 }: PageProps): Promise<Metadata> {
   try {
     const { id } = await params
-    const author = await getAuthor(id)
+    const author = await discovery.getAuthor(id)
     return { title: `${author.name} — Authors` }
   } catch {
     return { title: "Author" }
@@ -33,12 +33,12 @@ export default async function AuthorProfilePage({
   const [{ id }, raw] = await Promise.all([params, searchParams])
   const page = Number(Array.isArray(raw.page) ? raw.page[0] : (raw.page ?? 1))
   let author
-  let papers
+  let records
 
   try {
-    ;[author, papers] = await Promise.all([
-      getAuthor(id),
-      getAuthorPapers(id, page),
+    ;[author, records] = await Promise.all([
+      discovery.getAuthor(id),
+      discovery.getAuthorResearchRecords(id, page),
     ])
   } catch {
     notFound()
@@ -78,7 +78,7 @@ export default async function AuthorProfilePage({
             <div className="flex items-center gap-2">
               <BookOpen className="size-4 text-muted-foreground" />
               <div>
-                <p className="text-xl font-semibold">{papers.meta.total}</p>
+                <p className="text-xl font-semibold">{records.meta.total}</p>
                 <p className="text-xs text-muted-foreground">
                   Published papers
                 </p>
@@ -95,10 +95,10 @@ export default async function AuthorProfilePage({
           <p className="mt-1 text-sm text-muted-foreground">
             All approved papers authored or co-authored by {author.name}
           </p>
-          {papers.data.length > 0 ? (
+          {records.data.length > 0 ? (
             <div className="mt-5 grid gap-4 sm:grid-cols-2">
-              {papers.data.map((paper) => (
-                <ResearchCard key={paper.id} research={paper} />
+              {records.data.map((record) => (
+                <ResearchCard key={record.id} research={record} />
               ))}
             </div>
           ) : (
@@ -109,8 +109,8 @@ export default async function AuthorProfilePage({
         </div>
 
         <Pagination
-          page={papers.meta.page}
-          totalPages={papers.meta.totalPages}
+          page={records.meta.page}
+          totalPages={records.meta.totalPages}
           getHref={(target) => `/authors/${id}?page=${target}`}
         />
       </section>

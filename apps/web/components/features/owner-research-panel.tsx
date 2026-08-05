@@ -4,14 +4,9 @@ import Link from "next/link"
 import { useEffect, useState, useTransition } from "react"
 
 import { Button } from "@/components/ui/button"
-import {
-  callR2,
-  deleteOwnedResearch,
-  getMyResearches,
-  resubmitResearch,
-} from "@/lib/api"
+import { pdfAccess, researchLifecycle } from "@/lib/web-transport"
 import { replaceResearchPdf } from "@/lib/research-ingestion"
-import type { ResearchDetail } from "@/types/api"
+import type { ResearchDetail } from "@repo/api-client"
 
 export function OwnerResearchPanel() {
   const [papers, setPapers] = useState<ResearchDetail[]>([])
@@ -19,7 +14,7 @@ export function OwnerResearchPanel() {
   const [isPending, startTransition] = useTransition()
 
   function load() {
-    getMyResearches()
+    researchLifecycle.getOwnerRecords()
       .then(setPapers)
       .catch((reason) => setError(reason.message))
   }
@@ -29,7 +24,7 @@ export function OwnerResearchPanel() {
   function remove(id: string) {
     startTransition(async () => {
       try {
-        await deleteOwnedResearch(id)
+        await researchLifecycle.deleteRecord(id)
         load()
       } catch (reason) {
         setError(reason instanceof Error ? reason.message : "Delete failed")
@@ -40,10 +35,7 @@ export function OwnerResearchPanel() {
   function download(id: string) {
     startTransition(async () => {
       try {
-        const { url } = await callR2<{ url: string }>({
-          action: "owner-download",
-          researchId: id,
-        })
+        const { url } = await pdfAccess.getOwnerDownloadUrl(id)
         window.open(url, "_blank", "noopener,noreferrer")
       } catch (reason) {
         setError(reason instanceof Error ? reason.message : "Download failed")
@@ -90,7 +82,7 @@ export function OwnerResearchPanel() {
                   disabled={isPending}
                   onClick={() =>
                     startTransition(async () => {
-                      await resubmitResearch(paper.id)
+                      await researchLifecycle.resubmitRecord(paper.id)
                       load()
                     })
                   }

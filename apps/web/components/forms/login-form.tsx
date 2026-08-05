@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { getProfileAccess } from "@/lib/api"
+import { accountWorkspace } from "@/lib/web-transport"
 import { safeNextPath } from "@/lib/safe-next-path"
 import { getSupabase } from "@/lib/supabase"
 
@@ -29,7 +29,7 @@ export function LoginForm() {
             password: String(form.get("password")),
           })
         if (loginError) throw loginError
-        const profile = await getProfileAccess(data.user.id).catch(
+        const profile = await accountWorkspace.getProfileAccess(data.user.id).catch(
           async (error) => {
             await supabase.auth.signOut()
             throw error

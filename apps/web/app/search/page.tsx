@@ -6,8 +6,9 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
-import { getCategories, getKeywords, searchResearch } from "@/lib/api"
-import type { Category, Keyword, ResearchSummary } from "@/types/api"
+import { discovery } from "@/lib/web-transport"
+import type { Category, Keyword, ResearchSearchParams } from "@repo/api-client"
+import type { ResearchSummary } from "@/types/api"
 
 type PageProps = {
   searchParams: Promise<Record<string, string | string[] | undefined>>
@@ -23,9 +24,15 @@ function hrefWith(params: URLSearchParams, page: number) {
   return `/search?${next.toString()}`
 }
 
-async function loadSearch(params: Record<string, string | number | undefined>) {
+function searchSort(input: string | undefined): ResearchSearchParams["sort"] {
+  return input === "date" || input === "views" || input === "downloads"
+    ? input
+    : "relevance"
+}
+
+async function loadSearch(params: ResearchSearchParams) {
   try {
-    return await searchResearch(params)
+    return await discovery.searchResearch(params)
   } catch {
     return {
       data: [] as ResearchSummary[],
@@ -36,7 +43,7 @@ async function loadSearch(params: Record<string, string | number | undefined>) {
 
 async function loadCategories() {
   try {
-    return await getCategories()
+    return await discovery.getCategories()
   } catch {
     return [] as Category[]
   }
@@ -44,7 +51,7 @@ async function loadCategories() {
 
 async function loadKeywords() {
   try {
-    return await getKeywords()
+    return await discovery.getKeywords()
   } catch {
     return [] as Keyword[]
   }
@@ -60,7 +67,7 @@ export default async function SearchPage({ searchParams }: PageProps) {
     author: value(raw.author),
     dateFrom: value(raw.dateFrom),
     dateTo: value(raw.dateTo),
-    sort: value(raw.sort) ?? "relevance",
+    sort: searchSort(value(raw.sort)),
     page,
     limit: 10,
   }

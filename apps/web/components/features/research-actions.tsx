@@ -5,14 +5,12 @@ import { useEffect, useRef, useState, useTransition } from "react"
 
 import { Button } from "@/components/ui/button"
 import {
-  addToCollection as saveToCollection,
-  callR2,
-  getPdfAccessState,
-  recordEngagement,
-  transitionPdfRequest,
-} from "@/lib/api"
+  accountWorkspace,
+  discovery,
+  pdfAccess,
+} from "@/lib/web-transport"
 import { trackSuccessfulCitationExport } from "@/lib/citation-export"
-import type { PdfAccessState } from "@/types/api"
+import type { PdfAccessState } from "@repo/api-client"
 
 export function ResearchActions({
   researchId,
@@ -37,11 +35,11 @@ export function ResearchActions({
   useEffect(() => {
     if (trackedView.current) return
     trackedView.current = true
-    void recordEngagement(researchId, "view").catch(() => {})
+    void discovery.recordEngagement(researchId, "view").catch(() => {})
   }, [researchId])
 
   function loadAccessState() {
-    getPdfAccessState(researchId)
+    pdfAccess.getAccessState(researchId)
       .then(({ state, requestId, availableAt, reason }) => {
         setAccessState(state)
         setRequestId(requestId ?? null)
@@ -62,7 +60,7 @@ export function ResearchActions({
     setError(null)
     startTransition(async () => {
       try {
-        await transitionPdfRequest(requestId, "cancel")
+        await pdfAccess.transitionRequest(requestId, "cancel")
         loadAccessState()
       } catch (err) {
         setError(
@@ -77,10 +75,7 @@ export function ResearchActions({
     setError(null)
     startTransition(async () => {
       try {
-        const { url } = await callR2<{ url: string }>({
-          action: "granted-download",
-          requestId,
-        })
+        const { url } = await pdfAccess.getAuthorizedDownloadUrl(requestId)
         window.open(url, "_blank", "noopener,noreferrer")
       } catch (err) {
         setError(err instanceof Error ? err.message : "Unable to download PDF")
@@ -93,7 +88,7 @@ export function ResearchActions({
     setMessage(null)
     startTransition(async () => {
       try {
-        await saveToCollection(researchId)
+        await accountWorkspace.addToCollection(researchId)
         setMessage("Saved to Collection")
       } catch (err) {
         setError(
@@ -110,7 +105,7 @@ export function ResearchActions({
       try {
         const tracked = await trackSuccessfulCitationExport(
           () => navigator.clipboard.writeText(citation),
-          () => recordEngagement(researchId, "citation_export")
+          () => discovery.recordEngagement(researchId, "citation_export")
         )
         setMessage("Citation copied")
         if (!tracked)

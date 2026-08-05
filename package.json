@@ -8,6 +8,10 @@
     "node": ">=20"
   },
   "scripts": {
+    "build": "turbo run build",
+    "dev": "turbo run dev",
+    "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck",
     "format": "prettier --write \"**/*.{ts,tsx}\"",
     "test:integration": "vitest run --config vitest.integration.config.ts"
   },

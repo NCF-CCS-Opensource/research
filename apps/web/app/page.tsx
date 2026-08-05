@@ -13,7 +13,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
-import { getRecentResearch } from "@/lib/api"
+import { discovery } from "@/lib/web-transport"
 import type { ResearchSummary } from "@/types/api"
 
 const features = [
@@ -36,7 +36,7 @@ const features = [
 
 async function loadRecentResearch() {
   try {
-    return await getRecentResearch(6)
+    return await discovery.getRecentResearch(6)
   } catch {
     return {
       data: [] as ResearchSummary[],
