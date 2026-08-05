@@ -1,0 +1,50 @@
+$ next build
+▲ Next.js 16.2.6 (Turbopack)
+
+  Creating an optimized production build ...
+✓ Compiled successfully in 3.6s
+  Finished TypeScript in 4.0s    ✓ Finished TypeScript in 4.0s 
+  Collecting page data using 11 workers in 885ms    ✓ Collecting page data using 11 workers in 885ms 
+✓ Generating static pages using 11 workers (29/29) in 342ms
+  Finalizing page optimization in 8ms    ✓ Finalizing page optimization in 8ms 
+
+Route (app)
+┌ ƒ /
+├ ○ /_not-found
+├ ƒ /admin
+├ ƒ /admin/audit
+├ ƒ /admin/categories
+├ ƒ /admin/institutions
+├ ƒ /admin/keywords
+├ ƒ /admin/programs
+├ ƒ /admin/research
+├ ƒ /admin/users
+├ ƒ /api/auth/logout
+├ ƒ /auth/confirm
+├ ƒ /authors
+├ ƒ /authors/[id]
+├ ƒ /categories
+├ ƒ /categories/[id]
+├ ƒ /dashboard
+├ ƒ /dashboard/collections
+├ ƒ /dashboard/notifications
+├ ƒ /dashboard/papers
+├ ƒ /dashboard/papers/[id]/edit
+├ ƒ /dashboard/pdf-requests
+├ ƒ /dashboard/settings
+├ ƒ /forgot-password
+├ ƒ /login
+├ ƒ /register
+├ ƒ /research/[id]
+├ ƒ /research/[id]/request-pdf
+├ ƒ /reset-password
+├ ƒ /search
+├ ƒ /upload
+└ ƒ /verify-email
+
+
+ƒ Proxy (Middleware)
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+
