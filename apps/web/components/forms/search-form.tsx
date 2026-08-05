@@ -10,6 +10,9 @@ import { Input } from "@/components/ui/input"
 import { getSuggestions } from "@/lib/api"
 import type { SearchSuggestions } from "@/types/api"
 
+import { useQuery } from "@tanstack/react-query"
+import { useUIStore } from "@repo/store"
+
 export function SearchForm({
   compact = false,
   defaultValue = "",
@@ -18,30 +21,21 @@ export function SearchForm({
   defaultValue?: string
 }) {
   const router = useRouter()
-  const [query, setQuery] = useState(defaultValue)
-  const [suggestions, setSuggestions] = useState<SearchSuggestions | null>(null)
+  const searchDraft = useUIStore((state) => state.searchDraft)
+  const setSearchDraft = useUIStore((state) => state.setSearchDraft)
+
+  // Sync initial defaultValue if provided and draft is empty
+  const [localQuery, setLocalQuery] = useState(defaultValue)
+  const query = searchDraft || localQuery
+
   const [isPending, startTransition] = useTransition()
 
-  useEffect(() => {
-    if (query.trim().length < 2) {
-      return
-    }
-
-    const controller = new AbortController()
-    const timeout = window.setTimeout(async () => {
-      try {
-        const result = await getSuggestions(query)
-        if (!controller.signal.aborted) setSuggestions(result)
-      } catch {
-        if (!controller.signal.aborted) setSuggestions(null)
-      }
-    }, 250)
-
-    return () => {
-      window.clearTimeout(timeout)
-      controller.abort()
-    }
-  }, [query])
+  const { data: suggestions = null } = useQuery({
+    queryKey: ['search-suggestions', query],
+    queryFn: () => getSuggestions(query),
+    enabled: query.trim().length >= 2,
+    staleTime: 1000 * 60,
+  })
 
   function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -67,7 +61,10 @@ export function SearchForm({
           <Input
             id={compact ? "compact-search" : "hero-search"}
             value={query}
-            onChange={(event) => setQuery(event.target.value)}
+            onChange={(event) => {
+              setLocalQuery(event.target.value)
+              setSearchDraft(event.target.value)
+            }}
             className="h-11 border-0 bg-transparent px-0 text-sm shadow-none focus-visible:ring-0 dark:bg-transparent"
             placeholder="Title, author, keyword, or field"
             autoComplete="off"
