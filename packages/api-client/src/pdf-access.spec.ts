@@ -86,6 +86,55 @@ describe("pdfAccess module", () => {
     ).rejects.toBeInstanceOf(ValidationError)
   })
 
+  it("rejects request when in cooldown state", async () => {
+    const { pdfAccess } = makeModule({
+      rpc: {
+        get_pdf_access_state: {
+          state: "cooldown",
+          availableAt: "2026-01-02T00:00:00Z",
+        },
+      },
+    })
+    await expect(
+      pdfAccess.requestAccess("res_1", "Need access")
+    ).rejects.toThrow("Cooldown active until 2026-01-02T00:00:00Z")
+  })
+
+  it("rejects request when a pending request already exists", async () => {
+    const { pdfAccess } = makeModule({
+      rpc: {
+        get_pdf_access_state: { state: "pending", requestId: "req_existing" },
+      },
+    })
+    await expect(
+      pdfAccess.requestAccess("res_1", "Need access")
+    ).rejects.toThrow("A pending request already exists for this research PDF")
+  })
+
+  it("rejects request when state is not requestable", async () => {
+    const { pdfAccess } = makeModule({
+      rpc: {
+        get_pdf_access_state: { state: "guest" },
+      },
+    })
+    await expect(
+      pdfAccess.requestAccess("res_1", "Need access")
+    ).rejects.toThrow("PDF access is not requestable (state: guest)")
+  })
+
+  it("allows request when state is requestable", async () => {
+    const createRpc = vi.fn().mockReturnValue("req_1")
+    const { pdfAccess } = makeModule({
+      rpc: {
+        get_pdf_access_state: { state: "requestable" },
+        create_pdf_request: createRpc,
+      },
+    })
+    const result = await pdfAccess.requestAccess("res_1", "Need access")
+    expect(result).toEqual({ id: "req_1", status: "pending" })
+    expect(createRpc).toHaveBeenCalled()
+  })
+
   it("transitions a request and dispatches the matching email event", async () => {
     const transitionRpc = vi.fn().mockReturnValue("revoked")
     const emailEdge = vi.fn().mockResolvedValue({ message: "sent" })

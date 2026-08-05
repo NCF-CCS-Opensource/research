@@ -33,6 +33,8 @@ function makeDeps(overrides: Partial<IngestionDeps> = {}): IngestionDeps {
     }),
     putToStorage: vi.fn().mockResolvedValue(true),
     confirm: vi.fn().mockResolvedValue({ message: "Upload confirmed" }),
+    resetRecordState: vi.fn().mockResolvedValue(undefined),
+    revokeGrants: vi.fn().mockResolvedValue(undefined),
     ...overrides,
   }
 }

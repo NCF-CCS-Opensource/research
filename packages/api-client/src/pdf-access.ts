@@ -35,6 +35,32 @@ export function createPdfAccess(adapter: TransportAdapter): PdfAccess {
           "Request Note must be between 1 and 1,000 characters"
         )
       }
+
+      const accessState = await adapter.rpc<PdfAccessState>(
+        "get_pdf_access_state",
+        { target_research_id: researchId }
+      )
+
+      if (accessState.state === "cooldown") {
+        throw new ValidationError(
+          accessState.availableAt
+            ? `Cooldown active until ${accessState.availableAt}`
+            : "Cooldown period active. Please try again later."
+        )
+      }
+
+      if (accessState.state === "pending") {
+        throw new ValidationError(
+          "A pending request already exists for this research PDF"
+        )
+      }
+
+      if (accessState.state !== "requestable") {
+        throw new ValidationError(
+          `PDF access is not requestable (state: ${accessState.state})`
+        )
+      }
+
       const id = await adapter.rpc<string>("create_pdf_request", {
         target_research_id: researchId,
         note: trimmed,

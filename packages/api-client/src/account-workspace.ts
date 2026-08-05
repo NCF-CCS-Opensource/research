@@ -14,6 +14,31 @@ import type {
 } from "./types"
 import { mapResearch } from "./types"
 import { requireAuth, type TransportAdapter } from "./transport"
+import { ValidationError } from "./errors"
+
+const MAX_NAME_LENGTH = 200
+const MAX_SUFFIX_LENGTH = 20
+
+function validateProfileInput(input: ProfileSettingsInput): void {
+  if (!input.first_name?.trim()) {
+    throw new ValidationError("First name is required")
+  }
+  if (input.first_name.length > MAX_NAME_LENGTH) {
+    throw new ValidationError(`First name must be ${MAX_NAME_LENGTH} characters or fewer`)
+  }
+  if (!input.last_name?.trim()) {
+    throw new ValidationError("Last name is required")
+  }
+  if (input.last_name.length > MAX_NAME_LENGTH) {
+    throw new ValidationError(`Last name must be ${MAX_NAME_LENGTH} characters or fewer`)
+  }
+  if (input.middle_name != null && input.middle_name.length > MAX_NAME_LENGTH) {
+    throw new ValidationError(`Middle name must be ${MAX_NAME_LENGTH} characters or fewer`)
+  }
+  if (input.suffix != null && input.suffix.length > MAX_SUFFIX_LENGTH) {
+    throw new ValidationError(`Suffix must be ${MAX_SUFFIX_LENGTH} characters or fewer`)
+  }
+}
 
 export type ManageMetadataRequest =
   | { action: "list"; table: MetadataTable }
@@ -152,6 +177,7 @@ export function createAccountWorkspace(
     },
 
     async updateProfileSettings(input) {
+      validateProfileInput(input)
       const userId = await requireCurrentUser()
       await adapter.update(
         "profiles",
@@ -175,6 +201,15 @@ export function createAccountWorkspace(
     },
 
     async updateAccount(id, role, status) {
+      if (!id?.trim()) {
+        throw new ValidationError("Account ID is required")
+      }
+      if (!["user", "admin"].includes(role)) {
+        throw new ValidationError("Invalid role")
+      }
+      if (!["active", "suspended"].includes(status)) {
+        throw new ValidationError("Invalid status")
+      }
       await adapter.rpc("admin_update_account", {
         target_id: id,
         new_role: role,

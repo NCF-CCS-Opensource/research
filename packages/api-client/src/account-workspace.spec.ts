@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest"
 import { createInMemoryTransport } from "./transport"
 import { createAccountWorkspace } from "./account-workspace"
-import { DomainApiError } from "./errors"
+import { DomainApiError, ValidationError } from "./errors"
 
 const researchRow = {
   id: "res_1",
@@ -222,5 +222,68 @@ describe("accountWorkspace module", () => {
         expect.objectContaining({ name: "BSIT", institutionId: "inst_1" }),
       ])
     )
+  })
+
+  it("validates profile input - rejects empty first name", async () => {
+    const { accountWorkspace } = makeModule()
+    await expect(
+      accountWorkspace.updateProfileSettings({
+        first_name: "   ",
+        middle_name: null,
+        last_name: "Lovelace",
+        suffix: null,
+        institution_id: null,
+        program_id: null,
+      })
+    ).rejects.toThrow("First name is required")
+  })
+
+  it("validates profile input - rejects empty last name", async () => {
+    const { accountWorkspace } = makeModule()
+    await expect(
+      accountWorkspace.updateProfileSettings({
+        first_name: "Ada",
+        middle_name: null,
+        last_name: "   ",
+        suffix: null,
+        institution_id: null,
+        program_id: null,
+      })
+    ).rejects.toThrow("Last name is required")
+  })
+
+  it("validates profile input - rejects names exceeding max length", async () => {
+    const { accountWorkspace } = makeModule()
+    await expect(
+      accountWorkspace.updateProfileSettings({
+        first_name: "A".repeat(201),
+        middle_name: null,
+        last_name: "Lovelace",
+        suffix: null,
+        institution_id: null,
+        program_id: null,
+      })
+    ).rejects.toThrow("First name must be 200 characters or fewer")
+  })
+
+  it("validates account update - rejects empty ID", async () => {
+    const { accountWorkspace } = makeModule()
+    await expect(
+      accountWorkspace.updateAccount("", "admin", "active")
+    ).rejects.toThrow("Account ID is required")
+  })
+
+  it("validates account update - rejects invalid role", async () => {
+    const { accountWorkspace } = makeModule()
+    await expect(
+      accountWorkspace.updateAccount("user_1", "superadmin" as any, "active")
+    ).rejects.toThrow("Invalid role")
+  })
+
+  it("validates account update - rejects invalid status", async () => {
+    const { accountWorkspace } = makeModule()
+    await expect(
+      accountWorkspace.updateAccount("user_1", "admin", "banned" as any)
+    ).rejects.toThrow("Invalid status")
   })
 })

@@ -27,6 +27,8 @@ export type IngestionDeps = {
   ) => Promise<{ uploadUrl: string; key: string }>
   putToStorage: (uploadUrl: string, file: File) => Promise<boolean>
   confirm: (researchId: string) => Promise<{ message: string }>
+  resetRecordState: (researchId: string) => Promise<void>
+  revokeGrants: (researchId: string) => Promise<void>
 }
 
 export type IngestOutcome =
@@ -122,6 +124,10 @@ export function makeDefaultIngestionDeps(
       adapter.invokeEdge<{ message: string }>("confirm-upload", {
         researchId,
       }),
+    resetRecordState: (researchId) =>
+      adapter.rpc("reset_research_status", { target_id: researchId }),
+    revokeGrants: (researchId) =>
+      adapter.rpc("revoke_all_pdf_grants", { target_research_id: researchId }),
   }
 }
 
@@ -158,7 +164,13 @@ export async function replaceResearchPdf(
     return { status: "invalid-input", message: validation.message }
   }
 
-  return performUploadAndConfirm(researchId, file, deps)
+  const outcome = await performUploadAndConfirm(researchId, file, deps)
+  if (outcome.status !== "completed") return outcome
+
+  await deps.resetRecordState(researchId)
+  await deps.revokeGrants(researchId)
+
+  return outcome
 }
 
 async function performUploadAndConfirm(

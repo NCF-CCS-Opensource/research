@@ -35,6 +35,8 @@ function makeDeps(overrides: Partial<IngestionDeps> = {}): IngestionDeps {
     }),
     putToStorage: vi.fn().mockResolvedValue(true),
     confirm: vi.fn().mockResolvedValue({ message: "Upload confirmed" }),
+    resetRecordState: vi.fn().mockResolvedValue(undefined),
+    revokeGrants: vi.fn().mockResolvedValue(undefined),
     ...overrides,
   }
 }
@@ -119,6 +121,26 @@ describe("submitRecord / replacePdf", () => {
       "application/pdf"
     )
   })
+
+  it("resets moderation status after successful PDF replacement", async () => {
+    const deps = makeDeps()
+    await replaceResearchPdf("res_999", makePdfFile(), deps)
+    expect(deps.resetRecordState).toHaveBeenCalledWith("res_999")
+  })
+
+  it("revokes all PDF access grants after successful PDF replacement", async () => {
+    const deps = makeDeps()
+    await replaceResearchPdf("res_999", makePdfFile(), deps)
+    expect(deps.revokeGrants).toHaveBeenCalledWith("res_999")
+  })
+
+  it("does not reset status or revoke grants if upload fails", async () => {
+    const deps = makeDeps({ putToStorage: vi.fn().mockResolvedValue(false) })
+    const result = await replaceResearchPdf("res_999", makePdfFile(), deps)
+    expect(result.status).toBe("storage-failed")
+    expect(deps.resetRecordState).not.toHaveBeenCalled()
+    expect(deps.revokeGrants).not.toHaveBeenCalled()
+  })
 })
 
 describe("researchLifecycle module", () => {
@@ -130,6 +152,8 @@ describe("researchLifecycle module", () => {
         update_research_record: undefined,
         moderate_research: undefined,
         resubmit_research: undefined,
+        reset_research_status: undefined,
+        revoke_all_pdf_grants: undefined,
       },
       edge: {
         "presign-upload": { uploadUrl: "https://r2.example/upload", key: "k" },
