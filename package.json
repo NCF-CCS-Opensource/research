@@ -8,18 +8,7 @@
     "node": ">=20"
   },
   "scripts": {
-    "dev": "next dev -p 3000",
-    "build": "next build",
-    "start": "next start -p 3000",
-    "lint": "eslint",
     "format": "prettier --write \"**/*.{ts,tsx}\"",
-    "typecheck": "tsc --noEmit",
-    "test": "vitest run",
-    "turbo:dev": "turbo run dev",
-    "turbo:build": "turbo run build",
-    "turbo:lint": "turbo run lint",
-    "turbo:typecheck": "turbo run typecheck",
-    "turbo:test": "turbo run test",
     "test:integration": "vitest run --config vitest.integration.config.ts"
   },
   "dependencies": {

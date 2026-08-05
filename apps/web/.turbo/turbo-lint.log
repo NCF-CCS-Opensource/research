@@ -1,0 +1,7 @@
+$ eslint
+
+/home/jai/Github/NEXUS/ccs-research-hub-frontend/apps/web/lib/research-ingestion.ts
+  101:13  warning  'file' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+✖ 1 problem (0 errors, 1 warning)
+

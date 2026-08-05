@@ -1,0 +1,217 @@
+{
+  "app": {
+    "[project]/apps/web/app/_not-found/page": [
+      "static/media/a343f882a40d2cc9-s.p.0kho-wj7-y-w1.woff2",
+      "static/media/03bda585a99c6450-s.p.0zzh68k1~whtc.woff2",
+      "static/media/99e609270109b47d-s.p.16-z~2sp29ex6.woff2",
+      "static/media/effe91970fc4db64-s.p.07ig5l8azj~hy.woff2",
+      "static/media/23b7a97ae3b5c134-s.p.0o14nraug8u5s.woff2"
+    ],
+    "[project]/apps/web/app/admin/audit/page": [
+      "static/media/a343f882a40d2cc9-s.p.0kho-wj7-y-w1.woff2",
+      "static/media/03bda585a99c6450-s.p.0zzh68k1~whtc.woff2",
+      "static/media/99e609270109b47d-s.p.16-z~2sp29ex6.woff2",
+      "static/media/effe91970fc4db64-s.p.07ig5l8azj~hy.woff2",
+      "static/media/23b7a97ae3b5c134-s.p.0o14nraug8u5s.woff2"
+    ],
+    "[project]/apps/web/app/admin/categories/page": [
+      "static/media/a343f882a40d2cc9-s.p.0kho-wj7-y-w1.woff2",
+      "static/media/03bda585a99c6450-s.p.0zzh68k1~whtc.woff2",
+      "static/media/99e609270109b47d-s.p.16-z~2sp29ex6.woff2",
+      "static/media/effe91970fc4db64-s.p.07ig5l8azj~hy.woff2",
+      "static/media/23b7a97ae3b5c134-s.p.0o14nraug8u5s.woff2"
+    ],
+    "[project]/apps/web/app/admin/institutions/page": [
+      "static/media/a343f882a40d2cc9-s.p.0kho-wj7-y-w1.woff2",
+      "static/media/03bda585a99c6450-s.p.0zzh68k1~whtc.woff2",
+      "static/media/99e609270109b47d-s.p.16-z~2sp29ex6.woff2",
+      "static/media/effe91970fc4db64-s.p.07ig5l8azj~hy.woff2",
+      "static/media/23b7a97ae3b5c134-s.p.0o14nraug8u5s.woff2"
+    ],
+    "[project]/apps/web/app/admin/keywords/page": [
+      "static/media/a343f882a40d2cc9-s.p.0kho-wj7-y-w1.woff2",
+      "static/media/03bda585a99c6450-s.p.0zzh68k1~whtc.woff2",
+      "static/media/99e609270109b47d-s.p.16-z~2sp29ex6.woff2",
+      "static/media/effe91970fc4db64-s.p.07ig5l8azj~hy.woff2",
+      "static/media/23b7a97ae3b5c134-s.p.0o14nraug8u5s.woff2"
+    ],
+    "[project]/apps/web/app/admin/page": [
+      "static/media/a343f882a40d2cc9-s.p.0kho-wj7-y-w1.woff2",
+      "static/media/03bda585a99c6450-s.p.0zzh68k1~whtc.woff2",
+      "static/media/99e609270109b47d-s.p.16-z~2sp29ex6.woff2",
+      "static/media/effe91970fc4db64-s.p.07ig5l8azj~hy.woff2",
+      "static/media/23b7a97ae3b5c134-s.p.0o14nraug8u5s.woff2"
+    ],
+    "[project]/apps/web/app/admin/programs/page": [
+      "static/media/a343f882a40d2cc9-s.p.0kho-wj7-y-w1.woff2",
+      "static/media/03bda585a99c6450-s.p.0zzh68k1~whtc.woff2",
+      "static/media/99e609270109b47d-s.p.16-z~2sp29ex6.woff2",
+      "static/media/effe91970fc4db64-s.p.07ig5l8azj~hy.woff2",
+      "static/media/23b7a97ae3b5c134-s.p.0o14nraug8u5s.woff2"
+    ],
+    "[project]/apps/web/app/admin/research/page": [
+      "static/media/a343f882a40d2cc9-s.p.0kho-wj7-y-w1.woff2",
+      "static/media/03bda585a99c6450-s.p.0zzh68k1~whtc.woff2",
+      "static/media/99e609270109b47d-s.p.16-z~2sp29ex6.woff2",
+      "static/media/effe91970fc4db64-s.p.07ig5l8azj~hy.woff2",
+      "static/media/23b7a97ae3b5c134-s.p.0o14nraug8u5s.woff2"
+    ],
+    "[project]/apps/web/app/admin/users/page": [
+      "static/media/a343f882a40d2cc9-s.p.0kho-wj7-y-w1.woff2",
+      "static/media/03bda585a99c6450-s.p.0zzh68k1~whtc.woff2",
+      "static/media/99e609270109b47d-s.p.16-z~2sp29ex6.woff2",
+      "static/media/effe91970fc4db64-s.p.07ig5l8azj~hy.woff2",
+      "static/media/23b7a97ae3b5c134-s.p.0o14nraug8u5s.woff2"
+    ],
+    "[project]/apps/web/app/authors/[id]/page": [
+      "static/media/a343f882a40d2cc9-s.p.0kho-wj7-y-w1.woff2",
+      "static/media/03bda585a99c6450-s.p.0zzh68k1~whtc.woff2",
+      "static/media/99e609270109b47d-s.p.16-z~2sp29ex6.woff2",
+      "static/media/effe91970fc4db64-s.p.07ig5l8azj~hy.woff2",
+      "static/media/23b7a97ae3b5c134-s.p.0o14nraug8u5s.woff2"
+    ],
+    "[project]/apps/web/app/authors/page": [
+      "static/media/a343f882a40d2cc9-s.p.0kho-wj7-y-w1.woff2",
+      "static/media/03bda585a99c6450-s.p.0zzh68k1~whtc.woff2",
+      "static/media/99e609270109b47d-s.p.16-z~2sp29ex6.woff2",
+      "static/media/effe91970fc4db64-s.p.07ig5l8azj~hy.woff2",
+      "static/media/23b7a97ae3b5c134-s.p.0o14nraug8u5s.woff2"
+    ],
+    "[project]/apps/web/app/categories/[id]/page": [
+      "static/media/a343f882a40d2cc9-s.p.0kho-wj7-y-w1.woff2",
+      "static/media/03bda585a99c6450-s.p.0zzh68k1~whtc.woff2",
+      "static/media/99e609270109b47d-s.p.16-z~2sp29ex6.woff2",
+      "static/media/effe91970fc4db64-s.p.07ig5l8azj~hy.woff2",
+      "static/media/23b7a97ae3b5c134-s.p.0o14nraug8u5s.woff2"
+    ],
+    "[project]/apps/web/app/categories/page": [
+      "static/media/a343f882a40d2cc9-s.p.0kho-wj7-y-w1.woff2",
+      "static/media/03bda585a99c6450-s.p.0zzh68k1~whtc.woff2",
+      "static/media/99e609270109b47d-s.p.16-z~2sp29ex6.woff2",
+      "static/media/effe91970fc4db64-s.p.07ig5l8azj~hy.woff2",
+      "static/media/23b7a97ae3b5c134-s.p.0o14nraug8u5s.woff2"
+    ],
+    "[project]/apps/web/app/dashboard/collections/page": [
+      "static/media/a343f882a40d2cc9-s.p.0kho-wj7-y-w1.woff2",
+      "static/media/03bda585a99c6450-s.p.0zzh68k1~whtc.woff2",
+      "static/media/99e609270109b47d-s.p.16-z~2sp29ex6.woff2",
+      "static/media/effe91970fc4db64-s.p.07ig5l8azj~hy.woff2",
+      "static/media/23b7a97ae3b5c134-s.p.0o14nraug8u5s.woff2"
+    ],
+    "[project]/apps/web/app/dashboard/notifications/page": [
+      "static/media/a343f882a40d2cc9-s.p.0kho-wj7-y-w1.woff2",
+      "static/media/03bda585a99c6450-s.p.0zzh68k1~whtc.woff2",
+      "static/media/99e609270109b47d-s.p.16-z~2sp29ex6.woff2",
+      "static/media/effe91970fc4db64-s.p.07ig5l8azj~hy.woff2",
+      "static/media/23b7a97ae3b5c134-s.p.0o14nraug8u5s.woff2"
+    ],
+    "[project]/apps/web/app/dashboard/page": [
+      "static/media/a343f882a40d2cc9-s.p.0kho-wj7-y-w1.woff2",
+      "static/media/03bda585a99c6450-s.p.0zzh68k1~whtc.woff2",
+      "static/media/99e609270109b47d-s.p.16-z~2sp29ex6.woff2",
+      "static/media/effe91970fc4db64-s.p.07ig5l8azj~hy.woff2",
+      "static/media/23b7a97ae3b5c134-s.p.0o14nraug8u5s.woff2"
+    ],
+    "[project]/apps/web/app/dashboard/papers/[id]/edit/page": [
+      "static/media/a343f882a40d2cc9-s.p.0kho-wj7-y-w1.woff2",
+      "static/media/03bda585a99c6450-s.p.0zzh68k1~whtc.woff2",
+      "static/media/99e609270109b47d-s.p.16-z~2sp29ex6.woff2",
+      "static/media/effe91970fc4db64-s.p.07ig5l8azj~hy.woff2",
+      "static/media/23b7a97ae3b5c134-s.p.0o14nraug8u5s.woff2"
+    ],
+    "[project]/apps/web/app/dashboard/papers/page": [
+      "static/media/a343f882a40d2cc9-s.p.0kho-wj7-y-w1.woff2",
+      "static/media/03bda585a99c6450-s.p.0zzh68k1~whtc.woff2",
+      "static/media/99e609270109b47d-s.p.16-z~2sp29ex6.woff2",
+      "static/media/effe91970fc4db64-s.p.07ig5l8azj~hy.woff2",
+      "static/media/23b7a97ae3b5c134-s.p.0o14nraug8u5s.woff2"
+    ],
+    "[project]/apps/web/app/dashboard/pdf-requests/page": [
+      "static/media/a343f882a40d2cc9-s.p.0kho-wj7-y-w1.woff2",
+      "static/media/03bda585a99c6450-s.p.0zzh68k1~whtc.woff2",
+      "static/media/99e609270109b47d-s.p.16-z~2sp29ex6.woff2",
+      "static/media/effe91970fc4db64-s.p.07ig5l8azj~hy.woff2",
+      "static/media/23b7a97ae3b5c134-s.p.0o14nraug8u5s.woff2"
+    ],
+    "[project]/apps/web/app/dashboard/settings/page": [
+      "static/media/a343f882a40d2cc9-s.p.0kho-wj7-y-w1.woff2",
+      "static/media/03bda585a99c6450-s.p.0zzh68k1~whtc.woff2",
+      "static/media/99e609270109b47d-s.p.16-z~2sp29ex6.woff2",
+      "static/media/effe91970fc4db64-s.p.07ig5l8azj~hy.woff2",
+      "static/media/23b7a97ae3b5c134-s.p.0o14nraug8u5s.woff2"
+    ],
+    "[project]/apps/web/app/forgot-password/page": [
+      "static/media/a343f882a40d2cc9-s.p.0kho-wj7-y-w1.woff2",
+      "static/media/03bda585a99c6450-s.p.0zzh68k1~whtc.woff2",
+      "static/media/99e609270109b47d-s.p.16-z~2sp29ex6.woff2",
+      "static/media/effe91970fc4db64-s.p.07ig5l8azj~hy.woff2",
+      "static/media/23b7a97ae3b5c134-s.p.0o14nraug8u5s.woff2"
+    ],
+    "[project]/apps/web/app/login/page": [
+      "static/media/a343f882a40d2cc9-s.p.0kho-wj7-y-w1.woff2",
+      "static/media/03bda585a99c6450-s.p.0zzh68k1~whtc.woff2",
+      "static/media/99e609270109b47d-s.p.16-z~2sp29ex6.woff2",
+      "static/media/effe91970fc4db64-s.p.07ig5l8azj~hy.woff2",
+      "static/media/23b7a97ae3b5c134-s.p.0o14nraug8u5s.woff2"
+    ],
+    "[project]/apps/web/app/page": [
+      "static/media/a343f882a40d2cc9-s.p.0kho-wj7-y-w1.woff2",
+      "static/media/03bda585a99c6450-s.p.0zzh68k1~whtc.woff2",
+      "static/media/99e609270109b47d-s.p.16-z~2sp29ex6.woff2",
+      "static/media/effe91970fc4db64-s.p.07ig5l8azj~hy.woff2",
+      "static/media/23b7a97ae3b5c134-s.p.0o14nraug8u5s.woff2"
+    ],
+    "[project]/apps/web/app/register/page": [
+      "static/media/a343f882a40d2cc9-s.p.0kho-wj7-y-w1.woff2",
+      "static/media/03bda585a99c6450-s.p.0zzh68k1~whtc.woff2",
+      "static/media/99e609270109b47d-s.p.16-z~2sp29ex6.woff2",
+      "static/media/effe91970fc4db64-s.p.07ig5l8azj~hy.woff2",
+      "static/media/23b7a97ae3b5c134-s.p.0o14nraug8u5s.woff2"
+    ],
+    "[project]/apps/web/app/research/[id]/page": [
+      "static/media/a343f882a40d2cc9-s.p.0kho-wj7-y-w1.woff2",
+      "static/media/03bda585a99c6450-s.p.0zzh68k1~whtc.woff2",
+      "static/media/99e609270109b47d-s.p.16-z~2sp29ex6.woff2",
+      "static/media/effe91970fc4db64-s.p.07ig5l8azj~hy.woff2",
+      "static/media/23b7a97ae3b5c134-s.p.0o14nraug8u5s.woff2"
+    ],
+    "[project]/apps/web/app/research/[id]/request-pdf/page": [
+      "static/media/a343f882a40d2cc9-s.p.0kho-wj7-y-w1.woff2",
+      "static/media/03bda585a99c6450-s.p.0zzh68k1~whtc.woff2",
+      "static/media/99e609270109b47d-s.p.16-z~2sp29ex6.woff2",
+      "static/media/effe91970fc4db64-s.p.07ig5l8azj~hy.woff2",
+      "static/media/23b7a97ae3b5c134-s.p.0o14nraug8u5s.woff2"
+    ],
+    "[project]/apps/web/app/reset-password/page": [
+      "static/media/a343f882a40d2cc9-s.p.0kho-wj7-y-w1.woff2",
+      "static/media/03bda585a99c6450-s.p.0zzh68k1~whtc.woff2",
+      "static/media/99e609270109b47d-s.p.16-z~2sp29ex6.woff2",
+      "static/media/effe91970fc4db64-s.p.07ig5l8azj~hy.woff2",
+      "static/media/23b7a97ae3b5c134-s.p.0o14nraug8u5s.woff2"
+    ],
+    "[project]/apps/web/app/search/page": [
+      "static/media/a343f882a40d2cc9-s.p.0kho-wj7-y-w1.woff2",
+      "static/media/03bda585a99c6450-s.p.0zzh68k1~whtc.woff2",
+      "static/media/99e609270109b47d-s.p.16-z~2sp29ex6.woff2",
+      "static/media/effe91970fc4db64-s.p.07ig5l8azj~hy.woff2",
+      "static/media/23b7a97ae3b5c134-s.p.0o14nraug8u5s.woff2"
+    ],
+    "[project]/apps/web/app/upload/page": [
+      "static/media/a343f882a40d2cc9-s.p.0kho-wj7-y-w1.woff2",
+      "static/media/03bda585a99c6450-s.p.0zzh68k1~whtc.woff2",
+      "static/media/99e609270109b47d-s.p.16-z~2sp29ex6.woff2",
+      "static/media/effe91970fc4db64-s.p.07ig5l8azj~hy.woff2",
+      "static/media/23b7a97ae3b5c134-s.p.0o14nraug8u5s.woff2"
+    ],
+    "[project]/apps/web/app/verify-email/page": [
+      "static/media/a343f882a40d2cc9-s.p.0kho-wj7-y-w1.woff2",
+      "static/media/03bda585a99c6450-s.p.0zzh68k1~whtc.woff2",
+      "static/media/99e609270109b47d-s.p.16-z~2sp29ex6.woff2",
+      "static/media/effe91970fc4db64-s.p.07ig5l8azj~hy.woff2",
+      "static/media/23b7a97ae3b5c134-s.p.0o14nraug8u5s.woff2"
+    ]
+  },
+  "appUsingSizeAdjust": true,
+  "pages": {},
+  "pagesUsingSizeAdjust": false
+}
