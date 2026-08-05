@@ -10,6 +10,29 @@ import {
   type TransportAdapter,
 } from "@repo/api-client"
 
+function selectQuery(table: string, opts: SelectOptions) {
+  let query = getSupabase().from(table).select(opts.columns ?? "*")
+  if (opts.eq) {
+    for (const [key, value] of Object.entries(opts.eq)) {
+      query = query.eq(key, value)
+    }
+  }
+  if (opts.in) query = query.in(opts.in.column, opts.in.values)
+  if (opts.contains)
+    query = query.contains(
+      opts.contains.column,
+      JSON.stringify(opts.contains.value)
+    )
+  if (opts.ilike)
+    query = query.ilike(opts.ilike.column, opts.ilike.pattern)
+  if (opts.order)
+    query = query.order(opts.order.column, {
+      ascending: opts.order.ascending ?? true,
+    })
+  if (opts.range) query = query.range(opts.range.from, opts.range.to)
+  return query
+}
+
 const webTransport: TransportAdapter = {
   getCurrentUserId: async () =>
     (await getSupabase().auth.getUser()).data.user?.id ?? null,
@@ -19,38 +42,12 @@ const webTransport: TransportAdapter = {
     return data as T
   },
   async select<T>(table: string, opts: SelectOptions = {}): Promise<T[]> {
-    let query = getSupabase().from(table).select(opts.columns ?? "*")
-    if (opts.eq) {
-      for (const [key, value] of Object.entries(opts.eq)) {
-        query = query.eq(key, value)
-      }
-    }
-    if (opts.in) query = query.in(opts.in.column, opts.in.values)
-    if (opts.contains)
-      query = query.contains(
-        opts.contains.column,
-        opts.contains.value as Record<string, unknown>
-      )
-    if (opts.ilike)
-      query = query.ilike(opts.ilike.column, opts.ilike.pattern)
-    if (opts.order)
-      query = query.order(opts.order.column, {
-        ascending: opts.order.ascending ?? true,
-      })
-    if (opts.range) query = query.range(opts.range.from, opts.range.to)
-    const { data, error } = await query
+    const { data, error } = await selectQuery(table, opts)
     if (error) throw normalizeDomainError(error.message, error.code, 500)
     return data as T[]
   },
   async selectOne<T>(table: string, opts: SelectOptions = {}): Promise<T> {
-    let query = getSupabase().from(table).select(opts.columns ?? "*")
-    if (opts.eq) {
-      for (const [key, value] of Object.entries(opts.eq)) {
-        query = query.eq(key, value)
-      }
-    }
-    if (opts.in) query = query.in(opts.in.column, opts.in.values)
-    const { data, error } = await query.single()
+    const { data, error } = await selectQuery(table, opts).single()
     if (error) throw normalizeDomainError(error.message, error.code, 500)
     return data as T
   },
