@@ -4,6 +4,8 @@ export type SelectOptions = {
   columns?: string
   eq?: Record<string, unknown>
   in?: { column: string; values: unknown[] }
+  contains?: { column: string; value: Record<string, unknown> | unknown[] }
+  ilike?: { column: string; pattern: string }
   order?: { column: string; ascending?: boolean }
   range?: { from: number; to: number }
 }
@@ -49,6 +51,44 @@ function matchesIn(
   values: unknown[]
 ) {
   return values.includes(row[column])
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null
+}
+
+function objectContains(
+  subset: Record<string, unknown>,
+  obj: Record<string, unknown>
+) {
+  return Object.entries(subset).every(([key, value]) => obj[key] === value)
+}
+
+function matchesContains(
+  row: Record<string, unknown>,
+  column: string,
+  value: Record<string, unknown> | unknown[]
+) {
+  const cell = row[column]
+  if (Array.isArray(value)) {
+    if (!Array.isArray(cell)) return false
+    return value.some((element) =>
+      isRecord(element)
+        ? cell.some((item) => isRecord(item) && objectContains(element, item))
+        : cell.includes(element)
+    )
+  }
+  return isRecord(cell) && objectContains(value, cell)
+}
+
+function matchesIlike(
+  row: Record<string, unknown>,
+  column: string,
+  pattern: string
+) {
+  const value = row[column]
+  const needle = pattern.replace(/^%/, "").replace(/%$/, "").toLowerCase()
+  return typeof value === "string" && value.toLowerCase().includes(needle)
 }
 
 export function requireAuth(adapter: TransportAdapter) {
@@ -104,6 +144,14 @@ export function createInMemoryTransport(
       if (opts.in)
         rows = rows.filter((row) =>
           matchesIn(row, opts.in!.column, opts.in!.values)
+        )
+      if (opts.contains)
+        rows = rows.filter((row) =>
+          matchesContains(row, opts.contains!.column, opts.contains!.value)
+        )
+      if (opts.ilike)
+        rows = rows.filter((row) =>
+          matchesIlike(row, opts.ilike!.column, opts.ilike!.pattern)
         )
       if (opts.order) rows = applySorting(rows, opts.order)
       if (opts.range)

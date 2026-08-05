@@ -3,8 +3,8 @@ import Link from "next/link"
 import { Pagination } from "@/components/features/pagination"
 import { PublicShell } from "@/components/layout/public-shell"
 import { Button } from "@/components/ui/button"
-import { getAuthors } from "@/lib/api"
-import type { Author } from "@/types/api"
+import { publicQueries } from "@/lib/web-transport"
+import type { Author } from "@repo/api-client"
 
 type PageProps = {
   searchParams: Promise<Record<string, string | string[] | undefined>>
@@ -24,7 +24,7 @@ export default async function AuthorsPage({ searchParams }: PageProps) {
   }
 
   try {
-    authors = await getAuthors({ page, limit: 20, search })
+    authors = await publicQueries.getAuthors({ page, limit: 20, search })
   } catch {}
 
   return (

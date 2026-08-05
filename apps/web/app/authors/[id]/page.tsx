@@ -7,7 +7,7 @@ import { ResearchCard } from "@/components/features/research-card"
 import { Pagination } from "@/components/features/pagination"
 import { PublicShell } from "@/components/layout/public-shell"
 import { Button } from "@/components/ui/button"
-import { getAuthor, getAuthorPapers } from "@/lib/api"
+import { publicQueries } from "@/lib/web-transport"
 
 type PageProps = {
   params: Promise<{ id: string }>
@@ -19,7 +19,7 @@ export async function generateMetadata({
 }: PageProps): Promise<Metadata> {
   try {
     const { id } = await params
-    const author = await getAuthor(id)
+    const author = await publicQueries.getAuthor(id)
     return { title: `${author.name} — Authors` }
   } catch {
     return { title: "Author" }
@@ -37,8 +37,8 @@ export default async function AuthorProfilePage({
 
   try {
     ;[author, papers] = await Promise.all([
-      getAuthor(id),
-      getAuthorPapers(id, page),
+      publicQueries.getAuthor(id),
+      publicQueries.getAuthorPapers(id, page),
     ])
   } catch {
     notFound()

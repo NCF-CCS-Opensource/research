@@ -5,21 +5,14 @@ import { useEffect, useState, useTransition } from "react"
 import { Button } from "@/components/ui/button"
 import {
   callR2,
-  createMetadata,
-  deleteMetadata,
-  getAdminResearches,
-  getAuditLogs,
-  getMetadata,
-  getProfiles,
-  type MetadataTable,
-  moderateResearch,
-  renameMetadata,
-  updateAccount,
-} from "@/lib/api"
+  accountWorkspace,
+  researchLifecycle,
+} from "@/lib/web-transport"
+import type { MetadataTable, MetadataItem, ResearchStatus } from "@repo/api-client"
 
-type Research = Awaited<ReturnType<typeof getAdminResearches>>[number]
-type Profile = Awaited<ReturnType<typeof getProfiles>>[number]
-type AuditLog = Awaited<ReturnType<typeof getAuditLogs>>[number]
+type Research = Awaited<ReturnType<typeof researchLifecycle.getAdminQueue>>[number]
+type Profile = Awaited<ReturnType<typeof accountWorkspace.getProfiles>>[number]
+type AuditLog = Awaited<ReturnType<typeof researchLifecycle.getAuditLogs>>[number]
 
 function message(reason: unknown) {
   return reason instanceof Error ? reason.message : "Something went wrong"
@@ -32,7 +25,8 @@ export function AdminResearchPanel() {
   const [isPending, startTransition] = useTransition()
 
   function load() {
-    getAdminResearches(status)
+    const valid = status && ["pending", "approved", "rejected"].includes(status)
+    researchLifecycle.getAdminQueue(valid ? (status as ResearchStatus) : undefined)
       .then(setPapers)
       .catch((reason) => setError(message(reason)))
   }
@@ -45,7 +39,7 @@ export function AdminResearchPanel() {
     if (decision === "rejected" && !reason?.trim()) return
     startTransition(async () => {
       try {
-        await moderateResearch(id, decision, reason ?? undefined)
+        await researchLifecycle.moderate(id, decision, reason ?? undefined)
         load()
       } catch (cause) {
         setError(message(cause))
@@ -145,7 +139,7 @@ export function AdminUsersPanel() {
   const [isPending, startTransition] = useTransition()
 
   function load() {
-    getProfiles()
+    accountWorkspace.getProfiles()
       .then(setProfiles)
       .catch((reason) => setError(message(reason)))
   }
@@ -159,7 +153,7 @@ export function AdminUsersPanel() {
   ) {
     startTransition(async () => {
       try {
-        await updateAccount(
+        await accountWorkspace.updateAccount(
           profile.id,
           field === "role" ? (value as "user" | "admin") : profile.role,
           field === "status"
@@ -249,11 +243,11 @@ export function MetadataManager({
   const [isPending, startTransition] = useTransition()
 
   function load() {
-    getMetadata(table)
+    accountWorkspace.manageMetadata<MetadataItem[]>({ action: "list", table })
       .then(setItems)
       .catch((reason) => setError(message(reason)))
     if (table === "programs") {
-      getMetadata("institutions").then((options) => {
+      accountWorkspace.manageMetadata<MetadataItem[]>({ action: "list", table: "institutions" }).then((options) => {
         setInstitutions(options)
         setInstitutionId((current) => current || options[0]?.id || "")
       })
@@ -272,7 +266,7 @@ export function MetadataManager({
           if (!name.trim()) return
           startTransition(async () => {
             try {
-              await createMetadata(table, name, institutionId)
+              await accountWorkspace.manageMetadata({ action: "create", table, name, institutionId })
               setName("")
               load()
             } catch (cause) {
@@ -324,12 +318,13 @@ export function MetadataManager({
                   onChange={(event) =>
                     startTransition(async () => {
                       try {
-                        await renameMetadata(
+                        await accountWorkspace.manageMetadata({
+                          action: "rename",
                           table,
-                          item.id,
-                          item.name,
-                          event.target.value
-                        )
+                          id: item.id,
+                          name: item.name,
+                          institutionId: event.target.value
+                        })
                         load()
                       } catch (cause) {
                         setError(message(cause))
@@ -354,12 +349,13 @@ export function MetadataManager({
                   if (!next?.trim() || next.trim() === item.name) return
                   startTransition(async () => {
                     try {
-                      await renameMetadata(
+                      await accountWorkspace.manageMetadata({
+                        action: "rename",
                         table,
-                        item.id,
-                        next,
-                        item.institutionId ?? undefined
-                      )
+                        id: item.id,
+                        name: next,
+                        institutionId: item.institutionId ?? undefined
+                      })
                       load()
                     } catch (cause) {
                       setError(message(cause))
@@ -377,7 +373,7 @@ export function MetadataManager({
                   if (!window.confirm(`Delete “${item.name}”?`)) return
                   startTransition(async () => {
                     try {
-                      await deleteMetadata(table, item.id)
+                      await accountWorkspace.manageMetadata({ action: "delete", table, id: item.id })
                       load()
                     } catch (cause) {
                       setError(message(cause))
@@ -400,7 +396,7 @@ export function AuditLogPanel() {
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    getAuditLogs()
+    researchLifecycle.getAuditLogs()
       .then(setLogs)
       .catch((reason) => setError(message(reason)))
   }, [])

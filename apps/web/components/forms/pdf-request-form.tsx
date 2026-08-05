@@ -4,7 +4,7 @@ import Link from "next/link"
 import { useState, useTransition } from "react"
 
 import { Button } from "@/components/ui/button"
-import { createPdfRequest } from "@/lib/api"
+import { pdfAccess } from "@/lib/web-transport"
 
 export function PdfRequestForm({ researchId }: { researchId: string }) {
   const [message, setMessage] = useState<string | null>(null)
@@ -20,7 +20,7 @@ export function PdfRequestForm({ researchId }: { researchId: string }) {
 
     startTransition(async () => {
       try {
-        const response = await createPdfRequest(
+        const response = await pdfAccess.requestAccess(
           researchId,
           String(form.get("requestNote") ?? "")
         )
