@@ -8,7 +8,7 @@ import {
   accountWorkspace,
   callR2,
   pdfAccess,
-  publicQueries,
+  discovery,
 } from "@/lib/web-transport"
 import { trackSuccessfulCitationExport } from "@/lib/citation-export"
 import type { PdfAccessState } from "@repo/api-client"
@@ -36,7 +36,7 @@ export function ResearchActions({
   useEffect(() => {
     if (trackedView.current) return
     trackedView.current = true
-    void publicQueries.recordEngagement(researchId, "view").catch(() => {})
+    void discovery.recordEngagement(researchId, "view").catch(() => {})
   }, [researchId])
 
   function loadAccessState() {
@@ -109,7 +109,7 @@ export function ResearchActions({
       try {
         const tracked = await trackSuccessfulCitationExport(
           () => navigator.clipboard.writeText(citation),
-          () => publicQueries.recordEngagement(researchId, "citation_export")
+          () => discovery.recordEngagement(researchId, "citation_export")
         )
         setMessage("Citation copied")
         if (!tracked)

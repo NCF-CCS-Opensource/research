@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation"
 import Link from "next/link"
 
 import { Button } from "@/components/ui/button"
-import { researchLifecycle, publicQueries } from "@/lib/web-transport"
+import { discovery, researchLifecycle } from "@/lib/web-transport"
 import type { ResearchDetail } from "@repo/api-client"
 import { MultiCheckbox } from "@/components/forms/upload-research-form"
 
@@ -23,7 +23,11 @@ export function EditResearchForm({ id }: { id: string }) {
   const [isPending, startTransition] = useTransition()
 
   useEffect(() => {
-    Promise.all([researchLifecycle.getOwnerRecord(id), publicQueries.getCategories(), publicQueries.getKeywords()])
+    Promise.all([
+      researchLifecycle.getOwnerRecord(id),
+      discovery.getCategories(),
+      discovery.getKeywords(),
+    ])
       .then(([paper, categoryOptions, keywordOptions]) => {
         setResearch(paper)
         setCategories(categoryOptions)
