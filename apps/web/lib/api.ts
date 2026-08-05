@@ -1,14 +1,11 @@
 import type {
-  Author,
-  Category,
   DashboardData,
-  Keyword,
-  PaginatedResponse,
   ResearchDetail,
-  ResearchSummary,
-  SearchSuggestions,
 } from "@/types/api"
+import type { DiscoveryModule } from "@repo/api-client"
 import { getSupabase } from "@/lib/supabase"
+import { createSupabaseTransportAdapter } from "@/lib/transport"
+import { createDiscoveryModule, mapResearch, type PublicResearchRow } from "@repo/api-client"
 export * from "@/lib/mock-dataset"
 
 export class ApiError extends Error {
@@ -20,225 +17,64 @@ export class ApiError extends Error {
   }
 }
 
+let discoveryInstance: DiscoveryModule | undefined
+
+function getDiscovery(): DiscoveryModule {
+  if (!discoveryInstance) {
+    discoveryInstance = createDiscoveryModule(createSupabaseTransportAdapter())
+  }
+  return discoveryInstance
+}
+
 export async function getRecentResearch(limit = 6) {
-  const { data, error, count } = await getSupabase()
-    .from("public_research")
-    .select("*", { count: "exact" })
-    .order("created_at", { ascending: false })
-    .range(0, limit - 1)
-  if (error) throw new ApiError(error.message, 500)
-  return paginated(data.map(mapResearch), count, 1, limit)
+  return getDiscovery().getRecent(limit)
 }
 
 export async function searchResearch(
   query: Record<string, string | number | undefined>
 ) {
-  const page = positiveNumber(query.page, 1)
-  const limit = positiveNumber(query.limit, 10)
-  const supabase = getSupabase()
-  const params = {
-    p_query: optionalString(query.q),
-    p_category: optionalString(query.category),
-    p_keyword: optionalString(query.keyword),
-    p_author: optionalString(query.author),
-    p_date_from: optionalString(query.dateFrom),
-    p_date_to: optionalString(query.dateTo),
-    p_sort: optionalString(query.sort) ?? "relevance",
-    p_limit: limit,
-    p_offset: (page - 1) * limit,
-  }
-  const { data, error } = await supabase.rpc("search_public_research", params)
-  if (error) throw new ApiError(error.message, 500)
-  const rows = (data ?? []) as PublicResearchRow[]
-  let total = Number(rows[0]?.total_count ?? 0)
-  if (!rows.length && page > 1) {
-    const probe = await supabase.rpc("search_public_research", {
-      ...params,
-      p_limit: 1,
-      p_offset: 0,
-    })
-    if (probe.error) throw new ApiError(probe.error.message, 500)
-    total = Number(probe.data?.[0]?.total_count ?? 0)
-  }
-  return paginated(rows.map(mapResearch), total, page, limit)
+  return getDiscovery().search(query)
 }
 
 export async function getResearch(id: string) {
-  const { data, error } = await getSupabase()
-    .from("public_research")
-    .select("*")
-    .eq("id", id)
-    .single()
-  if (error)
-    throw new ApiError(error.message, error.code === "PGRST116" ? 404 : 500)
-  return mapResearch(data) as ResearchDetail
+  return getDiscovery().getDetail(id)
 }
 
 export async function getCategories() {
-  const { data, error } = await getSupabase()
-    .from("public_categories")
-    .select("*")
-    .order("name")
-  if (error) throw new ApiError(error.message, 500)
-  return data.map(mapCategory)
+  return getDiscovery().getCategories()
 }
 
 export async function getCategory(id: string, page = 1) {
-  const limit = 10
-  const supabase = getSupabase()
-  const [{ data: category, error: categoryError }, papers] = await Promise.all([
-    supabase.from("public_categories").select("*").eq("id", id).single(),
-    supabase
-      .from("public_research")
-      .select("*", { count: "exact" })
-      .contains("categories", JSON.stringify([{ id }]))
-      .order("created_at", { ascending: false })
-      .range((page - 1) * limit, page * limit - 1),
-  ])
-  if (categoryError)
-    throw new ApiError(
-      categoryError.message,
-      categoryError.code === "PGRST116" ? 404 : 500
-    )
-  if (papers.error) throw new ApiError(papers.error.message, 500)
-  return {
-    data: {
-      ...mapCategory(category),
-      researches: papers.data.map(mapResearch),
-    },
-    meta: paginated([], papers.count, page, limit).meta,
-  }
+  return getDiscovery().getCategory(id, page)
 }
 
 export async function getKeywords() {
-  const { data, error } = await getSupabase()
-    .from("keywords")
-    .select("id,name")
-    .order("name")
-  if (error) throw new ApiError(error.message, 500)
-  return data as Keyword[]
+  return getDiscovery().getKeywords()
 }
 
 export async function getAuthors(
   query: Record<string, string | number | undefined>
 ) {
-  const page = positiveNumber(query.page, 1)
-  const limit = positiveNumber(query.limit, 20)
-  let request = getSupabase()
-    .from("public_authors")
-    .select("*", { count: "exact" })
-    .order("name")
-    .range((page - 1) * limit, page * limit - 1)
-  if (optionalString(query.search))
-    request = request.ilike("name", `%${optionalString(query.search)}%`)
-  const { data, error, count } = await request
-  if (error) throw new ApiError(error.message, 500)
-  return paginated(data.map(mapAuthor), count, page, limit)
+  return getDiscovery().getAuthors(query)
 }
 
 export async function getAuthor(id: string) {
-  const { data, error } = await getSupabase()
-    .from("public_authors")
-    .select("*")
-    .eq("id", id)
-    .single()
-  if (error)
-    throw new ApiError(error.message, error.code === "PGRST116" ? 404 : 500)
-  return mapAuthor(data)
+  return getDiscovery().getAuthor(id)
 }
 
 export async function getAuthorPapers(id: string, page = 1) {
-  const limit = 10
-  const { data, error, count } = await getSupabase()
-    .from("public_research")
-    .select("*", { count: "exact" })
-    .contains("authors", JSON.stringify([{ id }]))
-    .order("created_at", { ascending: false })
-    .range((page - 1) * limit, page * limit - 1)
-  if (error) throw new ApiError(error.message, 500)
-  return paginated(data.map(mapResearch), count, page, limit)
+  return getDiscovery().getAuthorPapers(id, page)
 }
 
 export async function getSuggestions(q: string) {
-  const [researches, authors] = await Promise.all([
-    searchResearch({ q, page: 1, limit: 4 }),
-    getAuthors({ search: q, page: 1, limit: 3 }),
-  ])
-  return {
-    researches: researches.data.map(({ id, title, rank = 0 }) => ({
-      id,
-      title,
-      similarity: rank,
-    })),
-    authors: authors.data.map(({ id, name }) => ({ id, name })),
-  } satisfies SearchSuggestions
+  return getDiscovery().getSuggestions(q)
 }
 
-type PublicResearchRow = Record<string, unknown> & {
-  id: string
-  title: string
-  authors?: Author[]
-  categories?: Category[]
-  keywords?: Keyword[]
-}
-
-export function mapResearch(row: PublicResearchRow): ResearchDetail {
-  return {
-    id: row.id,
-    title: row.title,
-    abstract: row.abstract as string | null,
-    publishDate: row.publish_date as string | null,
-    status: row.status as ResearchSummary["status"],
-    uploaderId: row.uploader_id as string | undefined,
-    uploadComplete: row.upload_complete as boolean | undefined,
-    viewCount: row.view_count as number,
-    downloadCount: row.download_count as number,
-    citationExportCount: row.citation_export_count as number,
-    rejectionReason: row.rejection_reason as string | null,
-    createdAt: row.created_at as string,
-    updatedAt: row.updated_at as string,
-    authors: row.authors ?? [],
-    categories: row.categories ?? [],
-    keywords: row.keywords ?? [],
-    rank: row.rank as number | undefined,
-  }
-}
-
-function mapAuthor(row: Record<string, unknown>): Author {
-  return {
-    id: row.id as string,
-    name: row.name as string,
-    email: row.email as string | null,
-    paperCount: row.paper_count as number,
-  }
-}
-
-function mapCategory(row: Record<string, unknown>): Category {
-  return {
-    id: row.id as string,
-    name: row.name as string,
-    researchCount: row.research_count as number,
-  }
-}
-
-function paginated<T>(
-  data: T[],
-  count: number | null,
-  page: number,
-  limit: number
-): PaginatedResponse<T> {
-  const total = count ?? 0
-  return { data, meta: { total, page, totalPages: Math.ceil(total / limit) } }
-}
-
-function positiveNumber(value: string | number | undefined, fallback: number) {
-  const parsed = Number(value)
-  return Number.isInteger(parsed) && parsed > 0 ? parsed : fallback
-}
-
-function optionalString(value: string | number | undefined) {
-  const result = value === undefined ? "" : String(value).trim()
-  return result || undefined
+export async function recordEngagement(
+  researchId: string,
+  kind: "view" | "citation_export"
+) {
+  return getDiscovery().recordEngagement(researchId, kind)
 }
 
 export async function getMyResearches() {
@@ -599,17 +435,6 @@ export async function markNotificationsRead() {
   if (error) throw new ApiError(error.message, 400)
 }
 
-export async function recordEngagement(
-  researchId: string,
-  kind: "view" | "citation_export"
-) {
-  const { error } = await getSupabase().rpc("record_engagement", {
-    target_research_id: researchId,
-    kind,
-  })
-  if (error) throw new ApiError(error.message, 400)
-}
-
 export async function getDashboard(
   scope: "personal" | "admin",
   period: 30 | 90
@@ -672,3 +497,4 @@ export async function updateProfileSettings(input: {
     .eq("id", user.id)
   if (error) throw new ApiError(error.message, 400)
 }
+
