@@ -1,6 +1,7 @@
 import { getSupabase } from "@/lib/supabase"
 import {
   createAccountWorkspace,
+  createDiscovery,
   createPdfAccess,
   createPublicQueries,
   createResearchLifecycle,
@@ -103,6 +104,7 @@ export { webTransport }
 export const researchLifecycle = createResearchLifecycle(webTransport)
 export const pdfAccess = createPdfAccess(webTransport)
 export const accountWorkspace = createAccountWorkspace(webTransport)
+export const discovery = createDiscovery(webTransport)
 export const publicQueries = createPublicQueries(webTransport)
 
 export async function callR2<T>(

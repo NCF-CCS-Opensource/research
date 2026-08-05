@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest"
 import { createInMemoryTransport } from "./transport"
 import { NotFoundError } from "./errors"
-import { createPublicQueries } from "./public-queries"
+import { createDiscovery, createPublicQueries } from "./public-queries"
 
 const authors = [
   { id: "a1", name: "Ada Lovelace", email: "ada@example.com", paper_count: 2 },
@@ -83,6 +83,13 @@ function makeAdapter() {
 }
 
 describe("createPublicQueries", () => {
+  it("exposes discovery alongside the compatibility factory", async () => {
+    const discovery = createDiscovery(makeAdapter())
+    await expect(discovery.getRecentResearch(1)).resolves.toMatchObject({
+      data: [expect.objectContaining({ id: "res_3" })],
+    })
+  })
+
   it("returns recent research ordered by creation date", async () => {
     const publicQueries = createPublicQueries(makeAdapter())
     const result = await publicQueries.getRecentResearch(2)

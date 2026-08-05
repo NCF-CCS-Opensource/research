@@ -16,6 +16,74 @@ import { mapResearch } from "./types"
 import { requireAuth, type TransportAdapter } from "./transport"
 import { ValidationError } from "./errors"
 
+export type DashboardMetric =
+  | "researchViews"
+  | "authorizedDownloads"
+  | "citationExports"
+
+export type DashboardData = {
+  scope: "personal" | "admin"
+  mode: "reader" | "owner" | "admin"
+  isAdmin: boolean
+  generatedAt: string
+  cards: Partial<
+    Record<
+      | "savedResearch"
+      | "pendingPdfRequests"
+      | "grantedResearchPdfs"
+      | "unreadNotifications"
+      | "ownedResearch"
+      | "researchViews"
+      | "authorizedDownloads"
+      | "citationExports"
+      | "readyForModeration"
+      | "activeAccounts"
+      | "recentRegistrations"
+      | "approvedResearch"
+      | "pdfAccessRequestsLast30Days",
+      number
+    >
+  >
+  docket: Array<{
+    id?: string
+    kind: string
+    title?: string
+    label?: string
+    detail?: string
+    count?: number
+    createdAt?: string
+    href: string
+  }>
+  recentActivity: Array<{
+    kind: string
+    title: string
+    detail: string
+    occurredAt: string
+    href: string
+  }>
+  comparisons: Array<{
+    id: string
+    title: string
+    researchViews: number
+    authorizedDownloads: number
+    citationExports: number
+    pendingRequests: number
+  }>
+  recentAudit: Array<{
+    action: string
+    title: string
+    createdAt: string
+    href: string
+  }>
+  pulse: {
+    period: 30 | 90
+    current: Record<DashboardMetric, number>
+    previous: Record<DashboardMetric, number>
+    earliestAvailableDate: string | null
+    days: Array<{ date: string } & Record<DashboardMetric, number>>
+  } | null
+}
+
 const MAX_NAME_LENGTH = 200
 const MAX_SUFFIX_LENGTH = 20
 
@@ -68,6 +136,10 @@ export type AccountWorkspace = {
   removeFromCollection(researchId: string): Promise<void>
   getNotifications(): Promise<Notification[]>
   markNotificationsRead(): Promise<void>
+  getDashboard(
+    scope: "personal" | "admin",
+    period: 30 | 90
+  ): Promise<DashboardData>
   manageMetadata<T>(request: ManageMetadataRequest): Promise<T>
 }
 
@@ -270,6 +342,13 @@ export function createAccountWorkspace(
 
     async markNotificationsRead() {
       await adapter.rpc("mark_notifications_read")
+    },
+
+    async getDashboard(scope, period) {
+      return adapter.rpc<DashboardData>("get_dashboard", {
+        requested_scope: scope,
+        requested_period: period,
+      })
     },
 
     manageMetadata,

@@ -8,6 +8,7 @@ import type {
 } from "./types"
 import { mapResearch } from "./types"
 import { DomainApiError } from "./errors"
+import type { DashboardData } from "./account-workspace"
 
 export type PaginatedResponse<T> = {
   data: T[]
@@ -23,80 +24,30 @@ export type SearchSuggestions = {
   authors: Array<{ id: string; name: string }>
 }
 
-export type DashboardMetric =
-  | "researchViews"
-  | "authorizedDownloads"
-  | "citationExports"
-
-export type DashboardData = {
-  scope: "personal" | "admin"
-  mode: "reader" | "owner" | "admin"
-  isAdmin: boolean
-  generatedAt: string
-  cards: Partial<
-    Record<
-      | "savedResearch"
-      | "pendingPdfRequests"
-      | "grantedResearchPdfs"
-      | "unreadNotifications"
-      | "ownedResearch"
-      | "researchViews"
-      | "authorizedDownloads"
-      | "citationExports"
-      | "readyForModeration"
-      | "activeAccounts"
-      | "recentRegistrations"
-      | "approvedResearch"
-      | "pdfAccessRequestsLast30Days",
-      number
-    >
-  >
-  docket: Array<{
-    id?: string
-    kind: string
-    title?: string
-    label?: string
-    detail?: string
-    count?: number
-    createdAt?: string
-    href: string
-  }>
-  recentActivity: Array<{
-    kind: string
-    title: string
-    detail: string
-    occurredAt: string
-    href: string
-  }>
-  comparisons: Array<{
-    id: string
-    title: string
-    researchViews: number
-    authorizedDownloads: number
-    citationExports: number
-    pendingRequests: number
-  }>
-  recentAudit: Array<{
-    action: string
-    title: string
-    createdAt: string
-    href: string
-  }>
-  pulse: {
-    period: 30 | 90
-    current: Record<DashboardMetric, number>
-    previous: Record<DashboardMetric, number>
-    earliestAvailableDate: string | null
-    days: Array<{ date: string } & Record<DashboardMetric, number>>
-  } | null
+export type ResearchSearchParams = {
+  q?: string
+  category?: string
+  keyword?: string
+  author?: string
+  dateFrom?: string
+  dateTo?: string
+  sort?: string
+  page?: string | number
+  limit?: string | number
 }
 
-export type PublicQueries = {
+export type AuthorSearchParams = {
+  search?: string
+  page?: string | number
+  limit?: string | number
+}
+
+export type Discovery = {
   getRecentResearch(
     limit?: number
   ): Promise<PaginatedResponse<ResearchDetail>>
   searchResearch(
-    query: Record<string, string | number | undefined>
+    query: ResearchSearchParams
   ): Promise<PaginatedResponse<ResearchDetail>>
   getResearch(id: string): Promise<ResearchDetail>
   getCategories(): Promise<Category[]>
@@ -109,7 +60,7 @@ export type PublicQueries = {
   }>
   getKeywords(): Promise<Keyword[]>
   getAuthors(
-    query: Record<string, string | number | undefined>
+    query: AuthorSearchParams
   ): Promise<PaginatedResponse<Author>>
   getAuthor(id: string): Promise<Author>
   getAuthorPapers(
@@ -121,6 +72,9 @@ export type PublicQueries = {
     researchId: string,
     kind: "view" | "citation_export"
   ): Promise<void>
+}
+
+export type PublicQueries = Discovery & {
   getDashboard(
     scope: "personal" | "admin",
     period: 30 | 90
@@ -164,11 +118,9 @@ function mapCategory(row: Record<string, unknown>): Category {
   }
 }
 
-export function createPublicQueries(
-  adapter: TransportAdapter
-): PublicQueries {
+export function createDiscovery(adapter: TransportAdapter): Discovery {
   async function searchResearch(
-    query: Record<string, string | number | undefined>
+    query: ResearchSearchParams
   ): Promise<PaginatedResponse<ResearchDetail>> {
     const page = positiveNumber(query.page, 1)
     const limit = positiveNumber(query.limit, 10)
@@ -316,6 +268,12 @@ export function createPublicQueries(
       })
     },
 
+  }
+}
+
+export function createPublicQueries(adapter: TransportAdapter): PublicQueries {
+  return {
+    ...createDiscovery(adapter),
     async getDashboard(scope, period) {
       return adapter.rpc<DashboardData>("get_dashboard", {
         requested_scope: scope,
