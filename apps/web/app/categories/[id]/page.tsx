@@ -6,7 +6,7 @@ import { Pagination } from "@/components/features/pagination"
 import { ResearchCard } from "@/components/features/research-card"
 import { PublicShell } from "@/components/layout/public-shell"
 import { Button } from "@/components/ui/button"
-import { publicQueries } from "@/lib/web-transport"
+import { discovery } from "@/lib/web-transport"
 
 type PageProps = {
   params: Promise<{ id: string }>
@@ -22,7 +22,7 @@ export default async function CategoryDetailPage({
   let category
 
   try {
-    category = await publicQueries.getCategory(id, page)
+    category = await discovery.getCategory(id, page)
   } catch {
     notFound()
   }

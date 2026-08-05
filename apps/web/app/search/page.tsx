@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
-import { publicQueries } from "@/lib/web-transport"
+import { discovery } from "@/lib/web-transport"
 import type { Category, Keyword } from "@repo/api-client"
 import type { ResearchSummary } from "@/types/api"
 
@@ -26,7 +26,7 @@ function hrefWith(params: URLSearchParams, page: number) {
 
 async function loadSearch(params: Record<string, string | number | undefined>) {
   try {
-    return await publicQueries.searchResearch(params)
+    return await discovery.searchResearch(params)
   } catch {
     return {
       data: [] as ResearchSummary[],
@@ -37,7 +37,7 @@ async function loadSearch(params: Record<string, string | number | undefined>) {
 
 async function loadCategories() {
   try {
-    return await publicQueries.getCategories()
+    return await discovery.getCategories()
   } catch {
     return [] as Category[]
   }
@@ -45,7 +45,7 @@ async function loadCategories() {
 
 async function loadKeywords() {
   try {
-    return await publicQueries.getKeywords()
+    return await discovery.getKeywords()
   } catch {
     return [] as Keyword[]
   }
