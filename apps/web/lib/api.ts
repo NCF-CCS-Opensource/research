@@ -1,9 +1,12 @@
 import type {
+  Author,
+  Category,
   DashboardData,
+  Keyword,
+  PaginatedResponse,
   ResearchDetail,
   SearchSuggestions,
 } from "@/types/api"
-import type { DiscoveryModule } from "@repo/api-client"
 import { getSupabase } from "@/lib/supabase"
 import {
   createAccountWorkspace,
@@ -120,47 +123,157 @@ export const pdfAccess = createPdfAccess(webTransport)
 export const accountWorkspace = createAccountWorkspace(webTransport)
 
 export async function getRecentResearch(limit = 6) {
-  return getDiscovery().getRecent(limit)
+  const { data, error, count } = await getSupabase()
+    .from("public_research")
+    .select("*", { count: "exact" })
+    .order("created_at", { ascending: false })
+    .range(0, limit - 1)
+  if (error) throw new ApiError(error.message, 500)
+  return paginated(data.map(mapResearch), count, 1, limit)
 }
 
 export async function searchResearch(
   query: Record<string, string | number | undefined>
 ) {
-  return getDiscovery().search(query)
+  const page = positiveNumber(query.page, 1)
+  const limit = positiveNumber(query.limit, 10)
+  const supabase = getSupabase()
+  const params = {
+    p_query: optionalString(query.q),
+    p_category: optionalString(query.category),
+    p_keyword: optionalString(query.keyword),
+    p_author: optionalString(query.author),
+    p_date_from: optionalString(query.dateFrom),
+    p_date_to: optionalString(query.dateTo),
+    p_sort: optionalString(query.sort) ?? "relevance",
+    p_limit: limit,
+    p_offset: (page - 1) * limit,
+  }
+  const { data, error } = await supabase.rpc("search_public_research", params)
+  if (error) throw new ApiError(error.message, 500)
+  const rows = (data ?? []) as PublicResearchRow[]
+  let total = Number(rows[0]?.total_count ?? 0)
+  if (!rows.length && page > 1) {
+    const probe = await supabase.rpc("search_public_research", {
+      ...params,
+      p_limit: 1,
+      p_offset: 0,
+    })
+    if (probe.error) throw new ApiError(probe.error.message, 500)
+    total = Number(probe.data?.[0]?.total_count ?? 0)
+  }
+  return paginated(rows.map(mapResearch), total, page, limit)
 }
 
 export async function getResearch(id: string) {
-  return getDiscovery().getDetail(id)
+  const { data, error } = await getSupabase()
+    .from("public_research")
+    .select("*")
+    .eq("id", id)
+    .single()
+  if (error)
+    throw new ApiError(error.message, error.code === "PGRST116" ? 404 : 500)
+  return mapResearch(data) as ResearchDetail
 }
 
 export async function getCategories() {
-  return getDiscovery().getCategories()
+  const { data, error } = await getSupabase()
+    .from("public_categories")
+    .select("*")
+    .order("name")
+  if (error) throw new ApiError(error.message, 500)
+  return data.map(mapCategory)
 }
 
 export async function getCategory(id: string, page = 1) {
-  return getDiscovery().getCategory(id, page)
+  const limit = 10
+  const supabase = getSupabase()
+  const [{ data: category, error: categoryError }, papers] = await Promise.all([
+    supabase.from("public_categories").select("*").eq("id", id).single(),
+    supabase
+      .from("public_research")
+      .select("*", { count: "exact" })
+      .contains("categories", JSON.stringify([{ id }]))
+      .order("created_at", { ascending: false })
+      .range((page - 1) * limit, page * limit - 1),
+  ])
+  if (categoryError)
+    throw new ApiError(
+      categoryError.message,
+      categoryError.code === "PGRST116" ? 404 : 500
+    )
+  if (papers.error) throw new ApiError(papers.error.message, 500)
+  return {
+    data: {
+      ...mapCategory(category),
+      researches: papers.data.map(mapResearch),
+    },
+    meta: paginated([], papers.count, page, limit).meta,
+  }
 }
 
 export async function getKeywords() {
-  return getDiscovery().getKeywords()
+  const { data, error } = await getSupabase()
+    .from("keywords")
+    .select("id,name")
+    .order("name")
+  if (error) throw new ApiError(error.message, 500)
+  return data as Keyword[]
 }
 
 export async function getAuthors(
   query: Record<string, string | number | undefined>
 ) {
-  return getDiscovery().getAuthors(query)
+  const page = positiveNumber(query.page, 1)
+  const limit = positiveNumber(query.limit, 20)
+  let request = getSupabase()
+    .from("public_authors")
+    .select("*", { count: "exact" })
+    .order("name")
+    .range((page - 1) * limit, page * limit - 1)
+  if (optionalString(query.search))
+    request = request.ilike("name", `%${optionalString(query.search)}%`)
+  const { data, error, count } = await request
+  if (error) throw new ApiError(error.message, 500)
+  return paginated(data.map(mapAuthor), count, page, limit)
 }
 
 export async function getAuthor(id: string) {
-  return getDiscovery().getAuthor(id)
+  const { data, error } = await getSupabase()
+    .from("public_authors")
+    .select("*")
+    .eq("id", id)
+    .single()
+  if (error)
+    throw new ApiError(error.message, error.code === "PGRST116" ? 404 : 500)
+  return mapAuthor(data)
 }
 
 export async function getAuthorPapers(id: string, page = 1) {
-  return getDiscovery().getAuthorPapers(id, page)
+  const limit = 10
+  const { data, error, count } = await getSupabase()
+    .from("public_research")
+    .select("*", { count: "exact" })
+    .contains("authors", JSON.stringify([{ id }]))
+    .order("created_at", { ascending: false })
+    .range((page - 1) * limit, page * limit - 1)
+  if (error) throw new ApiError(error.message, 500)
+  return paginated(data.map(mapResearch), count, page, limit)
 }
 
 export async function getSuggestions(q: string) {
-  return getDiscovery().getSuggestions(q)
+  const [researches, authors] = await Promise.all([
+    searchResearch({ q, page: 1, limit: 4 }),
+    getAuthors({ search: q, page: 1, limit: 3 }),
+  ])
+  return {
+    researches: researches.data.map(({ id, title, rank = 0 }) => ({
+      id,
+      title,
+      similarity: rank,
+    })),
+    authors: authors.data.map(({ id, name }) => ({ id, name })),
+  } satisfies SearchSuggestions
 }
 
 type PublicResearchRow = ResearchRow
@@ -370,6 +483,17 @@ export async function markNotificationsRead() {
   await accountWorkspace.markNotificationsRead()
 }
 
+export async function recordEngagement(
+  researchId: string,
+  kind: "view" | "citation_export"
+) {
+  const { error } = await getSupabase().rpc("record_engagement", {
+    target_research_id: researchId,
+    kind,
+  })
+  if (error) throw new ApiError(error.message, 400)
+}
+
 export async function getDashboard(
   scope: "personal" | "admin",
   period: 30 | 90
@@ -408,4 +532,3 @@ export async function updateProfileSettings(input: {
 }) {
   await accountWorkspace.updateProfileSettings(input)
 }
-
