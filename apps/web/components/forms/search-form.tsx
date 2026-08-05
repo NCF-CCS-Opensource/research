@@ -7,7 +7,7 @@ import { ArrowRight, Search } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { getSuggestions } from "@/lib/api"
+import { publicQueries } from "@/lib/web-transport"
 
 import { useQuery } from "@tanstack/react-query"
 import { useUIStore } from "@repo/store"
@@ -31,7 +31,7 @@ export function SearchForm({
 
   const { data: suggestions = null } = useQuery({
     queryKey: ['search-suggestions', query],
-    queryFn: () => getSuggestions(query),
+    queryFn: () => publicQueries.getSuggestions(query),
     enabled: query.trim().length >= 2,
     staleTime: 1000 * 60,
   })

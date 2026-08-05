@@ -3,7 +3,7 @@
 import { useState, useTransition, useEffect } from "react"
 
 import { Button } from "@/components/ui/button"
-import { getCategories, getKeywords } from "@/lib/api"
+import { publicQueries } from "@/lib/web-transport"
 import {
   submitResearchRecord,
   type IngestOutcome,
@@ -58,7 +58,7 @@ export function UploadResearchForm() {
   const [isPending, startTransition] = useTransition()
 
   useEffect(() => {
-    Promise.all([getCategories(), getKeywords()])
+    Promise.all([publicQueries.getCategories(), publicQueries.getKeywords()])
       .then(([cats, kws]) => {
         setCategories(cats)
         setKeywords(kws)

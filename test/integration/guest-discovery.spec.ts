@@ -13,6 +13,7 @@ beforeAll(() => {
 
 describe("Guest discovery against local Supabase", () => {
   it("browses approved Research Records without discovering pending or rejected records", async () => {
+    const { publicQueries } = await import("@/lib/web-transport")
     const {
       getAuthorPapers,
       getAuthors,
@@ -20,7 +21,7 @@ describe("Guest discovery against local Supabase", () => {
       getCategory,
       getResearch,
       searchResearch,
-    } = await import("@/lib/api")
+    } = publicQueries
     const { getSupabase } = await import("@/lib/supabase")
 
     const search = await searchResearch({ q: "Ada", page: 1, limit: 10 })

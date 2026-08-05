@@ -5,7 +5,7 @@ import { notFound } from "next/navigation"
 
 import { Button } from "@/components/ui/button"
 import { PublicShell } from "@/components/layout/public-shell"
-import { getResearch, getCategory } from "@/lib/api"
+import { publicQueries } from "@/lib/web-transport"
 import { estimateReadTime } from "@/lib/read-time"
 import { ResearchActions } from "@/components/features/research-actions"
 import { CitationGenerator } from "@/components/features/citation-generator"
@@ -21,7 +21,7 @@ export async function generateMetadata({
 }: PageProps): Promise<Metadata> {
   try {
     const { id } = await params
-    const research = await getResearch(id)
+    const research = await publicQueries.getResearch(id)
     return {
       title: research.title,
       description: research.abstract?.slice(0, 160) ?? undefined,
@@ -40,7 +40,7 @@ function formatDate(value?: string | null) {
 
 async function loadRelated(categoryId: string, excludeId: string) {
   try {
-    const result = await getCategory(categoryId, 1)
+    const result = await publicQueries.getCategory(categoryId, 1)
     return (result.data.researches ?? [])
       .filter((r) => r.id !== excludeId)
       .slice(0, 4)
@@ -54,7 +54,7 @@ export default async function ResearchDetailPage({ params }: PageProps) {
   let research
 
   try {
-    research = await getResearch(id)
+    research = await publicQueries.getResearch(id)
   } catch {
     notFound()
   }
