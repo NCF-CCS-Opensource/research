@@ -7,7 +7,6 @@ import type {
   ResearchRow,
 } from "./types"
 import { mapResearch } from "./types"
-import { DomainApiError } from "./errors"
 
 export type PaginatedResponse<T> = {
   data: T[]
@@ -30,7 +29,7 @@ export type ResearchSearchParams = {
   author?: string
   dateFrom?: string
   dateTo?: string
-  sort?: string
+  sort?: "relevance" | "date" | "views" | "downloads"
   page?: string | number
   limit?: string | number
 }
@@ -62,7 +61,7 @@ export type Discovery = {
     query: AuthorSearchParams
   ): Promise<PaginatedResponse<Author>>
   getAuthor(id: string): Promise<Author>
-  getAuthorPapers(
+  getAuthorResearchRecords(
     id: string,
     page?: number
   ): Promise<PaginatedResponse<ResearchDetail>>
@@ -191,7 +190,7 @@ export function createDiscovery(adapter: TransportAdapter): Discovery {
 
     async getCategory(id, page = 1) {
       const limit = 10
-      const [category, allPapers] = await Promise.all([
+      const [category, allResearch] = await Promise.all([
         adapter.selectOne<Record<string, unknown>>("public_categories", {
           eq: { id },
         }),
@@ -200,14 +199,15 @@ export function createDiscovery(adapter: TransportAdapter): Discovery {
           order: { column: "created_at", ascending: false },
         }),
       ])
-      const paged = allPapers.slice((page - 1) * limit, page * limit)
+      const researches = allResearch
+        .slice((page - 1) * limit, page * limit)
+        .map(mapResearch)
       return {
         data: {
           ...mapCategory(category),
-          researches: paged.map(mapResearch),
+          researches,
         },
-        meta: paginated(paged.map(mapResearch), allPapers.length, page, limit)
-          .meta,
+        meta: paginated(researches, allResearch.length, page, limit).meta,
       }
     },
 
@@ -228,7 +228,7 @@ export function createDiscovery(adapter: TransportAdapter): Discovery {
       return mapAuthor(row)
     },
 
-    async getAuthorPapers(id, page = 1) {
+    async getAuthorResearchRecords(id, page = 1) {
       const limit = 10
       const allRows = await adapter.select<ResearchRow>("public_research", {
         contains: { column: "authors", value: [{ id }] },

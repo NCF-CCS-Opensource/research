@@ -5,6 +5,7 @@ import { useEffect, useState, useTransition } from "react"
 
 import { Button } from "@/components/ui/button"
 import { pdfAccess, researchLifecycle } from "@/lib/web-transport"
+import { replaceResearchPdf } from "@/lib/research-ingestion"
 import type { ResearchDetail } from "@repo/api-client"
 
 export function OwnerResearchPanel() {
@@ -111,10 +112,7 @@ export function OwnerResearchPanel() {
                       const file = event.target.files?.[0]
                       if (!file) return
                       startTransition(async () => {
-                        const outcome = await researchLifecycle.replacePdf(
-                          paper.id,
-                          file
-                        )
+                        const outcome = await replaceResearchPdf(paper.id, file)
                         if (outcome.status !== "completed") {
                           setError(
                             "message" in outcome

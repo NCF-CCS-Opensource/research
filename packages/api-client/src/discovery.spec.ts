@@ -125,7 +125,7 @@ describe("createDiscovery", () => {
 
   it("returns only research by the requested author", async () => {
     const discovery = createDiscovery(makeAdapter())
-    const result = await discovery.getAuthorPapers("a2", 1)
+    const result = await discovery.getAuthorResearchRecords("a2", 1)
     expect(result.meta.total).toBe(2)
     expect(result.data.map((row) => row.id)).toEqual(["res_3", "res_2"])
   })
