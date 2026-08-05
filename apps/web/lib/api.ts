@@ -9,6 +9,7 @@ import type {
   SearchSuggestions,
 } from "@/types/api"
 import { getSupabase } from "@/lib/supabase"
+export * from "@/lib/mock-dataset"
 
 export class ApiError extends Error {
   constructor(
