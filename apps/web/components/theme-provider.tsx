@@ -2,6 +2,7 @@
 
 import * as React from "react"
 import { ThemeProvider as NextThemesProvider, useTheme } from "next-themes"
+import { useUIStore } from "@repo/store"
 
 function ThemeProvider({
   children,
@@ -36,6 +37,7 @@ function isTypingTarget(target: EventTarget | null) {
 
 function ThemeHotkey() {
   const { resolvedTheme, setTheme } = useTheme()
+  const setThemePreference = useUIStore((state) => state.setThemePreference)
 
   React.useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
@@ -55,7 +57,9 @@ function ThemeHotkey() {
         return
       }
 
-      setTheme(resolvedTheme === "dark" ? "light" : "dark")
+      const nextTheme = resolvedTheme === "dark" ? "light" : "dark"
+      setTheme(nextTheme)
+      setThemePreference(nextTheme)
     }
 
     window.addEventListener("keydown", onKeyDown)
@@ -63,7 +67,7 @@ function ThemeHotkey() {
     return () => {
       window.removeEventListener("keydown", onKeyDown)
     }
-  }, [resolvedTheme, setTheme])
+  }, [resolvedTheme, setTheme, setThemePreference])
 
   return null
 }
