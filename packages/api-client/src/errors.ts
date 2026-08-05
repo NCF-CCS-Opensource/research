@@ -1,55 +1,36 @@
 export class DomainApiError extends Error {
   constructor(
     message: string,
-    readonly status: number,
-    readonly code?: string
+    readonly status: number
   ) {
     super(message)
-    this.name = "DomainApiError"
-  }
-}
-
-export class NotFoundError extends DomainApiError {
-  constructor(message = "Resource not found") {
-    super(message, 404, "NOT_FOUND")
-    this.name = "NotFoundError"
-  }
-}
-
-export class ValidationError extends DomainApiError {
-  constructor(message = "Validation failed") {
-    super(message, 400, "VALIDATION_ERROR")
-    this.name = "ValidationError"
   }
 }
 
 export class AccessDeniedError extends DomainApiError {
   constructor(message = "Access denied") {
-    super(message, 403, "ACCESS_DENIED")
-    this.name = "AccessDeniedError"
+    super(message, 403)
   }
 }
 
-export class AuthenticationError extends DomainApiError {
-  constructor(message = "Authentication required") {
-    super(message, 401, "AUTHENTICATION_ERROR")
-    this.name = "AuthenticationError"
+export class ValidationError extends DomainApiError {
+  constructor(message: string) {
+    super(message, 400)
   }
 }
 
-export class CooldownActiveError extends DomainApiError {
-  constructor(
-    message = "Cooldown period active",
-    readonly availableAt?: string
-  ) {
-    super(message, 409, "COOLDOWN_ACTIVE")
-    this.name = "CooldownActiveError"
+export class NotFoundError extends DomainApiError {
+  constructor(message = "Not found") {
+    super(message, 404)
   }
 }
 
-export class TransportError extends DomainApiError {
-  constructor(message: string, status = 500) {
-    super(message, status, "TRANSPORT_ERROR")
-    this.name = "TransportError"
-  }
+export function normalizeDomainError(
+  message: string,
+  code?: string | null,
+  fallback = 500
+): DomainApiError {
+  if (code === "PGRST116") return new NotFoundError(message)
+  if (code === "42501") return new AccessDeniedError(message)
+  return new DomainApiError(message, fallback)
 }
