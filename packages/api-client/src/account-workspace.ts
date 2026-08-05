@@ -183,11 +183,13 @@ export function createAccountWorkspace(
     },
 
     async getCollection() {
+      const userId = await requireCurrentUser()
       const saved = await adapter.select<{
         research_id: string
         created_at: string
       }>("collections", {
         columns: "research_id,created_at",
+        eq: { user_id: userId },
         order: { column: "created_at", ascending: false },
       })
       const ids = saved.map(({ research_id }) => research_id)

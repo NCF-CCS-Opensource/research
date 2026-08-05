@@ -36,42 +36,43 @@ function makeModule(overrides: {
       created_at: "2026-01-03T00:00:00Z",
     },
   ]
-  const transport = createInMemoryTransport({
-    userId: "user_1",
-    rpc: {
-      admin_update_account: undefined,
-      get_notifications: () =>
-        notifications.filter((n) => n.user_id === "user_1"),
-      mark_notifications_read: () => {
-        for (const n of notifications)
-          if (n.user_id === "user_1") n.read = true
+  const rpc = {
+    admin_update_account: undefined,
+    get_notifications: () =>
+      notifications.filter((n) => n.user_id === "user_1"),
+    mark_notifications_read: () => {
+      for (const n of notifications)
+        if (n.user_id === "user_1") n.read = true
+    },
+    ...overrides.rpc,
+  }
+  const tables = {
+    profiles: [
+      {
+        id: "user_1",
+        email: "a@b.c",
+        first_name: "Ada",
+        middle_name: null,
+        last_name: "Lovelace",
+        suffix: null,
+        institution_id: "inst_1",
+        program_id: "prog_1",
+        role: "user",
+        status: "active",
+        created_at: "2026-01-01T00:00:00Z",
       },
-      ...overrides.rpc,
-    },
-    tables: {
-      profiles: [
-        {
-          id: "user_1",
-          email: "a@b.c",
-          first_name: "Ada",
-          middle_name: null,
-          last_name: "Lovelace",
-          suffix: null,
-          institution_id: "inst_1",
-          program_id: "prog_1",
-          role: "user",
-          status: "active",
-          created_at: "2026-01-01T00:00:00Z",
-        },
-      ],
-      institutions: [{ id: "inst_1", name: "NCF" }],
-      programs: [{ id: "prog_1", name: "BSCS", institution_id: "inst_1" }],
-      categories: [{ id: "cat_1", name: "Computing" }],
-      collections: [],
-      public_research: [researchRow],
-      ...overrides.tables,
-    },
-    ...overrides,
+    ],
+    institutions: [{ id: "inst_1", name: "NCF" }],
+    programs: [{ id: "prog_1", name: "BSCS", institution_id: "inst_1" }],
+    categories: [{ id: "cat_1", name: "Computing" }],
+    collections: [],
+    public_research: [researchRow],
+    ...overrides.tables,
+  }
+  const transport = createInMemoryTransport({
+    userId: overrides.userId === undefined ? "user_1" : overrides.userId,
+    rpc,
+    tables,
   })
   return { transport, accountWorkspace: createAccountWorkspace(transport), notifications }
 }
@@ -139,10 +140,16 @@ describe("accountWorkspace module", () => {
   })
 
   it("adds, lists, and removes collection entries idempotently", async () => {
-    const { accountWorkspace, transport } = makeModule()
+    const { accountWorkspace, transport } = makeModule({
+      tables: {
+        collections: [
+          { user_id: "user_other", research_id: "res_1", created_at: "2026-01-01T00:00:00Z" },
+        ],
+      },
+    })
     await accountWorkspace.addToCollection("res_1")
     await accountWorkspace.addToCollection("res_1")
-    expect(await transport.select("collections")).toHaveLength(1)
+    expect(await transport.select("collections")).toHaveLength(2)
 
     const collection = await accountWorkspace.getCollection()
     expect(collection).toHaveLength(1)

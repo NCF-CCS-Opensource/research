@@ -352,8 +352,13 @@ export async function callR2<T>(
   return data as T
 }
 
+const RESEARCH_STATUSES: readonly string[] = ["pending", "approved", "rejected"]
+
 export async function getAdminResearches(status?: string) {
-  return researchLifecycle.getAdminQueue(status as ResearchStatus)
+  const valid = status && RESEARCH_STATUSES.includes(status)
+  return researchLifecycle.getAdminQueue(
+    valid ? (status as ResearchStatus) : undefined
+  )
 }
 
 export async function moderateResearch(

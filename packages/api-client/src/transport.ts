@@ -132,6 +132,7 @@ export function createInMemoryTransport(
     ) {
       const list = Array.isArray(rows) ? rows : [rows]
       const store = tables.get(table) ?? []
+      const inserted: Record<string, unknown>[] = []
       for (const row of list) {
         const next = { ...row }
         if (opts?.upsert && opts.onConflict) {
@@ -143,9 +144,10 @@ export function createInMemoryTransport(
         }
         if (next.id === undefined) next.id = `id_${store.length}_${Math.random()}`
         store.push(next)
+        inserted.push(next)
       }
       tables.set(table, store)
-      return list
+      return inserted
     },
 
     async update(

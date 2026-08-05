@@ -29,14 +29,15 @@ export function createPdfAccess(adapter: TransportAdapter): PdfAccess {
     },
 
     async requestAccess(researchId, note) {
-      if (!note?.trim()) {
+      const trimmed = note.trim()
+      if (!trimmed || trimmed.length > 1000) {
         throw new ValidationError(
           "Request Note must be between 1 and 1,000 characters"
         )
       }
       const id = await adapter.rpc<string>("create_pdf_request", {
         target_research_id: researchId,
-        note,
+        note: trimmed,
       })
       void adapter
         .invokeEdge("email-pdf-access", {

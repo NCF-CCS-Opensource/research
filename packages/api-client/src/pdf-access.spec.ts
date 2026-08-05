@@ -71,6 +71,21 @@ describe("pdfAccess module", () => {
     ).rejects.toBeInstanceOf(ValidationError)
   })
 
+  it("trims the note and rejects notes longer than 1,000 characters", async () => {
+    const createRpc = vi.fn().mockReturnValue("req_1")
+    const { pdfAccess } = makeModule({
+      rpc: { create_pdf_request: createRpc },
+    })
+    await pdfAccess.requestAccess("res_1", "  Need this paper  ")
+    expect(createRpc).toHaveBeenCalledWith({
+      target_research_id: "res_1",
+      note: "Need this paper",
+    })
+    await expect(
+      pdfAccess.requestAccess("res_1", "x".repeat(1001))
+    ).rejects.toBeInstanceOf(ValidationError)
+  })
+
   it("transitions a request and dispatches the matching email event", async () => {
     const transitionRpc = vi.fn().mockReturnValue("revoked")
     const emailEdge = vi.fn().mockResolvedValue({ message: "sent" })
