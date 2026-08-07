@@ -76,12 +76,12 @@ pnpm exec supabase secrets set \
   RESEND_API_KEY=... \
   EMAIL_FROM="NCF Research Nexus <research@example.edu>"
 
-pnpm exec supabase functions deploy r2 --no-verify-jwt
+pnpm exec supabase functions deploy r2
 ```
 
 Omit the two Resend values if application notifications are not required. The
-function validates the caller itself; keep `--no-verify-jwt` as configured in
-`supabase/config.toml`.
+The Supabase gateway validates Clerk session JWTs before the function derives
+the caller from the verified subject claim.
 
 ## 3. Verify and deploy Next.js
 

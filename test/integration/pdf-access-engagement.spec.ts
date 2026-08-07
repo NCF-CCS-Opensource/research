@@ -279,10 +279,11 @@ describe("Engagement Counts", () => {
       ).error
     ).not.toBeNull()
     await service.from("profiles").update({ role: "user" }).eq("id", outsiderId)
-    await service.rpc("authorize_granted_download", {
-      target_request_id: requested.data,
-      requester: requesterId,
+    const grantedDownload = await requester.functions.invoke("r2", {
+      body: { action: "granted-download", requestId: requested.data },
     })
+    expect(grantedDownload.error).toBeNull()
+    expect(grantedDownload.data?.url).toMatch(/^https?:\/\//)
     const counts = await service
       .from("researches")
       .select("view_count,citation_export_count,download_count")

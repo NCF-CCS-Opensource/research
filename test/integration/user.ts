@@ -8,13 +8,13 @@ export type LocalStatus = {
   JWT_SECRET: string
 }
 
-function jwt(secret: string, subject: string) {
+function jwt(secret: string, subject: string, expiresIn = 60) {
   const encode = (value: object) =>
     Buffer.from(JSON.stringify(value)).toString("base64url")
   const unsigned = `${encode({ alg: "HS256", typ: "JWT" })}.${encode({
     sub: subject,
     role: "authenticated",
-    exp: Math.floor(Date.now() / 1000) + 60,
+    exp: Math.floor(Date.now() / 1000) + expiresIn,
   })}`
   const signature = createHmac("sha256", secret)
     .update(unsigned)
@@ -22,9 +22,13 @@ function jwt(secret: string, subject: string) {
   return `${unsigned}.${signature}`
 }
 
-export function authenticatedClient(status: LocalStatus, id: string) {
+export function authenticatedClient(
+  status: LocalStatus,
+  id: string,
+  expiresIn = 60
+) {
   return createClient(status.API_URL, status.PUBLISHABLE_KEY, {
-    accessToken: async () => jwt(status.JWT_SECRET, id),
+    accessToken: async () => jwt(status.JWT_SECRET, id, expiresIn),
   })
 }
 

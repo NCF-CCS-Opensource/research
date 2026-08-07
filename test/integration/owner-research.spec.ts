@@ -1,7 +1,7 @@
 import { execFileSync } from "node:child_process"
 import { createClient } from "@supabase/supabase-js"
 import { beforeAll, describe, expect, it } from "vitest"
-import { type LocalStatus, user } from "./user"
+import { authenticatedClient, type LocalStatus, user } from "./user"
 
 let status: LocalStatus
 
@@ -99,11 +99,72 @@ describe("Owner Research Records", () => {
       .select("upload_complete,status")
       .eq("id", researchId)
       .single()
-    expect(completed.data).toEqual({ upload_complete: true, status: "pending" })
+    expect(completed.data).toEqual({
+      upload_complete: true,
+      status: "pending",
+    })
+
+    const ownerDownload = await owner.functions.invoke("r2", {
+      body: { action: "owner-download", researchId },
+    })
+    expect(ownerDownload.error).toBeNull()
+    expect(ownerDownload.data?.url).toMatch(/^https?:\/\//)
 
     const crossOwnerDownload = await other.functions.invoke("r2", {
       body: { action: "owner-download", researchId },
     })
     expect(crossOwnerDownload.error).not.toBeNull()
+
+    const unauthenticatedClient = createClient(
+      status.API_URL,
+      status.PUBLISHABLE_KEY
+    )
+    expect(
+      (
+        await unauthenticatedClient.functions.invoke("r2", {
+          body: { action: "owner-download", researchId },
+        })
+      ).error
+    ).not.toBeNull()
+    const invalidTokenClient = createClient(
+      status.API_URL,
+      status.PUBLISHABLE_KEY,
+      {
+        accessToken: async () => "invalid",
+      }
+    )
+    expect(
+      (
+        await invalidTokenClient.functions.invoke("r2", {
+          body: { action: "owner-download", researchId },
+        })
+      ).error
+    ).not.toBeNull()
+    expect(
+      (
+        await authenticatedClient(status, ownerUser.id, -1).functions.invoke(
+          "r2",
+          {
+            body: { action: "owner-download", researchId },
+          }
+        )
+      ).error
+    ).not.toBeNull()
+
+    await service
+      .from("profiles")
+      .update({ status: "suspended" })
+      .eq("id", ownerUser.id)
+    expect(
+      (
+        await owner.functions.invoke("r2", {
+          body: { action: "owner-download", researchId },
+        })
+      ).error
+    ).not.toBeNull()
+    await service
+      .from("profiles")
+      .update({ status: "active" })
+      .eq("id", ownerUser.id)
   })
 })

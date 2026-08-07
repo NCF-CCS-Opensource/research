@@ -22,5 +22,5 @@ enable_confirmations = true
 
 [functions.r2]
 enabled = true
-verify_jwt = false
+verify_jwt = true
 entrypoint = "./functions/r2/index.ts"
