@@ -1,8 +1,9 @@
 import { execFileSync } from "node:child_process"
 import { createClient, type SupabaseClient } from "@supabase/supabase-js"
 import { beforeAll, describe, expect, it } from "vitest"
+import { type LocalStatus, user } from "./user"
 
-let status: { API_URL: string; PUBLISHABLE_KEY: string; SECRET_KEY: string }
+let status: LocalStatus
 let service: SupabaseClient
 let owner: SupabaseClient
 let requester: SupabaseClient
@@ -11,19 +12,6 @@ let ownerId: string
 let requesterId: string
 let outsiderId: string
 let institutionId: string
-
-async function user(label: string) {
-  const email = `${label}-${Date.now()}-${crypto.randomUUID()}@example.com`
-  const created = await service.auth.admin.createUser({
-    email,
-    password: "password123",
-    email_confirm: true,
-    user_metadata: { first_name: label, last_name: "Tester" },
-  })
-  const client = createClient(status.API_URL, status.PUBLISHABLE_KEY)
-  await client.auth.signInWithPassword({ email, password: "password123" })
-  return { client, id: created.data.user!.id }
-}
 
 async function approvedResearch(title: string) {
   const created = await owner.rpc("create_research_record", {
@@ -62,9 +50,9 @@ beforeAll(async () => {
     })
   )
   service = createClient(status.API_URL, status.SECRET_KEY)
-  const ownerUser = await user("Owner")
-  const requesterUser = await user("Requester")
-  const outsiderUser = await user("Outsider")
+  const ownerUser = await user(service, status, "Owner")
+  const requesterUser = await user(service, status, "Requester")
+  const outsiderUser = await user(service, status, "Outsider")
   owner = ownerUser.client
   requester = requesterUser.client
   outsider = outsiderUser.client
