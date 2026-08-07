@@ -11,7 +11,6 @@ let outsider: SupabaseClient
 let ownerId: string
 let requesterId: string
 let outsiderId: string
-let institutionId: string
 
 async function approvedResearch(title: string) {
   const created = await owner.rpc("create_research_record", {
@@ -59,17 +58,14 @@ beforeAll(async () => {
   ownerId = ownerUser.id
   requesterId = requesterUser.id
   outsiderId = outsiderUser.id
-  const institution = await service
-    .from("institutions")
-    .insert({ name: `Institution ${Date.now()}` })
-    .select("id")
-    .single()
-  expect(institution.error).toBeNull()
-  institutionId = institution.data!.id
-  await service
-    .from("profiles")
-    .update({ institution_id: institutionId })
-    .eq("id", outsiderId)
+  expect(
+    (
+      await service
+        .from("profiles")
+        .update({ custom_institution: null })
+        .eq("id", requesterId)
+    ).error
+  ).toBeNull()
 })
 
 describe("PDF Access lifecycle", () => {
@@ -92,10 +88,14 @@ describe("PDF Access lifecycle", () => {
         })
       ).error
     ).not.toBeNull()
-    await service
-      .from("profiles")
-      .update({ institution_id: institutionId })
-      .eq("id", requesterId)
+    expect(
+      (
+        await service
+          .from("profiles")
+          .update({ custom_institution: "Test Institution" })
+          .eq("id", requesterId)
+      ).error
+    ).toBeNull()
     const attempts = await Promise.all([
       requester.rpc("create_pdf_request", {
         target_research_id: researchId,

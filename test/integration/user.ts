@@ -44,16 +44,14 @@ export async function user(
     email,
     password,
     email_confirm: true,
+    user_metadata: {
+      first_name: label,
+      last_name: "Tester",
+      custom_institution: "Test Institution",
+    },
   })
   if (account.error) throw account.error
   const id = account.data.user.id
-  const created = await service.from("profiles").insert({
-    id,
-    email,
-    first_name: label,
-    last_name: "Tester",
-  })
-  if (created.error) throw created.error
   const client = createClient(status.API_URL, status.PUBLISHABLE_KEY)
   const signedIn = await client.auth.signInWithPassword({ email, password })
   if (signedIn.error) throw signedIn.error

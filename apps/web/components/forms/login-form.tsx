@@ -12,7 +12,11 @@ import { getSupabase } from "@/lib/supabase"
 export function LoginForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const [error, setError] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(
+    searchParams.get("error") === "profile-unavailable"
+      ? "Your account Profile is unavailable."
+      : null
+  )
   const [isPending, startTransition] = useTransition()
 
   function onSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -31,7 +35,8 @@ export function LoginForm() {
           await supabase.rpc("get_current_profile_access").maybeSingle()
         ).data as ProfileAccess | null
         if (!profile) {
-          router.push(`/onboarding?next=${encodeURIComponent(safeNextPath(searchParams.get("next"), "/dashboard"))}`)
+          await supabase.auth.signOut()
+          throw new Error("Your account Profile is unavailable.")
         } else if (profile.status !== "active") {
           await supabase.auth.signOut()
           throw new Error("This account is suspended")

@@ -88,7 +88,7 @@ deploy.
 
 ## 4. Create the first Admin
 
-After the intended Admin registers and completes their Profile, run once
+After the intended Admin registers and confirms their email, run once
 in the Supabase SQL editor:
 
 ```sql
@@ -104,15 +104,15 @@ Run this matrix manually in local and production Supabase projects:
 
 | Check                       | Expected result                                                          |
 | --------------------------- | ------------------------------------------------------------------------ |
-| First registration          | Confirms the email, opens onboarding, and creates one Profile            |
-| Returning User              | Opens the intended destination without onboarding                        |
-| Intended destination        | A protected URL survives login and onboarding redirects                  |
+| First Registration          | Creates one complete Profile, confirms email, and opens `/dashboard`     |
+| Returning User              | Opens the intended destination after login                               |
+| Intended destination        | Login preserves it; Registration confirmation always opens `/dashboard` |
 | Admin routing               | Admins reach `/admin`; non-Admins cannot                                 |
 | Suspension                  | A suspended User reaches `/suspended` and cannot use protected workflows |
 | Sign-out                    | Ends the Supabase session and returns to public discovery                |
 | Invalid session             | Behaves as signed out without exposing protected data                    |
 | Password recovery           | A valid recovery link allows setting a new password                      |
-| Fresh sign-in after cleanup | A new registration and onboarding succeed with no legacy state           |
+| Fresh sign-in after cleanup | A new Registration succeeds with no legacy state                         |
 
 Also confirm public discovery, Owner PDF upload/download, Admin moderation, and
 PDF-access request, approval, download, and revocation. If uploads fail in the

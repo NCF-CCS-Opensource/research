@@ -3,13 +3,7 @@ export type ProfileAccess = {
   status: "active" | "suspended"
 }
 
-const protectedRoutes = [
-  "/dashboard",
-  "/upload",
-  "/admin",
-  "/onboarding",
-  "/suspended",
-]
+const protectedRoutes = ["/dashboard", "/upload", "/admin", "/suspended"]
 
 export function isProtectedRoute(pathname: string) {
   return (
@@ -38,17 +32,16 @@ export function authDestination(
       : null
   }
   if (!profile)
-    return pathname === "/onboarding"
+    return intendedPath === "/login?error=profile-unavailable"
       ? null
-      : `/onboarding?next=${encodeURIComponent(intendedPath)}`
+      : "/login?error=profile-unavailable"
   if (profile.status === "suspended")
     return pathname === "/suspended" ? null : "/suspended"
   if (pathname.startsWith("/admin") && profile.role !== "admin")
     return "/dashboard"
   if (pathname === "/suspended")
     return profile.role === "admin" ? "/admin" : "/dashboard"
-  if (loginRoute || pathname === "/onboarding")
-    return profile.role === "admin" ? "/admin" : "/dashboard"
+  if (loginRoute) return profile.role === "admin" ? "/admin" : "/dashboard"
 
   return null
 }
