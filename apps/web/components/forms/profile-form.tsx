@@ -5,14 +5,17 @@ import { useEffect, useState, useTransition } from "react"
 import { Button } from "@/components/ui/button"
 import { accountWorkspace } from "@/lib/web-transport"
 
-type Option = { id: string; name: string }
+type Option = { id: string; name: string; institutionId?: string | null }
 type Profile = {
+  email: string
   first_name: string
   middle_name: string | null
   last_name: string
   suffix: string | null
   institution_id: string | null
+  custom_institution: string | null
   program_id: string | null
+  custom_program: string | null
 }
 
 export function ProfileForm() {
@@ -20,14 +23,18 @@ export function ProfileForm() {
   const [institutions, setInstitutions] = useState<Option[]>([])
   const [programs, setPrograms] = useState<Option[]>([])
   const [message, setMessage] = useState<string | null>(null)
+  const [institutionId, setInstitutionId] = useState("")
   const [isPending, startTransition] = useTransition()
 
   useEffect(() => {
-    accountWorkspace.getProfileSettings().then(({ profile, institutions, programs }) => {
-      setProfile(profile)
-      setInstitutions(institutions)
-      setPrograms(programs)
-    })
+    accountWorkspace
+      .getProfileSettings()
+      .then(({ profile, institutions, programs }) => {
+        setProfile(profile)
+        setInstitutions(institutions)
+        setPrograms(programs)
+        setInstitutionId(profile.institution_id ?? "")
+      })
   }, [])
 
   function onSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -41,7 +48,10 @@ export function ProfileForm() {
           last_name: String(form.get("lastName")),
           suffix: String(form.get("suffix") || "") || null,
           institution_id: String(form.get("institutionId") || "") || null,
+          custom_institution:
+            String(form.get("customInstitution") || "") || null,
           program_id: String(form.get("programId") || "") || null,
+          custom_program: String(form.get("customProgram") || "") || null,
         })
         setMessage("Profile updated.")
       } catch (reason) {
@@ -97,10 +107,19 @@ export function ProfileForm() {
           />
         </label>
         <label className="grid gap-2 text-sm">
+          Contact Email
+          <input
+            value={profile.email}
+            readOnly
+            className="h-10 rounded-lg border bg-muted px-3"
+          />
+        </label>
+        <label className="grid gap-2 text-sm">
           Institution
           <select
             name="institutionId"
-            defaultValue={profile.institution_id ?? ""}
+            value={institutionId}
+            onChange={(event) => setInstitutionId(event.target.value)}
             className="h-10 rounded-lg border px-3"
           >
             <option value="">Not listed</option>
@@ -111,21 +130,45 @@ export function ProfileForm() {
             ))}
           </select>
         </label>
-        <label className="grid gap-2 text-sm">
-          Program
-          <select
-            name="programId"
-            defaultValue={profile.program_id ?? ""}
-            className="h-10 rounded-lg border px-3"
-          >
-            <option value="">Not applicable</option>
-            {programs.map((item) => (
-              <option key={item.id} value={item.id}>
-                {item.name}
-              </option>
-            ))}
-          </select>
-        </label>
+        {institutionId ? (
+          <label className="grid gap-2 text-sm">
+            Program
+            <select
+              name="programId"
+              defaultValue={profile.program_id ?? ""}
+              className="h-10 rounded-lg border px-3"
+            >
+              <option value="">Not applicable</option>
+              {programs
+                .filter((item) => item.institutionId === institutionId)
+                .map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {item.name}
+                  </option>
+                ))}
+            </select>
+          </label>
+        ) : (
+          <>
+            <label className="grid gap-2 text-sm">
+              Unlisted Institution
+              <input
+                name="customInstitution"
+                required
+                defaultValue={profile.custom_institution ?? ""}
+                className="h-10 rounded-lg border px-3"
+              />
+            </label>
+            <label className="grid gap-2 text-sm">
+              Program (optional)
+              <input
+                name="customProgram"
+                defaultValue={profile.custom_program ?? ""}
+                className="h-10 rounded-lg border px-3"
+              />
+            </label>
+          </>
+        )}
       </div>
       {message ? <p className="text-sm">{message}</p> : null}
       <Button disabled={isPending}>Save Profile</Button>

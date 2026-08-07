@@ -84,7 +84,7 @@ export type DashboardData = {
   } | null
 }
 
-const MAX_NAME_LENGTH = 200
+const MAX_NAME_LENGTH = 100
 const MAX_SUFFIX_LENGTH = 20
 
 function validateProfileInput(input: ProfileSettingsInput): void {
@@ -92,19 +92,33 @@ function validateProfileInput(input: ProfileSettingsInput): void {
     throw new ValidationError("First name is required")
   }
   if (input.first_name.length > MAX_NAME_LENGTH) {
-    throw new ValidationError(`First name must be ${MAX_NAME_LENGTH} characters or fewer`)
+    throw new ValidationError(
+      `First name must be ${MAX_NAME_LENGTH} characters or fewer`
+    )
   }
   if (!input.last_name?.trim()) {
     throw new ValidationError("Last name is required")
   }
   if (input.last_name.length > MAX_NAME_LENGTH) {
-    throw new ValidationError(`Last name must be ${MAX_NAME_LENGTH} characters or fewer`)
+    throw new ValidationError(
+      `Last name must be ${MAX_NAME_LENGTH} characters or fewer`
+    )
   }
   if (input.middle_name != null && input.middle_name.length > MAX_NAME_LENGTH) {
-    throw new ValidationError(`Middle name must be ${MAX_NAME_LENGTH} characters or fewer`)
+    throw new ValidationError(
+      `Middle name must be ${MAX_NAME_LENGTH} characters or fewer`
+    )
   }
   if (input.suffix != null && input.suffix.length > MAX_SUFFIX_LENGTH) {
-    throw new ValidationError(`Suffix must be ${MAX_SUFFIX_LENGTH} characters or fewer`)
+    throw new ValidationError(
+      `Suffix must be ${MAX_SUFFIX_LENGTH} characters or fewer`
+    )
+  }
+  if ((input.institution_id === null) === !input.custom_institution?.trim()) {
+    throw new ValidationError("Choose one Institution")
+  }
+  if (input.institution_id && input.custom_program?.trim()) {
+    throw new ValidationError("Custom Programs require an unlisted Institution")
   }
 }
 
@@ -130,7 +144,11 @@ export type AccountWorkspace = {
   updateProfileSettings(input: ProfileSettingsInput): Promise<void>
   getProfileAccess(id: string): Promise<AccountAccess>
   getProfiles(): Promise<AccountProfile[]>
-  updateAccount(id: string, role: UserRole, status: AccountStatus): Promise<void>
+  updateAccount(
+    id: string,
+    role: UserRole,
+    status: AccountStatus
+  ): Promise<void>
   getCollection(): Promise<CollectionItem[]>
   addToCollection(researchId: string): Promise<void>
   removeFromCollection(researchId: string): Promise<void>
@@ -181,7 +199,10 @@ export function createAccountWorkspace(
           id: string
           name: string
           institution_id: string | null
-        }>("programs", { columns: "id,name,institution_id", order: { column: "name" } })
+        }>("programs", {
+          columns: "id,name,institution_id",
+          order: { column: "name" },
+        })
         return rows.map((item) => ({
           id: item.id,
           name: item.name,
@@ -204,7 +225,11 @@ export function createAccountWorkspace(
       return undefined as T
     }
     if (request.action === "rename") {
-      await adapter.update(table, { name: request.name.trim() }, { id: request.id })
+      await adapter.update(
+        table,
+        { name: request.name.trim() },
+        { id: request.id }
+      )
       return undefined as T
     }
     await adapter.remove(table, { id: request.id })
@@ -217,7 +242,7 @@ export function createAccountWorkspace(
       const [profile, institutions, programs] = await Promise.all([
         adapter.selectOne<ProfileSettings["profile"]>("profiles", {
           columns:
-            "first_name,middle_name,last_name,suffix,institution_id,program_id",
+            "email,first_name,middle_name,last_name,suffix,institution_id,custom_institution,program_id,custom_program",
           eq: { id: userId },
         }),
         adapter.select<{ id: string; name: string }>("institutions", {
@@ -250,12 +275,17 @@ export function createAccountWorkspace(
 
     async updateProfileSettings(input) {
       validateProfileInput(input)
-      const userId = await requireCurrentUser()
-      await adapter.update(
-        "profiles",
-        { ...input, updated_at: new Date().toISOString() },
-        { id: userId }
-      )
+      await requireCurrentUser()
+      await adapter.rpc("update_profile_settings", {
+        new_first_name: input.first_name,
+        new_middle_name: input.middle_name,
+        new_last_name: input.last_name,
+        new_suffix: input.suffix,
+        new_institution_id: input.institution_id,
+        new_custom_institution: input.custom_institution,
+        new_program_id: input.program_id,
+        new_custom_program: input.custom_program,
+      })
     },
 
     async getProfileAccess(id) {
