@@ -1,7 +1,9 @@
 import Link from "next/link"
+import { auth } from "@clerk/nextjs/server"
 import { BookOpenText } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
+import { SignOut } from "@/components/auth/sign-out"
 import { MobileNav } from "@/components/layout/mobile-nav"
 import { ThemeToggle } from "@/components/layout/theme-toggle"
 import { createServerSupabase } from "@/lib/supabase-server"
@@ -13,9 +15,8 @@ const navItems = [
 ]
 
 export async function Navbar() {
+  const { userId } = await auth()
   const supabase = await createServerSupabase()
-  const { data } = await supabase.auth.getClaims()
-  const userId = data?.claims?.sub
   const profile = userId
     ? await supabase
         .from("profiles")
@@ -66,15 +67,7 @@ export async function Navbar() {
                   Dashboard
                 </Link>
               </Button>
-              <form action="/api/auth/logout" method="POST">
-                <Button
-                  variant="outline"
-                  type="submit"
-                  className="hidden sm:inline-flex"
-                >
-                  Sign Out
-                </Button>
-              </form>
+              <SignOut className="hidden sm:inline-flex" />
             </>
           ) : (
             <Button asChild>

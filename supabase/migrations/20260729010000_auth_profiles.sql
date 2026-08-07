@@ -71,6 +71,18 @@ as $$
   );
 $$;
 
+create function public.get_current_profile_access()
+returns table (role public.user_role, status public.account_status)
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select p.role, p.status
+  from public.profiles p
+  where p.id = (select public.current_user_id());
+$$;
+
 create policy "Public reads Institutions"
 on public.institutions for select
 to anon, authenticated
@@ -103,6 +115,8 @@ grant update (
 ) on public.profiles to authenticated;
 grant execute on function public.current_user_id(), public.is_active_user(), public.is_admin()
 to authenticated;
+revoke all on function public.get_current_profile_access() from public, anon;
+grant execute on function public.get_current_profile_access() to authenticated;
 
 create function public.create_profile_for_auth_user()
 returns trigger

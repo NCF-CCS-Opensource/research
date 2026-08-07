@@ -1,5 +1,4 @@
-import { createBrowserClient } from "@supabase/ssr"
-import type { SupabaseClient } from "@supabase/supabase-js"
+import { createClient, type SupabaseClient } from "@supabase/supabase-js"
 
 let client: SupabaseClient | undefined
 
@@ -9,5 +8,10 @@ export function getSupabase() {
   if (!url || !key)
     throw new Error("Supabase public environment is not configured")
 
-  return (client ??= createBrowserClient(url, key))
+  return (client ??= createClient(url, key, {
+    accessToken: async () =>
+      typeof window === "undefined"
+        ? null
+        : (window.Clerk?.session?.getToken() ?? null),
+  }))
 }

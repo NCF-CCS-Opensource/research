@@ -1,8 +1,9 @@
 # Deployment
 
 NCF Research Nexus runs as a Next.js application on Vercel, with Supabase for
-Postgres, Auth, and Edge Functions, Cloudflare R2 for private PDFs, and Resend
-for email. Use Node.js 20 or newer and pnpm.
+Postgres, Row Level Security, and Edge Functions, Clerk for Google authentication,
+Cloudflare R2 for private PDFs, and Resend for optional application email. Use
+Node.js 20 or newer and pnpm.
 
 ## Environment keys
 
@@ -14,6 +15,9 @@ Set these for the Production environment before building:
 | --- | --- | --- |
 | `NEXT_PUBLIC_SUPABASE_URL` | Yes | Supabase project URL |
 | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Yes | Supabase publishable key |
+| `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` | Yes | Clerk publishable key |
+| `CLERK_SECRET_KEY` | Yes | Clerk secret key (server-only) |
+| `NEXT_PUBLIC_CLERK_SIGN_IN_URL` | Yes | `/login` |
 
 These values are intentionally public and are embedded at build time. Redeploy
 after changing either value. Never add service-role, R2, or Resend secrets to
@@ -43,10 +47,11 @@ pnpm exec supabase link --project-ref YOUR_PROJECT_REF
 pnpm exec supabase db push
 ```
 
-Under **Authentication → URL Configuration**, set the Site URL to the
-production origin and add `https://YOUR_DOMAIN/auth/confirm` as a redirect URL.
-Configure Resend SMTP under **Authentication → SMTP Settings** so signup
-confirmation and password recovery work in production.
+In Clerk, enable Google as the sole connection and disable Clerk account
+self-deletion. Use Clerk's **Connect with Supabase** flow, then add Clerk under
+Supabase **Authentication → Third-Party Auth**. This native integration must
+issue the `authenticated` role in Clerk session tokens; do not create a legacy
+Supabase JWT template. Use separate Clerk development and production instances.
 
 ## 2. Configure R2 and the Edge Function
 
@@ -88,7 +93,7 @@ then deploy.
 
 ## 4. Create the first Admin
 
-After the intended Admin confirms their email and receives a Profile, run once
+After the intended Admin signs in with Google and has a Profile, run once
 in the Supabase SQL editor:
 
 ```sql
@@ -100,7 +105,8 @@ account-status changes in the Admin dashboard.
 
 ## Post-deploy checks
 
-Confirm signup and login, public discovery, Owner PDF upload/download, Admin
+Confirm Google login and sign-out, public discovery, intended-route redirects,
+missing and suspended Profile routing, Owner PDF upload/download, Admin
 moderation, and PDF-access request, approval, download, and revocation. If
 uploads fail in the browser, check R2 CORS first.
 
