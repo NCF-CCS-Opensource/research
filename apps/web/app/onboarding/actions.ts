@@ -1,11 +1,11 @@
 "use server"
 
-import { currentUser } from "@clerk/nextjs/server"
 import { createClient } from "@supabase/supabase-js"
 import { redirect } from "next/navigation"
 
 import { onboardingProfile } from "@/lib/onboarding"
 import { safeNextPath } from "@/lib/safe-next-path"
+import { createServerSupabase } from "@/lib/supabase-server"
 
 export type OnboardingState = { error?: string }
 
@@ -13,13 +13,13 @@ export async function completeOnboarding(
   _state: OnboardingState,
   form: FormData
 ): Promise<OnboardingState> {
-  const user = await currentUser()
-  const email = user?.primaryEmailAddress
-  if (!user || !email || email.verification?.status !== "verified")
-    return { error: "A verified Google account is required." }
+  const { data } = await (await createServerSupabase()).auth.getUser()
+  const user = data.user
+  if (!user?.email || !user.email_confirmed_at)
+    return { error: "A verified account is required." }
 
   const profile = onboardingProfile(
-    { id: user.id, email: email.emailAddress },
+    { id: user.id, email: user.email },
     form
   )
   if (typeof profile === "string") return { error: profile }

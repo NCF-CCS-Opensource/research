@@ -1,5 +1,5 @@
-import { SignOut } from "@/components/auth/sign-out"
 import { PublicShell } from "@/components/layout/public-shell"
+import { Button } from "@/components/ui/button"
 import { enforceProfileRoute } from "@/lib/profile-routing"
 
 export default async function SuspendedPage() {
@@ -11,7 +11,11 @@ export default async function SuspendedPage() {
         <p className="mt-4 text-muted-foreground">
           Your account cannot access protected Research Hub features. Contact an administrator for help.
         </p>
-        <SignOut className="mt-8" />
+        <form action="/api/auth/logout" method="POST">
+          <Button variant="outline" type="submit" className="mt-8">
+            Sign Out
+          </Button>
+        </form>
       </main>
     </PublicShell>
   )

@@ -9,7 +9,7 @@ export type LocalStatus = {
 }
 
 function jwt(secret: string, subject: string, expiresIn = 60) {
-  // Local-only Clerk-shaped session fixture; real Clerk OAuth/native trust stays manual.
+  // Local-only signed session fixture for database authorization tests.
   const encode = (value: object) =>
     Buffer.from(JSON.stringify(value)).toString("base64url")
   const unsigned = `${encode({ alg: "HS256", typ: "JWT" })}.${encode({
@@ -38,8 +38,15 @@ export async function user(
   status: LocalStatus,
   label: string
 ) {
-  const id = `user_${crypto.randomUUID()}`
   const email = `${label}-${Date.now()}-${crypto.randomUUID()}@example.com`
+  const password = "password123"
+  const account = await service.auth.admin.createUser({
+    email,
+    password,
+    email_confirm: true,
+  })
+  if (account.error) throw account.error
+  const id = account.data.user.id
   const created = await service.from("profiles").insert({
     id,
     email,
@@ -47,8 +54,11 @@ export async function user(
     last_name: "Tester",
   })
   if (created.error) throw created.error
+  const client = createClient(status.API_URL, status.PUBLISHABLE_KEY)
+  const signedIn = await client.auth.signInWithPassword({ email, password })
+  if (signedIn.error) throw signedIn.error
   return {
-    client: authenticatedClient(status, id),
+    client,
     email,
     id,
   }

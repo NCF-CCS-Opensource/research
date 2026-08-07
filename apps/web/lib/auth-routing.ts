@@ -26,7 +26,10 @@ export function authDestination(
   profile: ProfileAccess | null,
   intendedPath = pathname
 ) {
-  const loginRoute = pathname === "/login" || pathname.startsWith("/login/")
+  const loginRoute =
+    pathname === "/login" ||
+    pathname.startsWith("/login/") ||
+    pathname === "/register"
   const isProtected = isProtectedRoute(pathname)
 
   if (!userId) {

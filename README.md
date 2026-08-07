@@ -1,6 +1,6 @@
 # NCF Research Nexus
 
-The NCF College of Computer Studies research hub. This Next.js application uses Clerk for Google authentication, Supabase for Postgres, Row Level Security, and Edge Functions, Cloudflare R2 for private Research PDFs, and Resend for optional application email.
+The NCF College of Computer Studies research hub. This Next.js application uses Supabase for authentication, Postgres, Row Level Security, and Edge Functions, Cloudflare R2 for private Research PDFs, and Resend for optional application email.
 
 ## Local development
 
@@ -13,9 +13,7 @@ pnpm exec supabase db reset
 pnpm dev
 ```
 
-Copy `.env.example` to `.env.local`, use the API URL and publishable key printed by `supabase status -o json`, and add keys from a Clerk development instance configured for Google and Supabase.
-Set `auth.third_party.clerk.enabled = true` in `supabase/config.toml` when testing
-real Clerk sessions locally; signed database fixtures do not require a Clerk instance.
+Copy `.env.example` to `.env.local` and use the API URL and keys printed by `supabase status -o json`.
 
 ## Verification
 

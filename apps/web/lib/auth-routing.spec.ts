@@ -54,6 +54,13 @@ describe("authentication routing", () => {
       { role: "user", status: "active" },
       "/dashboard",
     ],
+    [
+      "returning User does not revisit registration",
+      "/register",
+      "user_1",
+      { role: "user", status: "active" },
+      "/dashboard",
+    ],
   ] as const)("%s", (_name, pathname, userId, profile, destination) => {
     expect(authDestination(pathname, userId, profile)).toBe(destination)
   })

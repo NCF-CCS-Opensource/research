@@ -1,19 +1,12 @@
-import { SignIn } from "@clerk/nextjs"
+import Link from "next/link"
 import { BookOpenText } from "lucide-react"
+import { Suspense } from "react"
 
+import { LoginForm } from "@/components/forms/login-form"
 import { PublicShell } from "@/components/layout/public-shell"
-import { safeNextPath } from "@/lib/safe-next-path"
-import { enforceProfileRoute } from "@/lib/profile-routing"
+import { Card } from "@/components/ui/card"
 
-export default async function LoginPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ next?: string }>
-}) {
-  await enforceProfileRoute("/login")
-  const next = (await searchParams).next
-  const destination = safeNextPath(next ?? null, "/login")
-
+export default function LoginPage() {
   return (
     <PublicShell>
       <section className="archive-grid mx-auto flex min-h-[calc(100vh-4rem)] max-w-7xl items-center justify-center px-4 py-12 sm:px-6 lg:px-8">
@@ -31,13 +24,19 @@ export default async function LoginPage({
               </p>
             </div>
           </div>
-
-          <SignIn
-            routing="path"
-            path="/login"
-            withSignUp
-            fallbackRedirectUrl={destination}
-          />
+          <Card className="rounded-none p-8 shadow-[7px_7px_0_var(--primary)]">
+            <Suspense fallback={<div className="text-sm text-muted-foreground">Loading…</div>}>
+              <LoginForm />
+            </Suspense>
+          </Card>
+          <div className="mt-5 flex justify-between text-sm">
+            <Link href="/forgot-password" className="text-muted-foreground hover:text-foreground">
+              Forgot password?
+            </Link>
+            <Link href="/register" className="font-medium hover:text-primary">
+              Register
+            </Link>
+          </div>
         </div>
       </section>
     </PublicShell>

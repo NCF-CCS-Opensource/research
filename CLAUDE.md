@@ -21,8 +21,8 @@ pnpm test:integration # Local Supabase integration tests
 ## Architecture
 
 - **Routing**: App Router under `apps/web/app/`. Public discovery is open; `dashboard/` and `upload/` require an Active Account; `admin/` additionally requires the Admin role.
-- **Authentication**: Clerk owns Google sign-in and sessions. `ClerkProvider` exposes session state, and `proxy.ts` handles routing only. Supabase RLS and security-definer functions remain authoritative.
-- **Data access**: Browser and server Supabase clients pass the current Clerk session token through the supported `accessToken` callback. Domain modules in `packages/api-client` use `apps/web/lib/web-transport.ts` and access Supabase directly under RLS.
+- **Authentication**: Supabase Auth owns email/password sign-in, verification, recovery, and sessions. `proxy.ts` refreshes session cookies; database checks remain authoritative.
+- **Data access**: Browser and server Supabase clients use the current Supabase session. Domain modules in `packages/api-client` use `apps/web/lib/web-transport.ts` and access Supabase directly under RLS.
 - **UI components**: shadcn/ui (`style: radix-nova`, `baseColor: neutral`) in `components/ui/`; feature components in `components/features/`; forms in `components/forms/`; shells/nav in `components/layout/`. Add new primitives with `npx shadcn@latest add <component>`. Import via `@/components/ui/...`.
 - **Types**: shared API response shapes in `types/api.ts`.
 

@@ -24,14 +24,14 @@ Deno.serve(async (request) => {
       supabaseUrl,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     )
-    const subject = subjectFromVerifiedJwt(authorization)
-    if (!subject) return json({ error: "Authentication required" }, 401)
+    const userId = subjectFromVerifiedJwt(authorization)
+    if (!userId) return json({ error: "Authentication required" }, 401)
 
     const body = await request.json()
     const { data: profile } = await service
       .from("profiles")
       .select("role,status")
-      .eq("id", subject)
+      .eq("id", userId)
       .single()
     if (profile?.status !== "active")
       return json({ error: "Account is not active" }, 403)
@@ -57,7 +57,7 @@ Deno.serve(async (request) => {
       .eq("id", researchId)
       .single()
     if (!research) return json({ error: "Research Record not found" }, 404)
-    const isOwner = research.uploader_id === subject
+    const isOwner = research.uploader_id === userId
 
     const s3 = new S3Client({
       region: "auto",
@@ -116,7 +116,7 @@ Deno.serve(async (request) => {
       }
       const confirmed = await service.rpc("confirm_research_upload", {
         target_id: researchId,
-        owner_id: subject,
+        owner_id: userId,
       })
       if (confirmed.error) throw confirmed.error
       return json({ message: "Upload confirmed" })
@@ -144,7 +144,7 @@ Deno.serve(async (request) => {
         { expiresIn: 300 }
       )
       const audit = await service.from("audit_logs").insert({
-        admin_id: subject,
+        admin_id: userId,
         research_id: researchId,
         action: "moderate",
       })
@@ -156,7 +156,7 @@ Deno.serve(async (request) => {
       const requestId = String(body.requestId ?? "")
       const authorized = await service.rpc("authorize_granted_download", {
         target_request_id: requestId,
-        requester: subject,
+        requester: userId,
       })
       if (authorized.error) throw authorized.error
       const grant = authorized.data?.[0]
@@ -231,8 +231,8 @@ Deno.serve(async (request) => {
       if (access.status !== expectedStatus[event])
         return json({ error: "PDF Access event is stale" }, 409)
       if (
-        (isRequest && subject !== access.requester_id) ||
-        (!isRequest && subject !== owner?.uploader_id)
+        (isRequest && userId !== access.requester_id) ||
+        (!isRequest && userId !== owner?.uploader_id)
       )
         return json({ error: "PDF Access request not found" }, 404)
       if (!Deno.env.get("RESEND_API_KEY") || !Deno.env.get("EMAIL_FROM"))
@@ -283,7 +283,7 @@ function json(body: unknown, status = 200) {
   })
 }
 
-// The gateway verifies the token before this handler decodes its subject.
+// The Supabase gateway verifies the JWT before this handler reads its subject.
 function subjectFromVerifiedJwt(authorization: string) {
   try {
     const token = authorization.match(/^Bearer (\S+)$/)?.[1]

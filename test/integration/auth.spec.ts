@@ -13,14 +13,46 @@ beforeAll(() => {
   ) as LocalStatus
 })
 
-describe("Clerk Auth Boundary", () => {
+describe("Supabase Auth Boundary", () => {
+  it("authenticates a verified user before Profile onboarding", async () => {
+    const service = createClient(status.API_URL, status.SECRET_KEY)
+    const email = `auth-${crypto.randomUUID()}@example.com`
+    const created = await service.auth.admin.createUser({
+      email,
+      password: "password123",
+      email_confirm: true,
+    })
+    expect(created.error).toBeNull()
+
+    const browser = createClient(status.API_URL, status.PUBLISHABLE_KEY)
+    const signedIn = await browser.auth.signInWithPassword({
+      email,
+      password: "password123",
+    })
+    expect(signedIn.data.user?.id).toBe(created.data.user?.id)
+    expect(
+      (await browser.rpc("get_current_profile_access").maybeSingle()).data
+    ).toBeNull()
+
+    await service.from("profiles").insert({
+      id: created.data.user!.id,
+      email,
+      first_name: "New",
+      last_name: "User",
+      custom_institution: "Test Institution",
+    })
+    expect(
+      (await browser.rpc("get_current_profile_access").single()).data
+    ).toEqual({ role: "user", status: "active" })
+  })
+
   it("authorizes a text identity subject through the shared database seam", async () => {
     const service = createClient(status.API_URL, status.SECRET_KEY)
     const id = `user_${crypto.randomUUID()}`
     const profile = await service.from("profiles").insert({
       id,
       email: `${id}@example.com`,
-      first_name: "Clerk",
+      first_name: "Supabase",
       last_name: "User",
     })
     expect(profile.error).toBeNull()
@@ -31,7 +63,7 @@ describe("Clerk Auth Boundary", () => {
 
     const research = await user.rpc("create_research_record", {
       research_title: "Text-owned Research",
-      research_abstract: "Clerk-shaped identity",
+      research_abstract: "Authenticated identity",
       research_publish_date: null,
       research_authors: [{ name: "Text User" }],
       category_ids: [],

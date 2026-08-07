@@ -1,7 +1,7 @@
 # Deployment
 
 NCF Research Nexus runs as a Next.js application on Vercel, with Supabase for
-Postgres, Row Level Security, and Edge Functions, Clerk for Google authentication,
+authentication, Postgres, Row Level Security, and Edge Functions,
 Cloudflare R2 for private PDFs, and Resend for optional application email. Use
 Node.js 20 or newer and pnpm.
 
@@ -11,30 +11,26 @@ Node.js 20 or newer and pnpm.
 
 Set these for the Production environment before building:
 
-| Key | Required | Value |
-| --- | --- | --- |
-| `NEXT_PUBLIC_SUPABASE_URL` | Yes | Supabase project URL |
-| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Yes | Supabase publishable key |
-| `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` | Yes | Clerk publishable key |
-| `CLERK_SECRET_KEY` | Yes | Clerk secret key (server-only) |
-| `CLERK_WEBHOOK_SIGNING_SECRET` | Yes | Clerk webhook signing secret (server-only) |
-| `NEXT_PUBLIC_CLERK_SIGN_IN_URL` | Yes | `/login` |
-| `SUPABASE_URL` | Yes | Supabase project URL (server-only) |
-| `SUPABASE_SERVICE_ROLE_KEY` | Yes | Supabase service-role key (server-only) |
+| Key                                    | Required | Value                                   |
+| -------------------------------------- | -------- | --------------------------------------- |
+| `NEXT_PUBLIC_SUPABASE_URL`             | Yes      | Supabase project URL                    |
+| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Yes      | Supabase publishable key                |
+| `SUPABASE_URL`                         | Yes      | Supabase project URL (server-only)      |
+| `SUPABASE_SERVICE_ROLE_KEY`            | Yes      | Supabase service-role key (server-only) |
 
 Only keys prefixed with `NEXT_PUBLIC_` are embedded at build time. Never prefix
-the webhook signing secret or service-role key with `NEXT_PUBLIC_`.
+the service-role key with `NEXT_PUBLIC_`.
 
 ### Supabase Edge Function
 
-| Key | Required | Value |
-| --- | --- | --- |
-| `R2_ENDPOINT` | Yes | `https://ACCOUNT_ID.r2.cloudflarestorage.com` |
-| `R2_ACCESS_KEY_ID` | Yes | R2 API-token access key |
-| `R2_SECRET_ACCESS_KEY` | Yes | R2 API-token secret |
-| `R2_BUCKET_NAME` | Yes | Private bucket name |
-| `RESEND_API_KEY` | No | Enables PDF-access notification email |
-| `EMAIL_FROM` | With Resend | Verified sender, such as `NCF Research Nexus <research@example.edu>` |
+| Key                    | Required    | Value                                                                |
+| ---------------------- | ----------- | -------------------------------------------------------------------- |
+| `R2_ENDPOINT`          | Yes         | `https://ACCOUNT_ID.r2.cloudflarestorage.com`                        |
+| `R2_ACCESS_KEY_ID`     | Yes         | R2 API-token access key                                              |
+| `R2_SECRET_ACCESS_KEY` | Yes         | R2 API-token secret                                                  |
+| `R2_BUCKET_NAME`       | Yes         | Private bucket name                                                  |
+| `RESEND_API_KEY`       | No          | Enables PDF-access notification email                                |
+| `EMAIL_FROM`           | With Resend | Verified sender, such as `NCF Research Nexus <research@example.edu>` |
 
 Supabase provides `SUPABASE_URL`, `SUPABASE_ANON_KEY`, and
 `SUPABASE_SERVICE_ROLE_KEY`; do not set or expose them manually.
@@ -49,23 +45,9 @@ pnpm exec supabase link --project-ref YOUR_PROJECT_REF
 pnpm exec supabase db push
 ```
 
-In Clerk, allow public signup through Google as the sole connection and disable
-account self-deletion. Use separate Clerk development and production
-instances, and configure custom Google OAuth credentials on the production
-instance. Keep Clerk's email identifier read-only. Use Clerk's **Connect with Supabase** flow, then add Clerk under
-Supabase **Authentication → Third-Party Auth**. This native integration must
-issue the `authenticated` role in Clerk session tokens; do not create a legacy
-Supabase JWT template. These settings are compatible with Clerk Hobby.
-
-Supabase Auth remains provisioned by the platform but is dormant: email signup
-is disabled and the application must not create or authenticate Supabase Auth
-users. Resend is used only for application notifications, never authentication.
-
-Create a Clerk webhook for `user.updated` at
-`https://YOUR_DOMAIN/api/webhooks/clerk`. For local development, expose port
-3000 with a tunnel and put the development instance's signing secret,
-`SUPABASE_URL`, and `SUPABASE_SERVICE_ROLE_KEY` in `apps/web/.env.local`. Put
-the production instance's values in Vercel. Keep both secrets server-only.
+In Supabase **Authentication → URL Configuration**, set the production site URL
+and allow `https://YOUR_DOMAIN/auth/confirm`. Configure the email provider and
+templates so confirmation and recovery links use the supplied redirect URL.
 
 ## 2. Configure R2 and the Edge Function
 
@@ -86,8 +68,7 @@ pnpm exec supabase functions deploy r2
 ```
 
 Omit the two Resend values if application notifications are not required. The
-Supabase gateway validates Clerk session JWTs before the function derives
-the caller from the verified subject claim.
+The Edge Function validates the Supabase access token before authorizing work.
 
 ## 3. Verify and deploy Next.js
 
@@ -107,7 +88,7 @@ deploy.
 
 ## 4. Create the first Admin
 
-After the intended Admin signs in with Google and has a Profile, run once
+After the intended Admin registers and completes their Profile, run once
 in the Supabase SQL editor:
 
 ```sql
@@ -119,20 +100,19 @@ account-status changes in the Admin dashboard.
 
 ## Post-deploy checks
 
-Run this matrix manually in both Clerk development and production; real Google
-OAuth is intentionally not automated:
+Run this matrix manually in local and production Supabase projects:
 
-| Check | Expected result |
-| --- | --- |
-| First Google sign-in | Creates the Clerk User, then opens onboarding; completing it creates one Profile |
-| Returning User | Opens the intended destination without onboarding |
-| Intended destination | A protected URL survives login and onboarding redirects |
-| Admin routing | Admins reach `/admin`; non-Admins cannot |
-| Suspension | A suspended User reaches `/suspended` and cannot use protected workflows |
-| Sign-out | Ends the Clerk session and returns to public discovery |
-| Invalid session | Behaves as signed out without exposing protected data |
-| Contact Email update | A verified Clerk primary-email change updates only the matching Profile |
-| Fresh sign-in after cleanup | A new Google sign-in and onboarding succeed with no legacy state |
+| Check                       | Expected result                                                          |
+| --------------------------- | ------------------------------------------------------------------------ |
+| First registration          | Confirms the email, opens onboarding, and creates one Profile            |
+| Returning User              | Opens the intended destination without onboarding                        |
+| Intended destination        | A protected URL survives login and onboarding redirects                  |
+| Admin routing               | Admins reach `/admin`; non-Admins cannot                                 |
+| Suspension                  | A suspended User reaches `/suspended` and cannot use protected workflows |
+| Sign-out                    | Ends the Supabase session and returns to public discovery                |
+| Invalid session             | Behaves as signed out without exposing protected data                    |
+| Password recovery           | A valid recovery link allows setting a new password                      |
+| Fresh sign-in after cleanup | A new registration and onboarding succeed with no legacy state           |
 
 Also confirm public discovery, Owner PDF upload/download, Admin moderation, and
 PDF-access request, approval, download, and revocation. If uploads fail in the
@@ -155,7 +135,6 @@ manually and records these exact targets before deleting anything:
 
 ```text
 Supabase project name/ref: ____________________
-Clerk instance (development or production): ____________________
 R2 account/bucket/prefix: ____________________ / ____________________ / pdfs/
 ```
 
@@ -175,8 +154,5 @@ R2 account/bucket/prefix: ____________________ / ____________________ / pdfs/
    ```
 
 3. In that Supabase project, open **Authentication → Users**, verify they are
-   test identities, and delete every legacy Supabase Auth user. Dormant
-   Supabase Auth cannot be removed from the platform itself.
-4. In the recorded Clerk instance, open **Users**, verify each is a test User,
-   and delete them. Never delete Users from the other Clerk instance.
-5. Repeat the manual matrix above, including a fresh Google sign-in.
+   test identities, and delete them.
+4. Repeat the manual matrix above, including a fresh registration.
