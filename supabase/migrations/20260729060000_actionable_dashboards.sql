@@ -25,7 +25,7 @@ returns table (
   abstract text,
   publish_date date,
   status public.research_status,
-  uploader_id text,
+  uploader_id uuid,
   upload_complete boolean,
   view_count integer,
   download_count integer,
@@ -168,7 +168,7 @@ $$;
 
 create or replace function public.authorize_granted_download(
   target_request_id uuid,
-  requester text
+  requester uuid
 )
 returns table (research_id uuid, file_key text)
 language plpgsql
@@ -225,7 +225,7 @@ security definer
 set search_path = ''
 as $$
 declare
-  dashboard_user_id text := public.current_user_id();
+  dashboard_user_id uuid := auth.uid();
   user_is_admin boolean;
   dashboard_mode text;
   cards jsonb;

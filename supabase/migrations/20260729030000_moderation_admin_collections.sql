@@ -1,6 +1,6 @@
 create table public.audit_logs (
   id uuid primary key default gen_random_uuid(),
-  admin_id text not null references public.profiles (id),
+  admin_id uuid not null references auth.users (id),
   research_id uuid references public.researches (id) on delete set null,
   action varchar(50) not null,
   meta jsonb,
@@ -8,7 +8,7 @@ create table public.audit_logs (
 );
 
 create table public.collections (
-  user_id text not null references public.profiles (id) on delete cascade,
+  user_id uuid not null references auth.users (id) on delete cascade,
   research_id uuid not null references public.researches (id) on delete cascade,
   created_at timestamptz not null default now(),
   primary key (user_id, research_id)
@@ -96,13 +96,13 @@ using ((select public.is_admin()));
 create policy "Users read their Collection"
 on public.collections for select
 to authenticated
-using (user_id = (select public.current_user_id()) and (select public.is_active_user()));
+using (user_id = (select auth.uid()) and (select public.is_active_user()));
 
 create policy "Users add eligible Research Records to their Collection"
 on public.collections for insert
 to authenticated
 with check (
-  user_id = (select public.current_user_id())
+  user_id = (select auth.uid())
   and (select public.is_active_user())
   and exists (
     select 1 from public.researches r
@@ -115,7 +115,7 @@ with check (
 create policy "Users remove from their Collection"
 on public.collections for delete
 to authenticated
-using (user_id = (select public.current_user_id()) and (select public.is_active_user()));
+using (user_id = (select auth.uid()) and (select public.is_active_user()));
 
 create policy "Admins create Categories"
 on public.categories for insert to authenticated
@@ -199,7 +199,7 @@ begin
 
   insert into public.audit_logs (admin_id, research_id, action, meta)
   values (
-    public.current_user_id(),
+    auth.uid(),
     target_id,
     case when decision = 'approved' then 'approve' else 'reject' end,
     case when decision = 'rejected' then jsonb_build_object('reason', trim(reason)) end
@@ -220,7 +220,7 @@ begin
 
   update public.researches
   set status = 'pending', rejection_reason = null, updated_at = now()
-  where id = target_id and uploader_id = public.current_user_id() and status = 'rejected';
+  where id = target_id and uploader_id = auth.uid() and status = 'rejected';
 
   if not found then
     raise exception 'Rejected Research Record not found';
