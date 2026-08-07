@@ -79,3 +79,70 @@ $$;
 create trigger create_profile_after_signup
 after insert on auth.users
 for each row execute function public.create_profile_for_auth_user();
+
+with registrations as (
+  select
+    auth_user.id,
+    nullif(trim(auth_user.email), '') as email,
+    nullif(trim(auth_user.raw_user_meta_data ->> 'first_name'), '') as first_name,
+    nullif(trim(auth_user.raw_user_meta_data ->> 'middle_name'), '') as middle_name,
+    nullif(trim(auth_user.raw_user_meta_data ->> 'last_name'), '') as last_name,
+    nullif(trim(auth_user.raw_user_meta_data ->> 'suffix'), '') as suffix,
+    nullif(trim(auth_user.raw_user_meta_data ->> 'institution_id'), '') as institution_id,
+    nullif(trim(auth_user.raw_user_meta_data ->> 'custom_institution'), '') as custom_institution,
+    nullif(trim(auth_user.raw_user_meta_data ->> 'program_id'), '') as program_id,
+    nullif(trim(auth_user.raw_user_meta_data ->> 'custom_program'), '') as custom_program
+  from auth.users auth_user
+)
+insert into public.profiles (
+  id,
+  email,
+  first_name,
+  middle_name,
+  last_name,
+  suffix,
+  institution_id,
+  custom_institution,
+  program_id,
+  custom_program
+)
+select
+  registration.id,
+  registration.email,
+  registration.first_name,
+  registration.middle_name,
+  registration.last_name,
+  registration.suffix,
+  institution.id,
+  registration.custom_institution,
+  program.id,
+  registration.custom_program
+from registrations registration
+left join public.institutions institution
+  on institution.id::text = registration.institution_id
+left join public.programs program
+  on program.id::text = registration.program_id
+  and program.institution_id = institution.id
+where registration.email is not null
+  and length(registration.email) <= 255
+  and registration.first_name is not null
+  and length(registration.first_name) <= 100
+  and coalesce(length(registration.middle_name), 0) <= 100
+  and registration.last_name is not null
+  and length(registration.last_name) <= 100
+  and coalesce(length(registration.suffix), 0) <= 20
+  and coalesce(length(registration.custom_institution), 0) <= 255
+  and coalesce(length(registration.custom_program), 0) <= 255
+  and (
+    (registration.institution_id is not null
+      and institution.id is not null
+      and registration.custom_institution is null)
+    or (registration.institution_id is null
+      and registration.custom_institution is not null)
+  )
+  and (registration.program_id is null or program.id is not null)
+  and (registration.custom_program is null or (
+    registration.institution_id is null
+    and registration.program_id is null
+  ))
+on conflict (id) do nothing;
