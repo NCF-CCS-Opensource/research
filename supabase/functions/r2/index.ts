@@ -20,20 +20,23 @@ Deno.serve(async (request) => {
   try {
     const authorization = request.headers.get("Authorization") ?? ""
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!
-    const publicClient = createClient(
-      supabaseUrl,
-      Deno.env.get("SUPABASE_ANON_KEY")!,
-      { global: { headers: { Authorization: authorization } } }
-    )
     const service = createClient(
       supabaseUrl,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     )
-    const { data: auth, error: authError } = await publicClient.auth.getUser()
-    if (authError || !auth.user)
-      return json({ error: "Authentication required" }, 401)
+    const subject = subjectFromVerifiedJwt(authorization)
+    if (!subject) return json({ error: "Authentication required" }, 401)
 
     const body = await request.json()
+    const { data: profile } = await service
+      .from("profiles")
+      .select("role,status")
+      .eq("id", subject)
+      .single()
+    if (profile?.status !== "active")
+      return json({ error: "Account is not active" }, 403)
+    const isAdmin = profile.role === "admin"
+
     let researchId = String(body.researchId ?? "")
     if (
       body.action === "email-pdf-access" ||
@@ -54,15 +57,7 @@ Deno.serve(async (request) => {
       .eq("id", researchId)
       .single()
     if (!research) return json({ error: "Research Record not found" }, 404)
-    const isOwner = research.uploader_id === auth.user.id
-    const { data: profile } = await service
-      .from("profiles")
-      .select("role,status")
-      .eq("id", auth.user.id)
-      .single()
-    if (profile?.status !== "active")
-      return json({ error: "Account is not active" }, 403)
-    const isAdmin = profile?.role === "admin" && profile.status === "active"
+    const isOwner = research.uploader_id === subject
 
     const s3 = new S3Client({
       region: "auto",
@@ -121,7 +116,7 @@ Deno.serve(async (request) => {
       }
       const confirmed = await service.rpc("confirm_research_upload", {
         target_id: researchId,
-        owner_id: auth.user.id,
+        owner_id: subject,
       })
       if (confirmed.error) throw confirmed.error
       return json({ message: "Upload confirmed" })
@@ -149,7 +144,7 @@ Deno.serve(async (request) => {
         { expiresIn: 300 }
       )
       const audit = await service.from("audit_logs").insert({
-        admin_id: auth.user.id,
+        admin_id: subject,
         research_id: researchId,
         action: "moderate",
       })
@@ -161,7 +156,7 @@ Deno.serve(async (request) => {
       const requestId = String(body.requestId ?? "")
       const authorized = await service.rpc("authorize_granted_download", {
         target_request_id: requestId,
-        requester: auth.user.id,
+        requester: subject,
       })
       if (authorized.error) throw authorized.error
       const grant = authorized.data?.[0]
@@ -179,13 +174,15 @@ Deno.serve(async (request) => {
       if (!["approved", "rejected"].includes(research.status))
         return json({ error: "Research moderation event is stale" }, 409)
       if (!Deno.env.get("RESEND_API_KEY") || !Deno.env.get("EMAIL_FROM"))
-        return json({ error: "Application email is not configured" }, 503)
+        return json({ message: "Application email is not configured" })
 
-      const { data: recipient } = await service.auth.admin.getUserById(
-        research.uploader_id
-      )
-      if (!recipient.user?.email)
-        return json({ error: "Recipient is unavailable" }, 404)
+      const { data: recipient } = await service
+        .from("profiles")
+        .select("email")
+        .eq("id", research.uploader_id)
+        .single()
+      if (!recipient?.email)
+        return json({ message: "Recipient is unavailable" })
 
       const subject = `Research ${research.status}: ${research.title}`
       const text =
@@ -200,12 +197,12 @@ Deno.serve(async (request) => {
         },
         body: JSON.stringify({
           from: Deno.env.get("EMAIL_FROM"),
-          to: [recipient.user.email],
+          to: [recipient.email],
           subject,
           text,
         }),
       })
-      if (!response.ok) return json({ error: "Email delivery failed" }, 502)
+      if (!response.ok) return json({ message: "Email delivery failed" })
       return json({ message: "Email sent" })
     }
 
@@ -234,8 +231,8 @@ Deno.serve(async (request) => {
       if (access.status !== expectedStatus[event])
         return json({ error: "PDF Access event is stale" }, 409)
       if (
-        (isRequest && auth.user.id !== access.requester_id) ||
-        (!isRequest && auth.user.id !== owner?.uploader_id)
+        (isRequest && subject !== access.requester_id) ||
+        (!isRequest && subject !== owner?.uploader_id)
       )
         return json({ error: "PDF Access request not found" }, 404)
       if (!Deno.env.get("RESEND_API_KEY") || !Deno.env.get("EMAIL_FROM"))
@@ -243,9 +240,12 @@ Deno.serve(async (request) => {
 
       const recipientId = isRequest ? owner?.uploader_id : access.requester_id
       if (!recipientId) return json({ message: "Recipient is unavailable" })
-      const { data: recipient } =
-        await service.auth.admin.getUserById(recipientId)
-      if (!recipient.user?.email)
+      const { data: recipient } = await service
+        .from("profiles")
+        .select("email")
+        .eq("id", recipientId)
+        .single()
+      if (!recipient?.email)
         return json({ message: "Recipient is unavailable" })
       const subject = isRequest
         ? `PDF access ${event}: ${access.research_title}`
@@ -258,7 +258,7 @@ Deno.serve(async (request) => {
         },
         body: JSON.stringify({
           from: Deno.env.get("EMAIL_FROM"),
-          to: [recipient.user.email],
+          to: [recipient.email],
           subject,
           text: subject,
         }),
@@ -281,4 +281,18 @@ function json(body: unknown, status = 200) {
     status,
     headers: { ...cors, "Content-Type": "application/json" },
   })
+}
+
+// The gateway verifies the token before this handler decodes its subject.
+function subjectFromVerifiedJwt(authorization: string) {
+  try {
+    const token = authorization.match(/^Bearer (\S+)$/)?.[1]
+    if (!token) return null
+    const subject = JSON.parse(
+      atob(token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/"))
+    ).sub
+    return typeof subject === "string" && subject ? subject : null
+  } catch {
+    return null
+  }
 }

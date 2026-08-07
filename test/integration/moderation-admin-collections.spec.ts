@@ -89,6 +89,21 @@ describe("moderation and administration", () => {
       decision: "approved",
     })
     expect(approved.error).toBeNull()
+    const moderationDownload = await admin.functions.invoke("r2", {
+      body: { action: "moderation-download", researchId: approvedId },
+    })
+    expect(moderationDownload.error).toBeNull()
+    expect(moderationDownload.data?.url).toMatch(/^https?:\/\//)
+    expect(
+      (
+        await service
+          .from("audit_logs")
+          .select("id")
+          .eq("admin_id", adminId)
+          .eq("research_id", approvedId)
+          .eq("action", "moderate")
+      ).data
+    ).toHaveLength(1)
     const guest = createClient(status.API_URL, status.PUBLISHABLE_KEY)
     const publicRead = await guest
       .from("public_research")
