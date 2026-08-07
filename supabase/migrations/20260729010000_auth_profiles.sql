@@ -14,7 +14,7 @@ create table public.programs (
 );
 
 create table public.profiles (
-  id text primary key,
+  id uuid primary key references auth.users (id) on delete cascade,
   email varchar(255) not null,
   first_name varchar(100) not null,
   middle_name varchar(100),
@@ -32,19 +32,6 @@ alter table public.institutions enable row level security;
 alter table public.programs enable row level security;
 alter table public.profiles enable row level security;
 
-alter table public.researches
-add constraint researches_uploader_id_fkey
-foreign key (uploader_id) references public.profiles (id);
-
-create function public.current_user_id()
-returns text
-language sql
-stable
-set search_path = ''
-as $$
-  select auth.jwt() ->> 'sub';
-$$;
-
 create function public.is_active_user()
 returns boolean
 language sql
@@ -54,7 +41,7 @@ set search_path = ''
 as $$
   select exists (
     select 1 from public.profiles
-    where id = (select public.current_user_id()) and status = 'active'
+    where id = (select auth.uid()) and status = 'active'
   );
 $$;
 
@@ -67,20 +54,8 @@ set search_path = ''
 as $$
   select exists (
     select 1 from public.profiles
-    where id = (select public.current_user_id()) and role = 'admin' and status = 'active'
+    where id = (select auth.uid()) and role = 'admin' and status = 'active'
   );
-$$;
-
-create function public.get_current_profile_access()
-returns table (role public.user_role, status public.account_status)
-language sql
-stable
-security definer
-set search_path = ''
-as $$
-  select p.role, p.status
-  from public.profiles p
-  where p.id = (select public.current_user_id());
 $$;
 
 create policy "Public reads Institutions"
@@ -97,26 +72,65 @@ create policy "Users read their Profile and Admins read Profiles"
 on public.profiles for select
 to authenticated
 using (
-  (id = (select public.current_user_id()) and status = 'active')
+  (id = (select auth.uid()) and status = 'active')
   or (select public.is_admin())
 );
 
 create policy "Users update their active Profile"
 on public.profiles for update
 to authenticated
-using (id = (select public.current_user_id()) and status = 'active')
-with check (id = (select public.current_user_id()) and status = 'active');
+using (id = (select auth.uid()) and status = 'active')
+with check (id = (select auth.uid()) and status = 'active');
 
 grant select on public.institutions, public.programs to anon, authenticated;
 grant select on public.profiles to authenticated;
-grant insert on public.profiles to service_role;
 grant update (
   first_name, middle_name, last_name, suffix, institution_id, program_id, updated_at
 ) on public.profiles to authenticated;
-grant execute on function public.current_user_id(), public.is_active_user(), public.is_admin()
-to authenticated;
-revoke all on function public.get_current_profile_access() from public, anon;
-grant execute on function public.get_current_profile_access() to authenticated;
+grant execute on function public.is_active_user(), public.is_admin() to authenticated;
+
+create function public.create_profile_for_auth_user()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  insert into public.profiles (
+    id,
+    email,
+    first_name,
+    middle_name,
+    last_name,
+    suffix,
+    institution_id,
+    program_id
+  )
+  values (
+    new.id,
+    new.email,
+    coalesce(nullif(trim(new.raw_user_meta_data ->> 'first_name'), ''), 'User'),
+    nullif(trim(new.raw_user_meta_data ->> 'middle_name'), ''),
+    coalesce(nullif(trim(new.raw_user_meta_data ->> 'last_name'), ''), 'Account'),
+    nullif(trim(new.raw_user_meta_data ->> 'suffix'), ''),
+    (
+      select id from public.institutions
+      where id::text = new.raw_user_meta_data ->> 'institution_id'
+      limit 1
+    ),
+    (
+      select id from public.programs
+      where id::text = new.raw_user_meta_data ->> 'program_id'
+      limit 1
+    )
+  );
+  return new;
+end;
+$$;
+
+create trigger create_profile_after_signup
+after insert on auth.users
+for each row execute function public.create_profile_for_auth_user();
 
 create function public.bootstrap_first_admin(target_email text)
 returns void
@@ -143,7 +157,7 @@ revoke all on function public.bootstrap_first_admin(text) from public, anon, aut
 grant execute on function public.bootstrap_first_admin(text) to service_role;
 
 create function public.admin_update_account(
-  target_id text,
+  target_id uuid,
   new_role public.user_role,
   new_status public.account_status
 )
@@ -168,5 +182,5 @@ end;
 $$;
 
 grant execute on function public.admin_update_account(
-  text, public.user_role, public.account_status
+  uuid, public.user_role, public.account_status
 ) to authenticated;

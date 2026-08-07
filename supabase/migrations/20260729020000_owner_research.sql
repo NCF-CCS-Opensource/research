@@ -1,12 +1,12 @@
 create policy "Owners read their Research Records"
 on public.researches for select
 to authenticated
-using (uploader_id = (select public.current_user_id()) and (select public.is_active_user()));
+using (uploader_id = (select auth.uid()) and (select public.is_active_user()));
 
 create policy "Owners delete their Research Records"
 on public.researches for delete
 to authenticated
-using (uploader_id = (select public.current_user_id()) and (select public.is_active_user()));
+using (uploader_id = (select auth.uid()) and (select public.is_active_user()));
 
 create policy "Owners read Authors on their Research Records"
 on public.authors for select
@@ -17,7 +17,7 @@ using (
     from public.research_authors ra
     join public.researches r on r.id = ra.research_id
     where ra.author_id = authors.id
-      and r.uploader_id = (select public.current_user_id())
+      and r.uploader_id = (select auth.uid())
       and (select public.is_active_user())
   )
 );
@@ -29,7 +29,7 @@ using (
   exists (
     select 1 from public.researches r
     where r.id = research_id
-      and r.uploader_id = (select public.current_user_id())
+      and r.uploader_id = (select auth.uid())
       and (select public.is_active_user())
   )
 );
@@ -41,7 +41,7 @@ using (
   exists (
     select 1 from public.researches r
     where r.id = research_id
-      and r.uploader_id = (select public.current_user_id())
+      and r.uploader_id = (select auth.uid())
       and (select public.is_active_user())
   )
 );
@@ -53,7 +53,7 @@ using (
   exists (
     select 1 from public.researches r
     where r.id = research_id
-      and r.uploader_id = (select public.current_user_id())
+      and r.uploader_id = (select auth.uid())
       and (select public.is_active_user())
   )
 );
@@ -76,7 +76,7 @@ security definer
 set search_path = ''
 as $$
 declare
-  owner_id text := public.current_user_id();
+  owner_id uuid := auth.uid();
   created_id uuid;
   author_entry jsonb;
   author_id uuid;
@@ -149,7 +149,7 @@ begin
     publish_date = research_publish_date,
     updated_at = now()
   where id = target_id
-    and uploader_id = public.current_user_id()
+    and uploader_id = auth.uid()
     and status <> 'approved';
 
   if not found then
@@ -158,7 +158,7 @@ begin
 end;
 $$;
 
-create function public.confirm_research_upload(target_id uuid, owner_id text)
+create function public.confirm_research_upload(target_id uuid, owner_id uuid)
 returns void
 language plpgsql
 security definer
@@ -196,9 +196,9 @@ grant execute on function public.create_research_record(
 ) to authenticated;
 grant execute on function public.update_research_record(uuid, text, text, date)
 to authenticated;
-revoke all on function public.confirm_research_upload(uuid, text)
+revoke all on function public.confirm_research_upload(uuid, uuid)
 from public, anon, authenticated;
-grant execute on function public.confirm_research_upload(uuid, text) to service_role;
+grant execute on function public.confirm_research_upload(uuid, uuid) to service_role;
 
 grant select, insert, update, delete on
   public.researches,
