@@ -17,11 +17,13 @@ Set these for the Production environment before building:
 | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Yes | Supabase publishable key |
 | `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` | Yes | Clerk publishable key |
 | `CLERK_SECRET_KEY` | Yes | Clerk secret key (server-only) |
+| `CLERK_WEBHOOK_SIGNING_SECRET` | Yes | Clerk webhook signing secret (server-only) |
 | `NEXT_PUBLIC_CLERK_SIGN_IN_URL` | Yes | `/login` |
+| `SUPABASE_URL` | Yes | Supabase project URL (server-only) |
+| `SUPABASE_SERVICE_ROLE_KEY` | Yes | Supabase service-role key (server-only) |
 
-These values are intentionally public and are embedded at build time. Redeploy
-after changing either value. Never add service-role, R2, or Resend secrets to
-Vercel variables prefixed with `NEXT_PUBLIC_`.
+Only keys prefixed with `NEXT_PUBLIC_` are embedded at build time. Never prefix
+the webhook signing secret or service-role key with `NEXT_PUBLIC_`.
 
 ### Supabase Edge Function
 
@@ -52,6 +54,12 @@ self-deletion. Use Clerk's **Connect with Supabase** flow, then add Clerk under
 Supabase **Authentication → Third-Party Auth**. This native integration must
 issue the `authenticated` role in Clerk session tokens; do not create a legacy
 Supabase JWT template. Use separate Clerk development and production instances.
+
+Create a Clerk webhook for `user.updated` at
+`https://YOUR_DOMAIN/api/webhooks/clerk`. For local development, expose port
+3000 with a tunnel and put the development instance's signing secret,
+`SUPABASE_URL`, and `SUPABASE_SERVICE_ROLE_KEY` in `apps/web/.env.local`. Put
+the production instance's values in Vercel. Keep both secrets server-only.
 
 ## 2. Configure R2 and the Edge Function
 
@@ -88,8 +96,8 @@ pnpm build
 ```
 
 Import the repository into Vercel. `vercel.json` already sets the framework,
-install command, and build command. Add the two Vercel environment keys above,
-then deploy.
+install command, and build command. Add the Vercel environment keys above, then
+deploy.
 
 ## 4. Create the first Admin
 
