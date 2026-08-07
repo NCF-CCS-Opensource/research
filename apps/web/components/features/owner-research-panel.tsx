@@ -4,6 +4,7 @@ import Link from "next/link"
 import { useEffect, useState, useTransition } from "react"
 
 import { Button } from "@/components/ui/button"
+import { errorMessage } from "@/lib/error-message"
 import { pdfAccess, researchLifecycle } from "@/lib/web-transport"
 import { replaceResearchPdf } from "@/lib/research-ingestion"
 import type { ResearchDetail } from "@repo/api-client"
@@ -16,7 +17,9 @@ export function OwnerResearchPanel() {
   function load() {
     researchLifecycle.getOwnerRecords()
       .then(setPapers)
-      .catch((reason) => setError(reason.message))
+      .catch((reason) =>
+        setError(errorMessage(reason, "Unable to load Research Records"))
+      )
   }
 
   useEffect(load, [])

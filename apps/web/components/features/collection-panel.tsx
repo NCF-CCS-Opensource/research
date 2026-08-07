@@ -4,6 +4,7 @@ import Link from "next/link"
 import { useEffect, useState, useTransition } from "react"
 
 import { Button } from "@/components/ui/button"
+import { errorMessage } from "@/lib/error-message"
 import { accountWorkspace } from "@/lib/web-transport"
 
 type Item = Awaited<ReturnType<typeof accountWorkspace.getCollection>>[number]
@@ -16,7 +17,7 @@ export function CollectionPanel() {
   function load() {
     accountWorkspace.getCollection()
       .then(setItems)
-      .catch((reason) => setError(reason.message))
+      .catch((reason) => setError(errorMessage(reason, "Unable to load Collection")))
   }
   useEffect(load, [])
 
