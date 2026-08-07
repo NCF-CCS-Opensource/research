@@ -1,4 +1,5 @@
 import { execFileSync } from "node:child_process"
+import { createHmac } from "node:crypto"
 import { createClient } from "@supabase/supabase-js"
 import { beforeAll, describe, expect, it } from "vitest"
 
@@ -6,9 +7,24 @@ type LocalStatus = {
   API_URL: string
   PUBLISHABLE_KEY: string
   SECRET_KEY: string
+  JWT_SECRET: string
 }
 
 let status: LocalStatus
+
+function jwt(subject: string) {
+  const encode = (value: object) =>
+    Buffer.from(JSON.stringify(value)).toString("base64url")
+  const unsigned = `${encode({ alg: "HS256", typ: "JWT" })}.${encode({
+    sub: subject,
+    role: "authenticated",
+    exp: Math.floor(Date.now() / 1000) + 60,
+  })}`
+  const signature = createHmac("sha256", status.JWT_SECRET)
+    .update(unsigned)
+    .digest("base64url")
+  return `${unsigned}.${signature}`
+}
 
 beforeAll(() => {
   status = JSON.parse(
@@ -19,6 +35,34 @@ beforeAll(() => {
 })
 
 describe("Supabase Auth Boundary", () => {
+  it("authorizes a text identity subject through the shared database seam", async () => {
+    const service = createClient(status.API_URL, status.SECRET_KEY)
+    const id = `user_${crypto.randomUUID()}`
+    const profile = await service.from("profiles").insert({
+      id,
+      email: `${id}@example.com`,
+      first_name: "Clerk",
+      last_name: "User",
+    })
+    expect(profile.error).toBeNull()
+
+    const user = createClient(status.API_URL, status.PUBLISHABLE_KEY, {
+      accessToken: async () => jwt(id),
+    })
+    const ownProfile = await user.from("profiles").select("id").single()
+    expect(ownProfile.data).toEqual({ id })
+
+    const research = await user.rpc("create_research_record", {
+      research_title: "Text-owned Research",
+      research_abstract: "Clerk-shaped identity",
+      research_publish_date: null,
+      research_authors: [{ name: "Text User" }],
+      category_ids: [],
+      keyword_ids: [],
+    })
+    expect(research.error).toBeNull()
+  })
+
   it("creates safe profiles and applies current role and account status", async () => {
     const admin = createClient(status.API_URL, status.SECRET_KEY)
     const suffix = Date.now()
