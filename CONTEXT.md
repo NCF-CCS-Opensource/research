@@ -48,6 +48,10 @@ _Avoid_: Owner approval, public PDF access, admin PDF grant
 An unauthenticated visitor who may browse public research metadata but cannot submit a PDF Access Request. Guest is a browsing state, not an account role.
 _Avoid_: Guest account, guest role, anonymous user
 
+**Registration**:
+The single account-creation step where a person provides login credentials and their complete Profile details. Registration sends an email confirmation; confirming the email completes account verification without a separate Profile onboarding step.
+_Avoid_: Onboarding, profile completion
+
 **User**:
 A person with a registered, email-verified account who can authenticate, upload a research record, and submit a PDF Access Request for another owner's research PDF.
 _Avoid_: Guest, visitor, unverified account

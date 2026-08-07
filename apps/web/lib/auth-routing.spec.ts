@@ -13,11 +13,11 @@ describe("authentication routing", () => {
     ],
     ["Guest keeps public discovery", "/search", null, null, null],
     [
-      "missing Profile starts onboarding",
+      "missing Profile returns to login",
       "/dashboard",
       "user_1",
       null,
-      "/onboarding?next=%2Fdashboard",
+      "/login?error=profile-unavailable",
     ],
     [
       "suspended User sees the suspension page",
@@ -76,7 +76,7 @@ describe("authentication routing", () => {
     ).toBe("/login?next=%2Fdashboard%2Fpapers%3Fpage%3D2")
   })
 
-  it("preserves a profile-less User's intended destination", () => {
+  it("does not route a profile-less account to onboarding", () => {
     expect(
       authDestination(
         "/dashboard/papers",
@@ -84,13 +84,25 @@ describe("authentication routing", () => {
         null,
         "/dashboard/papers?page=2"
       )
-    ).toBe("/onboarding?next=%2Fdashboard%2Fpapers%3Fpage%3D2")
+    ).toBe("/login?error=profile-unavailable")
+  })
+
+  it("stops redirecting after reporting an unavailable Profile", () => {
+    expect(
+      authDestination(
+        "/login",
+        "user_1",
+        null,
+        "/login?error=profile-unavailable"
+      )
+    ).toBeNull()
   })
 
   it("identifies protected routing boundaries", () => {
     expect(isProtectedRoute("/search")).toBe(false)
     expect(isProtectedRoute("/api/public")).toBe(false)
     expect(isProtectedRoute("/login")).toBe(false)
+    expect(isProtectedRoute("/onboarding")).toBe(false)
     expect(isProtectedRoute("/dashboard/papers")).toBe(true)
     expect(isProtectedRoute("/research/paper-1/request-pdf")).toBe(true)
   })

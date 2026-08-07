@@ -9,6 +9,6 @@ export default defineConfig({
     },
   },
   test: {
-    include: ["apps/web/lib/**/*.spec.ts", "packages/**/*.spec.ts"],
+    include: ["apps/web/{app,lib}/**/*.spec.ts", "packages/**/*.spec.ts"],
   },
 })

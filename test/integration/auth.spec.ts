@@ -14,36 +14,69 @@ beforeAll(() => {
 })
 
 describe("Supabase Auth Boundary", () => {
-  it("authenticates a verified user before Profile onboarding", async () => {
+  it("atomically creates a complete Profile during Registration", async () => {
     const service = createClient(status.API_URL, status.SECRET_KEY)
-    const email = `auth-${crypto.randomUUID()}@example.com`
-    const created = await service.auth.admin.createUser({
+    const email = `registration-${crypto.randomUUID()}@example.com`
+    const browser = createClient(status.API_URL, status.PUBLISHABLE_KEY)
+    const created = await browser.auth.signUp({
       email,
       password: "password123",
-      email_confirm: true,
+      options: {
+        data: {
+          first_name: "New",
+          middle_name: "Middle",
+          last_name: "User",
+          suffix: "Jr.",
+          custom_institution: "Test Institution",
+          custom_program: "Test Program",
+        },
+      },
     })
     expect(created.error).toBeNull()
 
-    const browser = createClient(status.API_URL, status.PUBLISHABLE_KEY)
-    const signedIn = await browser.auth.signInWithPassword({
-      email,
-      password: "password123",
-    })
-    expect(signedIn.data.user?.id).toBe(created.data.user?.id)
     expect(
-      (await browser.rpc("get_current_profile_access").maybeSingle()).data
-    ).toBeNull()
-
-    await service.from("profiles").insert({
-      id: created.data.user!.id,
+      (
+        await service
+          .from("profiles")
+          .select(
+            "email,first_name,middle_name,last_name,suffix,custom_institution,custom_program"
+          )
+          .eq("id", created.data.user!.id)
+          .single()
+      ).data
+    ).toEqual({
       email,
       first_name: "New",
+      middle_name: "Middle",
       last_name: "User",
+      suffix: "Jr.",
       custom_institution: "Test Institution",
+      custom_program: "Test Program",
     })
+  })
+
+  it("rejects the auth account when Registration details are invalid", async () => {
+    const service = createClient(status.API_URL, status.SECRET_KEY)
+    const browser = createClient(status.API_URL, status.PUBLISHABLE_KEY)
+    const email = `invalid-registration-${crypto.randomUUID()}@example.com`
+    const created = await browser.auth.signUp({
+      email,
+      password: "password123",
+      options: {
+        data: {
+          first_name: "New",
+          last_name: "User",
+          institution_id: "50000000-0000-0000-0000-000000000001",
+          program_id: crypto.randomUUID(),
+        },
+      },
+    })
+    expect(created.error).not.toBeNull()
     expect(
-      (await browser.rpc("get_current_profile_access").single()).data
-    ).toEqual({ role: "user", status: "active" })
+      (await service.auth.admin.listUsers()).data.users.some(
+        (user) => user.email === email
+      )
+    ).toBe(false)
   })
 
   it("authorizes a text identity subject through the shared database seam", async () => {
@@ -72,7 +105,9 @@ describe("Supabase Auth Boundary", () => {
     expect(research.error).toBeNull()
 
     await service.from("profiles").update({ status: "suspended" }).eq("id", id)
-    const suspendedAccess = await user.rpc("get_current_profile_access").single()
+    const suspendedAccess = await user
+      .rpc("get_current_profile_access")
+      .single()
     expect(suspendedAccess.data).toEqual({ role: "user", status: "suspended" })
     const suspendedMutation = await user.rpc("create_research_record", {
       research_title: "Blocked Research",

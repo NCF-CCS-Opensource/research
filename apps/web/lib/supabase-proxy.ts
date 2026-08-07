@@ -28,6 +28,7 @@ export async function updateSession(request: NextRequest) {
     ? ((await supabase.rpc("get_current_profile_access").maybeSingle())
         .data as ProfileAccess | null)
     : null
+  if (userId && !profile) await supabase.auth.signOut()
   const destination = authDestination(
     request.nextUrl.pathname,
     userId,
