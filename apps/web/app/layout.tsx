@@ -1,4 +1,5 @@
 import type { Metadata } from "next"
+import { ClerkProvider } from "@clerk/nextjs"
 import { Fraunces, IBM_Plex_Mono, Manrope } from "next/font/google"
 
 import "./globals.css"
@@ -45,9 +46,11 @@ export default function RootLayout({
       )}
     >
       <body>
-        <QueryProvider>
-          <ThemeProvider>{children}</ThemeProvider>
-        </QueryProvider>
+        <ClerkProvider dynamic>
+          <QueryProvider>
+            <ThemeProvider>{children}</ThemeProvider>
+          </QueryProvider>
+        </ClerkProvider>
       </body>
     </html>
   )

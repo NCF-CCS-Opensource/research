@@ -1,12 +1,19 @@
-import Link from "next/link"
+import { SignIn } from "@clerk/nextjs"
 import { BookOpenText } from "lucide-react"
-import { Suspense } from "react"
 
-import { LoginForm } from "@/components/forms/login-form"
 import { PublicShell } from "@/components/layout/public-shell"
-import { Card } from "@/components/ui/card"
+import { safeNextPath } from "@/lib/safe-next-path"
+import { enforceProfileRoute } from "@/lib/profile-routing"
 
-export default function LoginPage() {
+export default async function LoginPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ next?: string }>
+}) {
+  await enforceProfileRoute("/login")
+  const next = (await searchParams).next
+  const destination = safeNextPath(next ?? null, "/login")
+
   return (
     <PublicShell>
       <section className="archive-grid mx-auto flex min-h-[calc(100vh-4rem)] max-w-7xl items-center justify-center px-4 py-12 sm:px-6 lg:px-8">
@@ -25,30 +32,12 @@ export default function LoginPage() {
             </div>
           </div>
 
-          <Card className="rounded-none p-8 shadow-[7px_7px_0_var(--primary)]">
-            <Suspense
-              fallback={
-                <div className="text-sm text-muted-foreground">Loading…</div>
-              }
-            >
-              <LoginForm />
-            </Suspense>
-          </Card>
-
-          <div className="mt-5 flex justify-between text-sm">
-            <Link
-              href="/forgot-password"
-              className="text-muted-foreground transition-colors duration-150 hover:text-foreground"
-            >
-              Forgot password?
-            </Link>
-            <Link
-              href="/register"
-              className="font-medium transition-colors duration-150 hover:text-primary"
-            >
-              Register
-            </Link>
-          </div>
+          <SignIn
+            routing="path"
+            path="/login"
+            withSignUp
+            fallbackRedirectUrl={destination}
+          />
         </div>
       </section>
     </PublicShell>

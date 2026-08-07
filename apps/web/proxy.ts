@@ -1,13 +1,22 @@
-import type { NextRequest } from "next/server"
+import { clerkMiddleware } from "@clerk/nextjs/server"
+import { NextResponse } from "next/server"
 
-import { updateSession } from "@/lib/supabase-proxy"
+import { isProtectedRoute } from "@/lib/auth-routing"
 
-export async function proxy(request: NextRequest) {
-  return updateSession(request)
-}
+export default clerkMiddleware(async (auth, request) => {
+  const { userId } = await auth()
+  const pathname = request.nextUrl.pathname
+  if (userId || !isProtectedRoute(pathname)) return NextResponse.next()
+
+  const url = new URL("/login", request.url)
+  url.searchParams.set("next", `${pathname}${request.nextUrl.search}`)
+  return NextResponse.redirect(url)
+})
 
 export const config = {
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    "/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)",
+    "/(api|trpc)(.*)",
+    "/__clerk/(.*)",
   ],
 }
