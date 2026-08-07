@@ -77,4 +77,135 @@ describe("API client", () => {
       researchId: "research-1",
     })
   })
+
+  it.each([
+    [
+      "P0001",
+      "At least one Author is required",
+      "At least one Author is required",
+      400,
+    ],
+    [
+      "42501",
+      "Owners cannot request their own PDF",
+      "Owners cannot request their own PDF",
+      403,
+    ],
+    [
+      "PGRST116",
+      "JSON object requested, multiple (or no) rows returned",
+      "That record isn't available.",
+      404,
+    ],
+    [
+      "23505",
+      'duplicate key value violates unique constraint "categories_name_key"',
+      "That name is already taken.",
+      500,
+    ],
+    [
+      "23503",
+      'update or delete violates foreign key constraint "programs_institution_id_fkey"',
+      "Something still refers to this; remove those first.",
+      500,
+    ],
+  ])(
+    "shows safe database text for %s",
+    async (code, platformMessage, expectedMessage, status) => {
+      vi.stubGlobal(
+        "fetch",
+        vi
+          .fn()
+          .mockResolvedValue(
+            Response.json({ code, message: platformMessage }, { status: 400 })
+          )
+      )
+
+      const { discovery } = await import("./web-transport")
+
+      await expect(
+        discovery.getResearch("research-1")
+      ).rejects.toMatchObject({
+        message: expectedMessage,
+        status,
+      })
+    }
+  )
+
+  it("hides untranslated database text and retains it as the cause", async () => {
+    const platformMessage = 'relation "private_table" does not exist'
+    vi.stubGlobal(
+      "fetch",
+      vi
+        .fn()
+        .mockResolvedValue(
+          Response.json(
+            { code: "42P01", message: platformMessage },
+            { status: 500 }
+          )
+        )
+    )
+
+    const { discovery } = await import("./web-transport")
+
+    await expect(
+      discovery.getResearch("research-1")
+    ).rejects.toMatchObject({
+      message: "Something went wrong. Please try again.",
+      cause: expect.objectContaining({ message: platformMessage }),
+    })
+  })
+
+  it("shows the R2 Edge Function's authored failure message and status", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi
+        .fn()
+        .mockResolvedValue(
+          Response.json(
+            { error: "Only PDF files are accepted" },
+            { status: 400 }
+          )
+        )
+    )
+
+    const { pdfAccess } = await import("./web-transport")
+
+    await expect(
+      pdfAccess.getOwnerDownloadUrl("research-1")
+    ).rejects.toMatchObject({
+      message: "Only PDF files are accepted",
+      status: 400,
+    })
+  })
+
+  it("falls back when an R2 failure body is unreadable", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(new Response("not json", { status: 500 }))
+    )
+
+    const { pdfAccess } = await import("./web-transport")
+
+    await expect(
+      pdfAccess.getOwnerDownloadUrl("research-1")
+    ).rejects.toMatchObject({
+      message: "Something went wrong. Please try again.",
+      cause: expect.any(Error),
+    })
+  })
+
+  it("falls back when R2 has no response context", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("Network down")))
+
+    const { pdfAccess } = await import("./web-transport")
+
+    await expect(
+      pdfAccess.getOwnerDownloadUrl("research-1")
+    ).rejects.toMatchObject({
+      message: "Something went wrong. Please try again.",
+      status: 500,
+      cause: expect.any(Error),
+    })
+  })
 })

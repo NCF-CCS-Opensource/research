@@ -4,7 +4,9 @@ import {
   createDiscovery,
   createPdfAccess,
   createResearchLifecycle,
+  DomainApiError,
   normalizeDomainError,
+  USER_ERROR_MESSAGE,
   type InsertOptions,
   type SelectOptions,
   type TransportAdapter,
@@ -107,7 +109,18 @@ async function callR2<T>(
   body: { action: string } & Record<string, unknown>
 ) {
   const { data, error } = await getSupabase().functions.invoke("r2", { body })
-  if (error) throw error
-  if (data?.error) throw new Error(data.error)
+  if (error) {
+    const context = "context" in error ? error.context : undefined
+    let message = USER_ERROR_MESSAGE
+    if (context instanceof Response) {
+      try {
+        const data = (await context.json()) as { error?: unknown }
+        if (typeof data.error === "string") message = data.error
+      } catch {
+        // Use the safe fallback when the Edge Function body is unreadable.
+      }
+    }
+    throw new DomainApiError(message, context?.status ?? 500, { cause: error })
+  }
   return data as T
 }
