@@ -13,7 +13,7 @@ beforeAll(() => {
   ) as LocalStatus
 })
 
-describe("Supabase Auth Boundary", () => {
+describe("Clerk Auth Boundary", () => {
   it("authorizes a text identity subject through the shared database seam", async () => {
     const service = createClient(status.API_URL, status.SECRET_KEY)
     const id = `user_${crypto.randomUUID()}`
@@ -53,43 +53,26 @@ describe("Supabase Auth Boundary", () => {
     expect(suspendedMutation.error).not.toBeNull()
   })
 
-  it("creates safe profiles and applies current role and account status", async () => {
-    const admin = createClient(status.API_URL, status.SECRET_KEY)
-    const suffix = Date.now()
-    const userEmail = `user-${suffix}@example.com`
-    const adminEmail = `admin-${suffix}@example.com`
-
-    const createdUser = await admin.auth.admin.createUser({
-      email: userEmail,
-      password: "password123",
-      email_confirm: true,
-      user_metadata: {
-        first_name: "Normal",
-        last_name: "User",
-        role: "admin",
+  it("bootstraps and applies current role and account status", async () => {
+    const service = createClient(status.API_URL, status.SECRET_KEY)
+    const userId = `user_${crypto.randomUUID()}`
+    const adminId = `user_${crypto.randomUUID()}`
+    const userEmail = `${userId}@example.com`
+    const adminEmail = `${adminId}@example.com`
+    const profiles = await service.from("profiles").insert([
+      { id: userId, email: userEmail, first_name: "Normal", last_name: "User" },
+      {
+        id: adminId,
+        email: adminEmail,
+        first_name: "Trusted",
+        last_name: "Admin",
+        custom_institution: "Test Institution",
       },
-    })
-    const createdAdmin = await admin.auth.admin.createUser({
-      email: adminEmail,
-      password: "password123",
-      email_confirm: true,
-      user_metadata: { first_name: "Trusted", last_name: "Admin" },
-    })
-    expect(createdUser.error).toBeNull()
-    expect(createdAdmin.error).toBeNull()
+    ])
+    expect(profiles.error).toBeNull()
 
-    const userId = createdUser.data.user!.id
-    const adminId = createdAdmin.data.user!.id
-    const user = createClient(status.API_URL, status.PUBLISHABLE_KEY)
-    const trusted = createClient(status.API_URL, status.PUBLISHABLE_KEY)
-    await user.auth.signInWithPassword({
-      email: userEmail,
-      password: "password123",
-    })
-    await trusted.auth.signInWithPassword({
-      email: adminEmail,
-      password: "password123",
-    })
+    const user = authenticatedClient(status, userId)
+    const trusted = authenticatedClient(status, adminId)
 
     const ownProfile = await user
       .from("profiles")
@@ -107,7 +90,7 @@ describe("Supabase Auth Boundary", () => {
       .eq("id", userId)
     expect(escalation.error).not.toBeNull()
 
-    const bootstrap = await admin.rpc("bootstrap_first_admin", {
+    const bootstrap = await service.rpc("bootstrap_first_admin", {
       target_email: adminEmail,
     })
     expect(bootstrap.error).toBeNull()
