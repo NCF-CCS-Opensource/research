@@ -35,7 +35,7 @@ begin
     publish_date = research_publish_date,
     updated_at = now()
   where id = target_id
-    and uploader_id = auth.uid()
+    and uploader_id = public.current_user_id()
     and status <> 'approved';
 
   if not found then

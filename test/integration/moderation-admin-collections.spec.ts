@@ -1,27 +1,16 @@
 import { execFileSync } from "node:child_process"
 import { createClient, type SupabaseClient } from "@supabase/supabase-js"
 import { afterAll, beforeAll, describe, expect, it } from "vitest"
+import { type LocalStatus, user } from "./user"
 
-let status: { API_URL: string; PUBLISHABLE_KEY: string; SECRET_KEY: string }
+let status: LocalStatus
 let service: SupabaseClient
 let admin: SupabaseClient
 let owner: SupabaseClient
 let reader: SupabaseClient
 let adminId: string
 let ownerId: string
-
-async function user(label: string) {
-  const email = `${label}-${Date.now()}-${crypto.randomUUID()}@example.com`
-  const created = await service.auth.admin.createUser({
-    email,
-    password: "password123",
-    email_confirm: true,
-    user_metadata: { first_name: label, last_name: "Tester" },
-  })
-  const client = createClient(status.API_URL, status.PUBLISHABLE_KEY)
-  await client.auth.signInWithPassword({ email, password: "password123" })
-  return { client, email, id: created.data.user!.id }
-}
+let readerId: string
 
 async function research(
   client: SupabaseClient,
@@ -63,14 +52,15 @@ beforeAll(async () => {
     })
   )
   service = createClient(status.API_URL, status.SECRET_KEY)
-  const trusted = await user("admin")
-  const uploader = await user("owner")
-  const collector = await user("reader")
+  const trusted = await user(service, status, "admin")
+  const uploader = await user(service, status, "owner")
+  const collector = await user(service, status, "reader")
   admin = trusted.client
   owner = uploader.client
   reader = collector.client
   adminId = trusted.id
   ownerId = uploader.id
+  readerId = collector.id
   await service.from("profiles").update({ role: "admin" }).eq("id", trusted.id)
 })
 
@@ -176,8 +166,6 @@ describe("collections", () => {
       target_id: approvedId,
       decision: "approved",
     })
-    const readerId = (await reader.auth.getUser()).data.user!.id
-
     const saved = { user_id: readerId, research_id: approvedId }
     expect(
       (

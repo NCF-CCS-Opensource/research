@@ -1,12 +1,7 @@
 import { execFileSync } from "node:child_process"
 import { createClient } from "@supabase/supabase-js"
 import { beforeAll, describe, expect, it } from "vitest"
-
-type LocalStatus = {
-  API_URL: string
-  PUBLISHABLE_KEY: string
-  SECRET_KEY: string
-}
+import { authenticatedClient, type LocalStatus } from "./user"
 
 let status: LocalStatus
 
@@ -19,6 +14,32 @@ beforeAll(() => {
 })
 
 describe("Supabase Auth Boundary", () => {
+  it("authorizes a text identity subject through the shared database seam", async () => {
+    const service = createClient(status.API_URL, status.SECRET_KEY)
+    const id = `user_${crypto.randomUUID()}`
+    const profile = await service.from("profiles").insert({
+      id,
+      email: `${id}@example.com`,
+      first_name: "Clerk",
+      last_name: "User",
+    })
+    expect(profile.error).toBeNull()
+
+    const user = authenticatedClient(status, id)
+    const ownProfile = await user.from("profiles").select("id").single()
+    expect(ownProfile.data).toEqual({ id })
+
+    const research = await user.rpc("create_research_record", {
+      research_title: "Text-owned Research",
+      research_abstract: "Clerk-shaped identity",
+      research_publish_date: null,
+      research_authors: [{ name: "Text User" }],
+      category_ids: [],
+      keyword_ids: [],
+    })
+    expect(research.error).toBeNull()
+  })
+
   it("creates safe profiles and applies current role and account status", async () => {
     const admin = createClient(status.API_URL, status.SECRET_KEY)
     const suffix = Date.now()

@@ -5,7 +5,7 @@ create type public.pdf_request_status as enum (
 create table public.pdf_requests (
   id uuid primary key default gen_random_uuid(),
   research_id uuid references public.researches (id) on delete set null,
-  requester_id uuid references auth.users (id) on delete set null,
+  requester_id text references public.profiles (id) on delete set null,
   research_title varchar(500) not null,
   owner_name varchar(500) not null,
   requester_name varchar(500) not null,
@@ -25,7 +25,7 @@ where status in ('pending', 'granted');
 
 create table public.notifications (
   id uuid primary key default gen_random_uuid(),
-  user_id uuid not null references auth.users (id) on delete cascade,
+  user_id text not null references public.profiles (id) on delete cascade,
   research_id uuid references public.researches (id) on delete set null,
   message text not null,
   read boolean not null default false,
@@ -38,21 +38,21 @@ alter table public.notifications enable row level security;
 create policy "Users read their PDF requests and Owners read requests"
 on public.pdf_requests for select to authenticated
 using (
-  requester_id = (select auth.uid())
+  requester_id = (select public.current_user_id())
   or exists (
     select 1 from public.researches r
-    where r.id = research_id and r.uploader_id = (select auth.uid())
+    where r.id = research_id and r.uploader_id = (select public.current_user_id())
   )
 );
 
 create policy "Users read their Notifications"
 on public.notifications for select to authenticated
-using (user_id = (select auth.uid()) and (select public.is_active_user()));
+using (user_id = (select public.current_user_id()) and (select public.is_active_user()));
 
 create policy "Users mark their Notifications read"
 on public.notifications for update to authenticated
-using (user_id = (select auth.uid()) and (select public.is_active_user()))
-with check (user_id = (select auth.uid()) and (select public.is_active_user()));
+using (user_id = (select public.current_user_id()) and (select public.is_active_user()))
+with check (user_id = (select public.current_user_id()) and (select public.is_active_user()));
 
 grant select on public.pdf_requests to authenticated;
 grant select, update (read) on public.notifications to authenticated;
@@ -67,7 +67,7 @@ security definer
 set search_path = ''
 as $$
 declare
-  user_id uuid := auth.uid();
+  user_id text := public.current_user_id();
   record public.researches;
   active_request public.pdf_requests;
   latest_request public.pdf_requests;
@@ -129,7 +129,7 @@ security definer
 set search_path = ''
 as $$
 declare
-  user_id uuid := auth.uid();
+  user_id text := public.current_user_id();
   record public.researches;
   requester public.profiles;
   owner public.profiles;
@@ -217,7 +217,7 @@ security definer
 set search_path = ''
 as $$
 declare
-  user_id uuid := auth.uid();
+  user_id text := public.current_user_id();
   request public.pdf_requests;
   record public.researches;
   next_status public.pdf_request_status;
@@ -281,7 +281,7 @@ as $$
         'ownerName', q.owner_name, 'requestNote', q.request_note,
         'status', q.status, 'createdAt', q.created_at
       ) order by q.created_at desc)
-      from public.pdf_requests q where q.requester_id = auth.uid()
+      from public.pdf_requests q where q.requester_id = public.current_user_id()
     ), '[]'::jsonb),
     'pending', coalesce((
       select jsonb_agg(jsonb_build_object(
@@ -292,7 +292,7 @@ as $$
       ) order by q.created_at desc)
       from public.pdf_requests q
       join public.researches r on r.id = q.research_id
-      where r.uploader_id = auth.uid() and q.status = 'pending'
+      where r.uploader_id = public.current_user_id() and q.status = 'pending'
     ), '[]'::jsonb),
     'grants', coalesce((
       select jsonb_agg(jsonb_build_object(
@@ -303,7 +303,7 @@ as $$
       ) order by q.granted_at desc)
       from public.pdf_requests q
       join public.researches r on r.id = q.research_id
-      where r.uploader_id = auth.uid() and q.status = 'granted'
+      where r.uploader_id = public.current_user_id() and q.status = 'granted'
     ), '[]'::jsonb)
   )
   where public.is_active_user();
@@ -317,7 +317,7 @@ security invoker
 set search_path = ''
 as $$
   select * from public.notifications
-  where user_id = auth.uid()
+  where user_id = public.current_user_id()
   order by created_at desc;
 $$;
 
@@ -328,7 +328,7 @@ security invoker
 set search_path = ''
 as $$
   update public.notifications set read = true
-  where user_id = auth.uid() and not read;
+  where user_id = public.current_user_id() and not read;
 $$;
 
 create function public.record_engagement(target_research_id uuid, kind text)
@@ -367,10 +367,10 @@ as $$
     end
   )
   from public.researches r
-  where public.is_admin() or r.uploader_id = auth.uid();
+  where public.is_admin() or r.uploader_id = public.current_user_id();
 $$;
 
-create function public.authorize_granted_download(target_request_id uuid, requester uuid)
+create function public.authorize_granted_download(target_request_id uuid, requester text)
 returns table (research_id uuid, file_key text)
 language plpgsql
 security definer
@@ -392,7 +392,7 @@ begin
 end;
 $$;
 
-create or replace function public.confirm_research_upload(target_id uuid, owner_id uuid)
+create or replace function public.confirm_research_upload(target_id uuid, owner_id text)
 returns void
 language plpgsql
 security definer
@@ -452,7 +452,7 @@ grant execute on function public.get_notifications() to authenticated;
 grant execute on function public.mark_notifications_read() to authenticated;
 grant execute on function public.record_engagement(uuid, text) to anon, authenticated;
 grant execute on function public.get_engagement_overview() to authenticated;
-revoke all on function public.authorize_granted_download(uuid, uuid) from public, anon, authenticated;
-grant execute on function public.authorize_granted_download(uuid, uuid) to service_role;
-revoke all on function public.confirm_research_upload(uuid, uuid) from public, anon, authenticated;
-grant execute on function public.confirm_research_upload(uuid, uuid) to service_role;
+revoke all on function public.authorize_granted_download(uuid, text) from public, anon, authenticated;
+grant execute on function public.authorize_granted_download(uuid, text) to service_role;
+revoke all on function public.confirm_research_upload(uuid, text) from public, anon, authenticated;
+grant execute on function public.confirm_research_upload(uuid, text) to service_role;
