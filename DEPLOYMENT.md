@@ -49,8 +49,8 @@ pnpm exec supabase link --project-ref YOUR_PROJECT_REF
 pnpm exec supabase db push
 ```
 
-In Clerk, enable Google as the sole connection and disable Clerk account
-signup and account self-deletion. Use separate Clerk development and production
+In Clerk, allow public signup through Google as the sole connection and disable
+account self-deletion. Use separate Clerk development and production
 instances, and configure custom Google OAuth credentials on the production
 instance. Keep Clerk's email identifier read-only. Use Clerk's **Connect with Supabase** flow, then add Clerk under
 Supabase **Authentication → Third-Party Auth**. This native integration must

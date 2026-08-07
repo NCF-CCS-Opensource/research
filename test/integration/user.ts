@@ -9,6 +9,7 @@ export type LocalStatus = {
 }
 
 function jwt(secret: string, subject: string, expiresIn = 60) {
+  // Local-only Clerk-shaped session fixture; real Clerk OAuth/native trust stays manual.
   const encode = (value: object) =>
     Buffer.from(JSON.stringify(value)).toString("base64url")
   const unsigned = `${encode({ alg: "HS256", typ: "JWT" })}.${encode({
