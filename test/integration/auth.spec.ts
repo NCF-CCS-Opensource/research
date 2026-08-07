@@ -1,30 +1,9 @@
 import { execFileSync } from "node:child_process"
-import { createHmac } from "node:crypto"
 import { createClient } from "@supabase/supabase-js"
 import { beforeAll, describe, expect, it } from "vitest"
-
-type LocalStatus = {
-  API_URL: string
-  PUBLISHABLE_KEY: string
-  SECRET_KEY: string
-  JWT_SECRET: string
-}
+import { authenticatedClient, type LocalStatus } from "./user"
 
 let status: LocalStatus
-
-function jwt(subject: string) {
-  const encode = (value: object) =>
-    Buffer.from(JSON.stringify(value)).toString("base64url")
-  const unsigned = `${encode({ alg: "HS256", typ: "JWT" })}.${encode({
-    sub: subject,
-    role: "authenticated",
-    exp: Math.floor(Date.now() / 1000) + 60,
-  })}`
-  const signature = createHmac("sha256", status.JWT_SECRET)
-    .update(unsigned)
-    .digest("base64url")
-  return `${unsigned}.${signature}`
-}
 
 beforeAll(() => {
   status = JSON.parse(
@@ -46,9 +25,7 @@ describe("Supabase Auth Boundary", () => {
     })
     expect(profile.error).toBeNull()
 
-    const user = createClient(status.API_URL, status.PUBLISHABLE_KEY, {
-      accessToken: async () => jwt(id),
-    })
+    const user = authenticatedClient(status, id)
     const ownProfile = await user.from("profiles").select("id").single()
     expect(ownProfile.data).toEqual({ id })
 

@@ -22,6 +22,12 @@ function jwt(secret: string, subject: string) {
   return `${unsigned}.${signature}`
 }
 
+export function authenticatedClient(status: LocalStatus, id: string) {
+  return createClient(status.API_URL, status.PUBLISHABLE_KEY, {
+    accessToken: async () => jwt(status.JWT_SECRET, id),
+  })
+}
+
 export async function user(
   service: SupabaseClient,
   status: LocalStatus,
@@ -37,9 +43,7 @@ export async function user(
   })
   if (created.error) throw created.error
   return {
-    client: createClient(status.API_URL, status.PUBLISHABLE_KEY, {
-      accessToken: async () => jwt(status.JWT_SECRET, id),
-    }),
+    client: authenticatedClient(status, id),
     email,
     id,
   }
