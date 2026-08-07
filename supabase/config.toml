@@ -9,11 +9,9 @@ sql_paths = ["./seed.sql"]
 
 [auth]
 site_url = "http://127.0.0.1:3000"
-additional_redirect_urls = ["http://127.0.0.1:3000/auth/confirm", "http://localhost:3000/auth/confirm"]
 
 [auth.email]
-enable_signup = true
-enable_confirmations = true
+enable_signup = false
 
 # Enable for real local Clerk sessions after setting CLERK_DOMAIN:
 # [auth.third_party.clerk]

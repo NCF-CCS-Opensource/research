@@ -118,49 +118,6 @@ to authenticated;
 revoke all on function public.get_current_profile_access() from public, anon;
 grant execute on function public.get_current_profile_access() to authenticated;
 
-create function public.create_profile_for_auth_user()
-returns trigger
-language plpgsql
-security definer
-set search_path = ''
-as $$
-begin
-  insert into public.profiles (
-    id,
-    email,
-    first_name,
-    middle_name,
-    last_name,
-    suffix,
-    institution_id,
-    program_id
-  )
-  values (
-    new.id::text,
-    new.email,
-    coalesce(nullif(trim(new.raw_user_meta_data ->> 'first_name'), ''), 'User'),
-    nullif(trim(new.raw_user_meta_data ->> 'middle_name'), ''),
-    coalesce(nullif(trim(new.raw_user_meta_data ->> 'last_name'), ''), 'Account'),
-    nullif(trim(new.raw_user_meta_data ->> 'suffix'), ''),
-    (
-      select id from public.institutions
-      where id::text = new.raw_user_meta_data ->> 'institution_id'
-      limit 1
-    ),
-    (
-      select id from public.programs
-      where id::text = new.raw_user_meta_data ->> 'program_id'
-      limit 1
-    )
-  );
-  return new;
-end;
-$$;
-
-create trigger create_profile_after_signup
-after insert on auth.users
-for each row execute function public.create_profile_for_auth_user();
-
 create function public.bootstrap_first_admin(target_email text)
 returns void
 language plpgsql

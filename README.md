@@ -29,4 +29,4 @@ pnpm build
 
 Database changes belong in `supabase/migrations/`. `supabase/seed.sql` contains only public discovery fixtures; integration tests create their own users and private records.
 
-See [DEPLOYMENT.md](./DEPLOYMENT.md) for production setup, secrets, first-Admin bootstrap, pause recovery, and backups.
+See [DEPLOYMENT.md](./DEPLOYMENT.md) for production setup, manual QA, first-Admin bootstrap, the operator-only pre-release reset, pause recovery, and backups.

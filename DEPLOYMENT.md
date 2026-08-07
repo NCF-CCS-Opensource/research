@@ -49,11 +49,17 @@ pnpm exec supabase link --project-ref YOUR_PROJECT_REF
 pnpm exec supabase db push
 ```
 
-In Clerk, enable Google as the sole connection and disable Clerk account
-self-deletion. Use Clerk's **Connect with Supabase** flow, then add Clerk under
+In Clerk, allow public signup through Google as the sole connection and disable
+account self-deletion. Use separate Clerk development and production
+instances, and configure custom Google OAuth credentials on the production
+instance. Keep Clerk's email identifier read-only. Use Clerk's **Connect with Supabase** flow, then add Clerk under
 Supabase **Authentication → Third-Party Auth**. This native integration must
 issue the `authenticated` role in Clerk session tokens; do not create a legacy
-Supabase JWT template. Use separate Clerk development and production instances.
+Supabase JWT template. These settings are compatible with Clerk Hobby.
+
+Supabase Auth remains provisioned by the platform but is dormant: email signup
+is disabled and the application must not create or authenticate Supabase Auth
+users. Resend is used only for application notifications, never authentication.
 
 Create a Clerk webhook for `user.updated` at
 `https://YOUR_DOMAIN/api/webhooks/clerk`. For local development, expose port
@@ -80,7 +86,7 @@ pnpm exec supabase functions deploy r2
 ```
 
 Omit the two Resend values if application notifications are not required. The
-The Supabase gateway validates Clerk session JWTs before the function derives
+Supabase gateway validates Clerk session JWTs before the function derives
 the caller from the verified subject claim.
 
 ## 3. Verify and deploy Next.js
@@ -113,10 +119,24 @@ account-status changes in the Admin dashboard.
 
 ## Post-deploy checks
 
-Confirm Google login and sign-out, public discovery, intended-route redirects,
-missing and suspended Profile routing, Owner PDF upload/download, Admin
-moderation, and PDF-access request, approval, download, and revocation. If
-uploads fail in the browser, check R2 CORS first.
+Run this matrix manually in both Clerk development and production; real Google
+OAuth is intentionally not automated:
+
+| Check | Expected result |
+| --- | --- |
+| First Google sign-in | Creates the Clerk User, then opens onboarding; completing it creates one Profile |
+| Returning User | Opens the intended destination without onboarding |
+| Intended destination | A protected URL survives login and onboarding redirects |
+| Admin routing | Admins reach `/admin`; non-Admins cannot |
+| Suspension | A suspended User reaches `/suspended` and cannot use protected workflows |
+| Sign-out | Ends the Clerk session and returns to public discovery |
+| Invalid session | Behaves as signed out without exposing protected data |
+| Contact Email update | A verified Clerk primary-email change updates only the matching Profile |
+| Fresh sign-in after cleanup | A new Google sign-in and onboarding succeed with no legacy state |
+
+Also confirm public discovery, Owner PDF upload/download, Admin moderation, and
+PDF-access request, approval, download, and revocation. If uploads fail in the
+browser, check R2 CORS first.
 
 Supabase Free projects may pause after inactivity. Resume the project in the
 Supabase dashboard and wait for a healthy database before retrying the app.
@@ -126,3 +146,37 @@ Before risky schema changes, create a logical backup and store it outside Git:
 mkdir -p supabase/backups
 pnpm exec supabase db dump --linked --file supabase/backups/$(date +%Y-%m-%d).sql
 ```
+
+## One-time pre-release test reset
+
+**Forbidden after any real User or Research data exists.** Nothing in the app,
+migrations, or deployment runs this reset. One operator performs each step
+manually and records these exact targets before deleting anything:
+
+```text
+Supabase project name/ref: ____________________
+Clerk instance (development or production): ____________________
+R2 account/bucket/prefix: ____________________ / ____________________ / pdfs/
+```
+
+1. Verify all three dashboards show the recorded targets. In R2, open that
+   bucket and delete every object under `pdfs/` only. Do not delete the bucket.
+2. In the recorded Supabase project's SQL editor, remove application data:
+
+   ```sql
+   truncate table
+     public.profiles,
+     public.researches,
+     public.authors,
+     public.categories,
+     public.keywords,
+     public.institutions
+   restart identity cascade;
+   ```
+
+3. In that Supabase project, open **Authentication → Users**, verify they are
+   test identities, and delete every legacy Supabase Auth user. Dormant
+   Supabase Auth cannot be removed from the platform itself.
+4. In the recorded Clerk instance, open **Users**, verify each is a test User,
+   and delete them. Never delete Users from the other Clerk instance.
+5. Repeat the manual matrix above, including a fresh Google sign-in.
