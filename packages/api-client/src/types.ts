@@ -102,7 +102,11 @@ export type PdfAccessDashboard = {
   grants: PdfGrantItem[]
 }
 
-export type MetadataTable = "categories" | "keywords" | "institutions" | "programs"
+export type MetadataTable =
+  | "categories"
+  | "keywords"
+  | "institutions"
+  | "programs"
 
 export type MetadataItem = {
   id: string
@@ -116,8 +120,11 @@ export type ProfileSettings = {
     middle_name: string | null
     last_name: string
     suffix: string | null
+    email: string
     institution_id: string | null
+    custom_institution: string | null
     program_id: string | null
+    custom_program: string | null
   }
   institutions: MetadataItem[]
   programs: Array<{ id: string; name: string; institutionId: string | null }>
@@ -129,7 +136,9 @@ export type ProfileSettingsInput = {
   last_name: string
   suffix: string | null
   institution_id: string | null
+  custom_institution: string | null
   program_id: string | null
+  custom_program: string | null
 }
 
 export type AccountProfile = {

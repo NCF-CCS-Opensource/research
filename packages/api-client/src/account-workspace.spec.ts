@@ -21,11 +21,16 @@ const researchRow = {
   keywords: [],
 }
 
-function makeModule(overrides: {
-  userId?: string | null
-  tables?: Record<string, Record<string, unknown>[]>
-  rpc?: Record<string, unknown | ((params?: Record<string, unknown>) => unknown)>
-} = {}) {
+function makeModule(
+  overrides: {
+    userId?: string | null
+    tables?: Record<string, Record<string, unknown>[]>
+    rpc?: Record<
+      string,
+      unknown | ((params?: Record<string, unknown>) => unknown)
+    >
+  } = {}
+) {
   const notifications = [
     {
       id: "n1",
@@ -41,8 +46,7 @@ function makeModule(overrides: {
     get_notifications: () =>
       notifications.filter((n) => n.user_id === "user_1"),
     mark_notifications_read: () => {
-      for (const n of notifications)
-        if (n.user_id === "user_1") n.read = true
+      for (const n of notifications) if (n.user_id === "user_1") n.read = true
     },
     ...overrides.rpc,
   }
@@ -56,7 +60,9 @@ function makeModule(overrides: {
         last_name: "Lovelace",
         suffix: null,
         institution_id: "inst_1",
+        custom_institution: null,
         program_id: "prog_1",
+        custom_program: null,
         role: "user",
         status: "active",
         created_at: "2026-01-01T00:00:00Z",
@@ -74,7 +80,11 @@ function makeModule(overrides: {
     rpc,
     tables,
   })
-  return { transport, accountWorkspace: createAccountWorkspace(transport), notifications }
+  return {
+    transport,
+    accountWorkspace: createAccountWorkspace(transport),
+    notifications,
+  }
 }
 
 describe("accountWorkspace module", () => {
@@ -101,19 +111,30 @@ describe("accountWorkspace module", () => {
   })
 
   it("updates profile settings for the current user", async () => {
-    const { accountWorkspace, transport } = makeModule()
+    const updateProfile = vi.fn()
+    const { accountWorkspace } = makeModule({
+      rpc: { update_profile_settings: updateProfile },
+    })
     await accountWorkspace.updateProfileSettings({
       first_name: "Grace",
       middle_name: null,
       last_name: "Hopper",
       suffix: null,
       institution_id: "inst_1",
+      custom_institution: null,
       program_id: null,
+      custom_program: null,
     })
-    const [updated] = await transport.select<{ first_name: string }>("profiles", {
-      eq: { id: "user_1" },
+    expect(updateProfile).toHaveBeenCalledWith({
+      new_first_name: "Grace",
+      new_middle_name: null,
+      new_last_name: "Hopper",
+      new_suffix: null,
+      new_institution_id: "inst_1",
+      new_custom_institution: null,
+      new_program_id: null,
+      new_custom_program: null,
     })
-    expect(updated.first_name).toBe("Grace")
   })
 
   it("returns a single profile's access state", async () => {
@@ -143,7 +164,11 @@ describe("accountWorkspace module", () => {
     const { accountWorkspace, transport } = makeModule({
       tables: {
         collections: [
-          { user_id: "user_other", research_id: "res_1", created_at: "2026-01-01T00:00:00Z" },
+          {
+            user_id: "user_other",
+            research_id: "res_1",
+            created_at: "2026-01-01T00:00:00Z",
+          },
         ],
       },
     })
@@ -164,9 +189,9 @@ describe("accountWorkspace module", () => {
 
   it("requires authentication for collection mutations", async () => {
     const { accountWorkspace } = makeModule({ userId: null })
-    await expect(accountWorkspace.addToCollection("res_1")).rejects.toBeInstanceOf(
-      DomainApiError
-    )
+    await expect(
+      accountWorkspace.addToCollection("res_1")
+    ).rejects.toBeInstanceOf(DomainApiError)
   })
 
   it("lists and marks notifications as read", async () => {
@@ -178,7 +203,9 @@ describe("accountWorkspace module", () => {
 
   it("returns personal and Admin dashboards", async () => {
     const getDashboard = vi.fn().mockReturnValue({ scope: "admin" })
-    const { accountWorkspace } = makeModule({ rpc: { get_dashboard: getDashboard } })
+    const { accountWorkspace } = makeModule({
+      rpc: { get_dashboard: getDashboard },
+    })
 
     await expect(accountWorkspace.getDashboard("admin", 90)).resolves.toEqual({
       scope: "admin",
@@ -269,14 +296,14 @@ describe("accountWorkspace module", () => {
     const { accountWorkspace } = makeModule()
     await expect(
       accountWorkspace.updateProfileSettings({
-        first_name: "A".repeat(201),
+        first_name: "A".repeat(101),
         middle_name: null,
         last_name: "Lovelace",
         suffix: null,
         institution_id: null,
         program_id: null,
       })
-    ).rejects.toThrow("First name must be 200 characters or fewer")
+    ).rejects.toThrow("First name must be 100 characters or fewer")
   })
 
   it("validates account update - rejects empty ID", async () => {
