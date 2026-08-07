@@ -38,6 +38,19 @@ describe("Supabase Auth Boundary", () => {
       keyword_ids: [],
     })
     expect(research.error).toBeNull()
+
+    await service.from("profiles").update({ status: "suspended" }).eq("id", id)
+    const suspendedAccess = await user.rpc("get_current_profile_access").single()
+    expect(suspendedAccess.data).toEqual({ role: "user", status: "suspended" })
+    const suspendedMutation = await user.rpc("create_research_record", {
+      research_title: "Blocked Research",
+      research_abstract: "A suspended User cannot create this",
+      research_publish_date: null,
+      research_authors: [{ name: "Blocked User" }],
+      category_ids: [],
+      keyword_ids: [],
+    })
+    expect(suspendedMutation.error).not.toBeNull()
   })
 
   it("creates safe profiles and applies current role and account status", async () => {

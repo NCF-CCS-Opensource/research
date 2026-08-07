@@ -37,7 +37,7 @@ function selectQuery(table: string, opts: SelectOptions) {
 
 const webTransport: TransportAdapter = {
   getCurrentUserId: async () =>
-    (await getSupabase().auth.getUser()).data.user?.id ?? null,
+    typeof window === "undefined" ? null : (window.Clerk?.user?.id ?? null),
   async rpc<T>(fn: string, params?: Record<string, unknown>): Promise<T> {
     const { data, error } = await getSupabase().rpc(fn, params)
     if (error) throw normalizeDomainError(error.message, error.code, 500)
