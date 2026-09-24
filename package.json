@@ -50,7 +50,7 @@
     "tailwindcss": "^4",
     "turbo": "^2.10.8",
     "typescript": "^5",
-    "vitest": "^4.1.10",
+    "vitest": "^4.1.11",
     "@repo/tsconfig": "workspace:*",
     "@repo/eslint-config": "workspace:*"
   }
