@@ -29,7 +29,7 @@ The single required plain-text explanation attached to a PDF Access Request, tri
 _Avoid_: Message, chat, reply, conversation
 
 **Requester Identity**:
-The requester's full name, required institution, and optional program shown to the owner with a PDF Access Request. A complete Requester Identity is required before requesting access; the requester's email address remains hidden.
+The requester's full name and optional Program, shown to the Owner with a PDF Access Request. The requester's email address remains hidden.
 _Avoid_: Contact details, requester email, anonymous request
 
 **PDF Access Grant**:
@@ -40,6 +40,10 @@ _Avoid_: Download link, emailed PDF access, permanent URL
 An in-app notice to the owner when a PDF Access Request arrives or to the requester when access is approved, rejected, or revoked. Email may repeat the notice for convenience but carries no Request Note, Requester Identity, or download URL.
 _Avoid_: Email grant, download email, access link
 
+**Moderation Notification**:
+An in-app notice to the Owner when an Admin approves or rejects their Research Record. Email may repeat the notice for convenience.
+_Avoid_: Approval email, rejection email
+
 **Moderation Access**:
 An admin's authority to download a research PDF solely to moderate its research record, without a PDF Access Request or PDF Access Grant. Every moderation download is recorded in the Audit Log.
 _Avoid_: Owner approval, public PDF access, admin PDF grant
@@ -48,13 +52,25 @@ _Avoid_: Owner approval, public PDF access, admin PDF grant
 An unauthenticated visitor who may browse public research metadata but cannot submit a PDF Access Request. Guest is a browsing state, not an account role.
 _Avoid_: Guest account, guest role, anonymous user
 
+**NCF Google Account**:
+A Google account on the student domain `gbox.ncf.edu.ph` or the faculty and employee domain `ncf.edu.ph`. It is the only kind of account that may complete Registration, and its domain does not change what a User may do.
+_Avoid_: Any Google account, personal Gmail
+
 **Registration**:
-The single account-creation step where a person provides login credentials and their complete Profile details. Registration sends an email confirmation; confirming the email completes account verification without a separate Profile onboarding step.
-_Avoid_: Onboarding, profile completion
+A person's first sign-in with an NCF Google Account followed by saving their complete Profile details. The person becomes a User only when the Profile is saved; there is no separate email confirmation.
+_Avoid_: Onboarding, profile completion, sign-up
+
+**Profile**:
+A User's personal details: full name, the email address of their NCF Google Account, and an optional Program. Registration saves the first complete Profile.
+_Avoid_: Account, user record
+
+**Program**:
+An NCF academic program from the list Admins maintain. A Profile may reference one Program; free-text Programs are not allowed.
+_Avoid_: Course, custom program
 
 **User**:
-A person with a registered, email-verified account who can authenticate, upload a research record, and submit a PDF Access Request for another owner's research PDF.
-_Avoid_: Guest, visitor, unverified account
+A person who completed Registration and can authenticate, upload a research record, and submit a PDF Access Request for another owner's research PDF.
+_Avoid_: Guest, visitor, unregistered account
 
 **Active Account**:
 A registered account whose administrative status permits authentication and normal User activity. It does not mean the User has logged in or interacted recently.
@@ -75,6 +91,10 @@ _Avoid_: Owner, uploader
 **Approval**:
 The moderation decision that makes a research record eligible for public discovery; owners and admins can still see non-approved records in their private workflows.
 _Avoid_: Upload completion, publication
+
+**Rejection Reason**:
+The required explanation an Admin gives when rejecting a Research Record, visible to its Owner and to Admins.
+_Avoid_: Rejection note, feedback, comment
 
 **Research Record**:
 The metadata entity created for a paper before or after its PDF file is uploaded; it can exist without a completed file upload.

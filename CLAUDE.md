@@ -20,6 +20,8 @@ pnpm test:integration # Local Supabase integration tests
 
 ## Architecture
 
+The migration to a NestJS API (ADR 0005, PRD #86) follows the rules in `ARCHITECTURE.md`. The bullets below describe the running Supabase app until the web cutover lands.
+
 - **Routing**: App Router under `apps/web/app/`. Public discovery is open; `dashboard/` and `upload/` require an Active Account; `admin/` additionally requires the Admin role.
 - **Authentication**: Supabase Auth owns email/password sign-in, verification, recovery, and sessions. `proxy.ts` refreshes session cookies; database checks remain authoritative.
 - **Data access**: Browser and server Supabase clients use the current Supabase session. Domain modules in `packages/api-client` use `apps/web/lib/web-transport.ts` and access Supabase directly under RLS.
