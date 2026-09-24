@@ -15,8 +15,15 @@ pnpm dev              # Dev server (port 3000)
 pnpm build            # Production build
 pnpm lint             # ESLint
 pnpm typecheck        # tsc --noEmit
+pnpm test             # Unit tests (Vitest)
 pnpm test:integration # Local Supabase integration tests
 ```
+
+## Branches
+
+- Branch from `develop` as `feat/*` or `fix/*` and open the PR into `develop`. `develop` and `master` accept changes only through pull requests.
+- Release by opening a PR from `develop` into `master`. Every PR merges with a merge commit; squash and rebase merges are disabled.
+- The `verify` check (lint, typecheck, unit tests, build) must pass before any PR merges.
 
 ## Architecture
 
