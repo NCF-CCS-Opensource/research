@@ -48,10 +48,13 @@ export class ApiExceptionFilter implements ExceptionFilter {
     }
 
     // 4. Anything else (ADR 0004: returns 500 with generic message while original error is logged)
-    this.logger.error(
-      "Unhandled exception caught",
-      exception instanceof Error ? exception.stack : String(exception)
-    )
+    const details =
+      exception instanceof Error
+        ? (exception.stack ?? exception.message)
+        : typeof exception === "object" && exception !== null
+          ? JSON.stringify(exception)
+          : String(exception)
+    this.logger.error("Unhandled exception caught", details)
     return response.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
       message: "Something went wrong. Please try again.",
     })

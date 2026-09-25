@@ -23,13 +23,12 @@ export async function runMigrations(connectionString?: string) {
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
-  runMigrations()
-    .then(() => {
-      console.log("Migrations applied successfully.")
-      process.exit(0)
-    })
-    .catch((err) => {
-      console.error("Migration failed:", err)
-      process.exit(1)
-    })
+  try {
+    await runMigrations()
+    console.log("Migrations applied successfully.")
+    process.exit(0)
+  } catch (err) {
+    console.error("Migration failed:", err)
+    process.exit(1)
+  }
 }

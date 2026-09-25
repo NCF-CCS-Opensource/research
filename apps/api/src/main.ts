@@ -3,7 +3,7 @@ import { NestFactory } from "@nestjs/core"
 import { AppModule } from "./app.module"
 import { validateEnv } from "./config/env"
 
-async function bootstrap() {
+try {
   const env = validateEnv()
 
   const app = await NestFactory.create(AppModule)
@@ -15,9 +15,7 @@ async function bootstrap() {
 
   await app.listen(env.PORT)
   console.log(`API is running on port ${env.PORT}`)
-}
-
-bootstrap().catch((err) => {
+} catch (err) {
   console.error("Failed to start API application:", err)
   process.exit(1)
-})
+}
