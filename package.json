@@ -14,7 +14,8 @@
     "typecheck": "turbo run typecheck",
     "format": "prettier --write \"**/*.{ts,tsx}\"",
     "test": "vitest run",
-    "test:integration": "vitest run --config vitest.integration.config.ts"
+    "test:integration": "vitest run --config vitest.integration.config.ts",
+    "db:migrate": "pnpm --filter @repo/api db:migrate"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.111.0",
