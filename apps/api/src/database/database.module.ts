@@ -1,6 +1,12 @@
-import { Global, Inject, Module, type OnApplicationShutdown } from "@nestjs/common"
+import {
+  Global,
+  Inject,
+  Module,
+  type OnApplicationShutdown,
+} from "@nestjs/common"
 import { drizzle } from "drizzle-orm/postgres-js"
 import postgres from "postgres"
+import { validateEnv } from "../config/env"
 import * as schema from "./schema"
 
 export const DATABASE_CONNECTION = Symbol("DATABASE_CONNECTION")
@@ -12,10 +18,8 @@ export const POSTGRES_CLIENT = Symbol("POSTGRES_CLIENT")
     {
       provide: POSTGRES_CLIENT,
       useFactory: () => {
-        const url =
-          process.env.DATABASE_URL ||
-          "postgresql://postgres:postgres@localhost:5432/research"
-        return postgres(url, { max: 10 })
+        const env = validateEnv()
+        return postgres(env.DATABASE_URL, { max: 10 })
       },
     },
     {

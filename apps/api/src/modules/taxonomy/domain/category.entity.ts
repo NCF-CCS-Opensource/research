@@ -1,3 +1,5 @@
+import { InvalidCategoryNameError } from "./category.errors"
+
 export interface CategoryProperties {
   id: string
   name: string
@@ -11,7 +13,7 @@ export class Category {
 
   static create(props: CategoryProperties): Category {
     if (!props.name || props.name.trim() === "") {
-      throw new Error("Category name cannot be empty")
+      throw new InvalidCategoryNameError()
     }
     return new Category(props.id, props.name.trim())
   }

@@ -1,7 +1,7 @@
 import { DomainError } from "../../../common/errors/domain.error"
 
-export class CategoryNotFoundError extends DomainError {
-  constructor(id: string) {
-    super("CATEGORY_NOT_FOUND", `Category with id ${id} not found`, 404)
+export class InvalidCategoryNameError extends DomainError {
+  constructor() {
+    super("INVALID_CATEGORY_NAME", "Category name cannot be empty", 400)
   }
 }

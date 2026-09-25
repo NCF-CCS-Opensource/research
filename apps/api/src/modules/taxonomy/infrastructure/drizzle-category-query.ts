@@ -1,12 +1,10 @@
 import { Inject, Injectable } from "@nestjs/common"
+import type { Category } from "@repo/contracts"
 import { asc } from "drizzle-orm"
 import type { Database } from "../../../database/database"
 import { DATABASE_CONNECTION } from "../../../database/database.module"
 import { categories } from "../../../database/schema"
-import type {
-  CategoryDto,
-  CategoryQuery,
-} from "../application/category-query.interface"
+import type { CategoryQuery } from "../application/category-query.interface"
 
 @Injectable()
 export class DrizzleCategoryQuery implements CategoryQuery {
@@ -14,7 +12,7 @@ export class DrizzleCategoryQuery implements CategoryQuery {
     @Inject(DATABASE_CONNECTION) private readonly db: Database
   ) {}
 
-  async list(): Promise<CategoryDto[]> {
+  async list(): Promise<Category[]> {
     const rows = await this.db
       .select({
         id: categories.id,

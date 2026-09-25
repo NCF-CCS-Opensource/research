@@ -7,10 +7,12 @@ import postgres from "postgres"
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 export async function runMigrations(connectionString?: string) {
-  const url =
-    connectionString ||
-    process.env.DATABASE_URL ||
-    "postgresql://postgres:postgres@localhost:5432/research"
+  const url = connectionString || process.env.DATABASE_URL
+  if (!url) {
+    throw new Error(
+      "DATABASE_URL is required to run migrations. Please provide it in the environment."
+    )
+  }
 
   const client = postgres(url, { max: 1 })
   const db = drizzle(client)

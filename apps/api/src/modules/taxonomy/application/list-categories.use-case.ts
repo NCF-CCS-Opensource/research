@@ -1,7 +1,7 @@
 import { Inject, Injectable } from "@nestjs/common"
+import type { Category } from "@repo/contracts"
 import {
   CATEGORY_QUERY,
-  type CategoryDto,
   type CategoryQuery,
 } from "./category-query.interface"
 
@@ -11,7 +11,7 @@ export class ListCategoriesUseCase {
     @Inject(CATEGORY_QUERY) private readonly categoryQuery: CategoryQuery
   ) {}
 
-  async execute(): Promise<CategoryDto[]> {
+  async execute(): Promise<Category[]> {
     return this.categoryQuery.list()
   }
 }

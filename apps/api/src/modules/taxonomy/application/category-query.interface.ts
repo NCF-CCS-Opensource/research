@@ -1,10 +1,7 @@
-export interface CategoryDto {
-  id: string
-  name: string
-}
+import type { Category } from "@repo/contracts"
 
 export const CATEGORY_QUERY = Symbol("CATEGORY_QUERY")
 
 export interface CategoryQuery {
-  list(): Promise<CategoryDto[]>
+  list(): Promise<Category[]>
 }

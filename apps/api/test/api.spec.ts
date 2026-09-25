@@ -20,6 +20,8 @@ import type { Database } from "../src/database/database"
 import { DATABASE_CONNECTION } from "../src/database/database.module"
 import { runMigrations } from "../src/database/migrate"
 import { categories } from "../src/database/schema"
+import { Category } from "../src/modules/taxonomy/domain/category.entity"
+import { InvalidCategoryNameError } from "../src/modules/taxonomy/domain/category.errors"
 
 const testValidationSchema = z.object({
   name: z.string().min(1, { message: "Category name is required" }),
@@ -169,6 +171,26 @@ describe("API foundation tracer bullet", () => {
         message: "Something went wrong. Please try again.",
       })
       expect(JSON.stringify(res.body)).not.toContain("Secret database crash")
+    })
+  })
+
+  describe("Category domain entity", () => {
+    it("creates a Category entity with valid properties", () => {
+      const category = Category.create({
+        id: "10000000-0000-0000-0000-000000000001",
+        name: "Software Engineering",
+      })
+      expect(category.id).toBe("10000000-0000-0000-0000-000000000001")
+      expect(category.name).toBe("Software Engineering")
+    })
+
+    it("throws InvalidCategoryNameError when name is empty", () => {
+      expect(() =>
+        Category.create({
+          id: "10000000-0000-0000-0000-000000000001",
+          name: "  ",
+        })
+      ).toThrow(InvalidCategoryNameError)
     })
   })
 })
