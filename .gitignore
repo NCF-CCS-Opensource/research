@@ -9,16 +9,18 @@ node_modules
 !.yarn/versions
 
 # testing
-/coverage
+coverage/
 
 # next.js & turbo
 .next/
 .turbo/
+turbo-*.log
 .scratch/
-/out/
+out/
+dist/
 
 # production
-/build
+build/
 
 # misc
 .DS_Store
