@@ -11,11 +11,11 @@ import {
 } from "@repo/contracts"
 import {
   CurrentIdentity,
+  type RequestIdentity,
 } from "../../../common/decorators/current-identity.decorator"
 import { Registering } from "../../../common/decorators/registering.decorator"
 import { ZodValidationPipe } from "../../../common/pipes/zod-validation.pipe"
 import { RegisterUseCase } from "../application/register.use-case"
-import type { RequestIdentity } from "../application/request-identity"
 
 @Controller()
 export class RegisterController {

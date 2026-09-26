@@ -10,7 +10,7 @@ export class RegistrationRequiredError extends DomainError {
   constructor() {
     super(
       "REGISTRATION_REQUIRED",
-      "Complete registration before continuing.",
+      "Complete Registration before continuing.",
       403
     )
   }

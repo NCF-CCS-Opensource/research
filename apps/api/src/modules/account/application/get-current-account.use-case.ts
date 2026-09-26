@@ -1,13 +1,14 @@
-import { Injectable, UnauthorizedException } from "@nestjs/common"
+import { Injectable } from "@nestjs/common"
 import type { CurrentAccountResponse } from "@repo/contracts"
-import type { RequestIdentity } from "./request-identity"
+import type {
+  RequestIdentity,
+} from "../../../common/decorators/current-identity.decorator"
+
+type SignedInIdentity = Exclude<RequestIdentity, { state: "guest" }>
 
 @Injectable()
 export class GetCurrentAccountUseCase {
-  execute(identity: RequestIdentity): CurrentAccountResponse {
-    if (identity.state === "guest") {
-      throw new UnauthorizedException("Authentication required")
-    }
+  execute(identity: SignedInIdentity): CurrentAccountResponse {
     if (identity.state === "registering") {
       return { status: "registering" }
     }

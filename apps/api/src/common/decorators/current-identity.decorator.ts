@@ -1,7 +1,18 @@
 import { createParamDecorator, type ExecutionContext } from "@nestjs/common"
-import type {
-  RequestIdentity,
-} from "../../modules/account/application/request-identity"
+import type { AccountRole } from "../../modules/account/domain/profile.entity"
+
+interface SignedInIdentity {
+  profileId: string
+  clerkUserId: string
+  email: string
+  role: AccountRole
+}
+
+export type RequestIdentity =
+  | { state: "guest" }
+  | { state: "registering"; clerkUserId: string; email: string }
+  | ({ state: "active" } & SignedInIdentity)
+  | ({ state: "suspended" } & SignedInIdentity)
 
 export interface RequestWithIdentity {
   identity?: RequestIdentity

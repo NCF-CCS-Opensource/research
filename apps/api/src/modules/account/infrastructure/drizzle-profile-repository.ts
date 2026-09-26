@@ -7,7 +7,13 @@ import type {
   ProfileRepository,
 } from "../application/profile-repository.interface"
 import { Profile } from "../domain/profile.entity"
-import { ProfileAlreadyExistsError } from "../domain/profile.errors"
+import {
+  EmailAlreadyRegisteredError,
+  ProfileAlreadyExistsError,
+} from "../domain/profile.errors"
+
+const CLERK_USER_ID_CONSTRAINT = "profiles_clerk_user_id_unique"
+const EMAIL_CONSTRAINT = "profiles_email_unique"
 
 @Injectable()
 export class DrizzleProfileRepository implements ProfileRepository {
@@ -35,18 +41,28 @@ export class DrizzleProfileRepository implements ProfileRepository {
         status: profile.status,
       })
     } catch (err) {
-      if (isUniqueViolation(err)) {
+      if (isUniqueViolation(err, CLERK_USER_ID_CONSTRAINT)) {
         throw new ProfileAlreadyExistsError()
+      }
+      if (isUniqueViolation(err, EMAIL_CONSTRAINT)) {
+        throw new EmailAlreadyRegisteredError()
       }
       throw err
     }
   }
 
   async updateEmail(profileId: string, email: string): Promise<void> {
-    await this.db
-      .update(profiles)
-      .set({ email })
-      .where(eq(profiles.id, profileId))
+    try {
+      await this.db
+        .update(profiles)
+        .set({ email })
+        .where(eq(profiles.id, profileId))
+    } catch (err) {
+      if (isUniqueViolation(err, EMAIL_CONSTRAINT)) {
+        throw new EmailAlreadyRegisteredError()
+      }
+      throw err
+    }
   }
 }
 
@@ -62,10 +78,14 @@ function toDomain(row: ProfileRow): Profile {
   })
 }
 
-function isUniqueViolation(err: unknown): boolean {
+function isUniqueViolation(err: unknown, constraintName: string): boolean {
+  // Drizzle wraps the driver error in DrizzleQueryError; the Postgres error
+  // (with .code / .constraint_name) is its `cause`, not the thrown error itself.
+  const cause = err instanceof Error ? (err.cause ?? err) : err
   return (
-    typeof err === "object" &&
-    err !== null &&
-    (err as { code?: string }).code === "23505"
+    typeof cause === "object" &&
+    cause !== null &&
+    (cause as { code?: string }).code === "23505" &&
+    (cause as { constraint_name?: string }).constraint_name === constraintName
   )
 }

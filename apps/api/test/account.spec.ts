@@ -54,6 +54,14 @@ const FAKE_IDENTITIES: Record<string, VerifiedIdentity> = {
     clerkUserId: "clerk_outside",
     email: "someone@gmail.com",
   },
+  "token-registering-email-collision": {
+    clerkUserId: "clerk_registering_collision",
+    email: "active.user@ncf.edu.ph",
+  },
+  "token-active-collides-with-other": {
+    clerkUserId: "clerk_active",
+    email: "other.user@ncf.edu.ph",
+  },
 }
 
 const fakeTokenVerifier: TokenVerifier = {
@@ -125,7 +133,7 @@ describe("Account module", () => {
 
       expect(res.body).toEqual({
         code: "REGISTRATION_REQUIRED",
-        message: "Complete registration before continuing.",
+        message: "Complete Registration before continuing.",
       })
     })
 
@@ -321,6 +329,28 @@ describe("Account module", () => {
         .where(eq(profiles.clerkUserId, "clerk_active"))
       expect(rows).toHaveLength(1)
     })
+
+    it("rejects an email that already belongs to a different Profile", async () => {
+      await db.insert(profiles).values({
+        id: "30000000-0000-0000-0000-000000000001",
+        clerkUserId: "clerk_active",
+        fullName: "Active User",
+        email: "active.user@ncf.edu.ph",
+        role: "user",
+        status: "active",
+      })
+
+      const res = await request(app.getHttpServer())
+        .post(registerContract.path)
+        .set("Authorization", "Bearer token-registering-email-collision")
+        .send({ fullName: "Collider" })
+        .expect(409)
+
+      expect(res.body).toEqual({
+        code: "EMAIL_ALREADY_REGISTERED",
+        message: "This email is already registered to another account.",
+      })
+    })
   })
 
   describe("Current-account endpoint (GET /account/get-current-account)", () => {
@@ -395,6 +425,37 @@ describe("Account module", () => {
         .from(profiles)
         .where(eq(profiles.clerkUserId, "clerk_active"))
       expect(row?.email).toBe("active.newmail@ncf.edu.ph")
+    })
+
+    it("returns EMAIL_ALREADY_REGISTERED instead of crashing when the token's new email collides with a different Profile", async () => {
+      await db.insert(profiles).values([
+        {
+          id: "30000000-0000-0000-0000-000000000001",
+          clerkUserId: "clerk_active",
+          fullName: "Active User",
+          email: "active.user@ncf.edu.ph",
+          role: "user",
+          status: "active",
+        },
+        {
+          id: "30000000-0000-0000-0000-000000000004",
+          clerkUserId: "clerk_other",
+          fullName: "Other User",
+          email: "other.user@ncf.edu.ph",
+          role: "user",
+          status: "active",
+        },
+      ])
+
+      const res = await request(app.getHttpServer())
+        .get(getCurrentAccountContract.path)
+        .set("Authorization", "Bearer token-active-collides-with-other")
+        .expect(409)
+
+      expect(res.body).toEqual({
+        code: "EMAIL_ALREADY_REGISTERED",
+        message: "This email is already registered to another account.",
+      })
     })
   })
 

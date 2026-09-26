@@ -20,6 +20,16 @@ export class ProfileAlreadyExistsError extends DomainError {
   }
 }
 
+export class EmailAlreadyRegisteredError extends DomainError {
+  constructor() {
+    super(
+      "EMAIL_ALREADY_REGISTERED",
+      "This email is already registered to another account.",
+      409
+    )
+  }
+}
+
 export class ProgramNotFoundError extends DomainError {
   constructor() {
     super("PROGRAM_NOT_FOUND", "Select a Program from the list.", 400)

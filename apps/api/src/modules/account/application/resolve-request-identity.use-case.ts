@@ -1,9 +1,11 @@
 import { Inject, Injectable } from "@nestjs/common"
+import type {
+  RequestIdentity,
+} from "../../../common/decorators/current-identity.decorator"
 import {
   PROFILE_REPOSITORY,
   type ProfileRepository,
 } from "./profile-repository.interface"
-import type { RequestIdentity } from "./request-identity"
 import { TOKEN_VERIFIER, type TokenVerifier } from "./token-verifier.interface"
 
 @Injectable()

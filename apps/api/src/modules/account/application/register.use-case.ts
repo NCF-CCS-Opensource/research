@@ -1,12 +1,9 @@
 import { Inject, Injectable } from "@nestjs/common"
+import type { RegisterResponse } from "@repo/contracts"
 import {
   ListProgramsUseCase,
 } from "../../taxonomy/application/list-programs.use-case"
-import {
-  Profile,
-  type AccountRole,
-  type AccountStatus,
-} from "../domain/profile.entity"
+import { Profile } from "../domain/profile.entity"
 import {
   ProfileAlreadyExistsError,
   ProgramNotFoundError,
@@ -23,15 +20,6 @@ export interface RegisterInput {
   programId?: string
 }
 
-export interface RegisterResult {
-  id: string
-  fullName: string
-  email: string
-  programId: string | null
-  role: AccountRole
-  status: AccountStatus
-}
-
 @Injectable()
 export class RegisterUseCase {
   constructor(
@@ -39,7 +27,7 @@ export class RegisterUseCase {
     private readonly listPrograms: ListProgramsUseCase
   ) {}
 
-  async execute(input: RegisterInput): Promise<RegisterResult> {
+  async execute(input: RegisterInput): Promise<RegisterResponse> {
     const existing = await this.profiles.findByClerkUserId(input.clerkUserId)
     if (existing) {
       throw new ProfileAlreadyExistsError()
