@@ -9,6 +9,9 @@ export const envSchema = z.object({
     .string({ required_error: "DATABASE_URL is required" })
     .min(1, { message: "DATABASE_URL is required" }),
   WEB_ORIGIN: z.string().optional().default("http://localhost:3000"),
+  CLERK_SECRET_KEY: z
+    .string({ required_error: "CLERK_SECRET_KEY is required" })
+    .min(1, { message: "CLERK_SECRET_KEY is required" }),
 })
 
 export type Env = z.infer<typeof envSchema>

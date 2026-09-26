@@ -8,6 +8,13 @@
       "when": 1790297685279,
       "tag": "0000_melted_moon_knight",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1790403486469,
+      "tag": "0001_white_rocket_raccoon",
+      "breakpoints": true
     }
   ]
 }
