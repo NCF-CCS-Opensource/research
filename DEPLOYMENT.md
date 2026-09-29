@@ -98,6 +98,19 @@ select public.bootstrap_first_admin('admin@example.edu');
 The function refuses to run after an Admin exists. Manage later role and
 account-status changes in the Admin dashboard.
 
+### NestJS API
+
+After the intended Admin completes Registration, run once against the API's
+PostgreSQL database (replace the email):
+
+```sql
+update profiles set role = 'admin' where email = 'admin@ncf.edu.ph';
+```
+
+Confirm it updated exactly one row. Later role and account-status changes go
+through the Admin routes (`/account/change-user-role`,
+`/account/change-account-status`).
+
 ## Post-deploy checks
 
 Run this matrix manually in local and production Supabase projects:

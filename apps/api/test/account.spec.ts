@@ -1,7 +1,14 @@
 import "reflect-metadata"
 import { Controller, Get, type INestApplication } from "@nestjs/common"
 import { Test, type TestingModule } from "@nestjs/testing"
-import { getCurrentAccountContract, registerContract } from "@repo/contracts"
+import {
+  changeAccountStatusContract,
+  changeUserRoleContract,
+  getCurrentAccountContract,
+  listUsersContract,
+  registerContract,
+  updateProfileContract,
+} from "@repo/contracts"
 import { eq } from "drizzle-orm"
 import request from "supertest"
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest"
@@ -455,6 +462,202 @@ describe("Account module", () => {
       expect(res.body).toEqual({
         code: "EMAIL_ALREADY_REGISTERED",
         message: "This email is already registered to another account.",
+      })
+    })
+  })
+
+  describe("Profile settings and Admin account management", () => {
+    const ACTIVE_ID = "30000000-0000-0000-0000-000000000001"
+    const SUSPENDED_ID = "30000000-0000-0000-0000-000000000002"
+    const ADMIN_ID = "30000000-0000-0000-0000-000000000003"
+    const PROGRAM_ID = "40000000-0000-0000-0000-000000000001"
+
+    beforeEach(async () => {
+      await db.insert(programs).values({ id: PROGRAM_ID, name: "Biology" })
+      await db.insert(profiles).values([
+        {
+          id: ACTIVE_ID,
+          clerkUserId: "clerk_active",
+          fullName: "Active User",
+          email: "active.user@ncf.edu.ph",
+          programId: PROGRAM_ID,
+        },
+        {
+          id: SUSPENDED_ID,
+          clerkUserId: "clerk_suspended",
+          fullName: "Suspended User",
+          email: "suspended.user@ncf.edu.ph",
+          status: "suspended",
+        },
+        {
+          id: ADMIN_ID,
+          clerkUserId: "clerk_admin",
+          fullName: "Admin User",
+          email: "admin.user@ncf.edu.ph",
+          role: "admin",
+        },
+      ])
+    })
+
+    const post = (path: string, token: string, body: object) =>
+      request(app.getHttpServer())
+        .post(path)
+        .set("Authorization", `Bearer ${token}`)
+        .send(body)
+
+    describe("Update profile", () => {
+      it("updates the full name and Program", async () => {
+        const res = await post(updateProfileContract.path, "token-active", {
+          fullName: "  New Name ",
+          programId: null,
+        }).expect(201)
+
+        expect(res.body).toMatchObject({
+          id: ACTIVE_ID,
+          fullName: "New Name",
+          programId: null,
+        })
+        const [row] = await db
+          .select()
+          .from(profiles)
+          .where(eq(profiles.id, ACTIVE_ID))
+        expect(row).toMatchObject({ fullName: "New Name", programId: null })
+      })
+
+      it("returns authored field messages for invalid input", async () => {
+        const res = await post(updateProfileContract.path, "token-active", {
+          fullName: " ",
+          programId: "nope",
+        }).expect(400)
+
+        expect(res.body.errors).toEqual([
+          { field: "fullName", message: "Full name is required" },
+          { field: "programId", message: "Invalid Program ID" },
+        ])
+      })
+
+      it("rejects a Program that is not in the maintained list", async () => {
+        const res = await post(updateProfileContract.path, "token-active", {
+          fullName: "Active User",
+          programId: "40000000-0000-0000-0000-000000000099",
+        }).expect(400)
+
+        expect(res.body.code).toBe("PROGRAM_NOT_FOUND")
+      })
+    })
+
+    describe("Admin-only routes", () => {
+      it("reject an Active User with 403", async () => {
+        await request(app.getHttpServer())
+          .get(listUsersContract.path)
+          .set("Authorization", "Bearer token-active")
+          .expect(403)
+        await post(changeUserRoleContract.path, "token-active", {
+          profileId: ACTIVE_ID,
+          role: "admin",
+        }).expect(403)
+        await post(changeAccountStatusContract.path, "token-active", {
+          profileId: SUSPENDED_ID,
+          status: "active",
+        }).expect(403)
+      })
+    })
+
+    describe("List users", () => {
+      it("lists Users with Profile details, role, and status", async () => {
+        const res = await request(app.getHttpServer())
+          .get(listUsersContract.path)
+          .set("Authorization", "Bearer token-admin")
+          .expect(200)
+
+        expect(res.body).toEqual([
+          {
+            id: ACTIVE_ID,
+            fullName: "Active User",
+            email: "active.user@ncf.edu.ph",
+            programId: PROGRAM_ID,
+            programName: "Biology",
+            role: "user",
+            status: "active",
+          },
+          expect.objectContaining({ id: ADMIN_ID, role: "admin" }),
+          expect.objectContaining({ id: SUSPENDED_ID, status: "suspended" }),
+        ])
+      })
+    })
+
+    describe("Change role", () => {
+      it("promotes and demotes between User and Admin", async () => {
+        const promoted = await post(changeUserRoleContract.path, "token-admin", {
+          profileId: ACTIVE_ID,
+          role: "admin",
+        }).expect(201)
+        expect(promoted.body).toMatchObject({ id: ACTIVE_ID, role: "admin" })
+
+        const demoted = await post(changeUserRoleContract.path, "token-admin", {
+          profileId: ACTIVE_ID,
+          role: "user",
+        }).expect(201)
+        expect(demoted.body).toMatchObject({ id: ACTIVE_ID, role: "user" })
+      })
+
+      it("returns 404 for an unknown Profile", async () => {
+        const res = await post(changeUserRoleContract.path, "token-admin", {
+          profileId: "30000000-0000-0000-0000-000000000099",
+          role: "admin",
+        }).expect(404)
+        expect(res.body.code).toBe("PROFILE_NOT_FOUND")
+      })
+
+      it("stops an Admin from changing their own role", async () => {
+        const res = await post(changeUserRoleContract.path, "token-admin", {
+          profileId: ADMIN_ID,
+          role: "user",
+        }).expect(409)
+        expect(res.body.code).toBe("CANNOT_CHANGE_OWN_ACCOUNT")
+      })
+    })
+
+    describe("Suspend and reactivate", () => {
+      it("suspends an account, which is rejected on its next request", async () => {
+        await request(app.getHttpServer())
+          .get("/test-protected-route")
+          .set("Authorization", "Bearer token-active")
+          .expect(200)
+
+        const res = await post(
+          changeAccountStatusContract.path,
+          "token-admin",
+          { profileId: ACTIVE_ID, status: "suspended" }
+        ).expect(201)
+        expect(res.body).toMatchObject({ id: ACTIVE_ID, status: "suspended" })
+
+        const blocked = await request(app.getHttpServer())
+          .get("/test-protected-route")
+          .set("Authorization", "Bearer token-active")
+          .expect(403)
+        expect(blocked.body.code).toBe("ACCOUNT_SUSPENDED")
+      })
+
+      it("reactivates a suspended account", async () => {
+        await post(changeAccountStatusContract.path, "token-admin", {
+          profileId: SUSPENDED_ID,
+          status: "active",
+        }).expect(201)
+
+        await request(app.getHttpServer())
+          .get("/test-protected-route")
+          .set("Authorization", "Bearer token-suspended")
+          .expect(200)
+      })
+
+      it("stops an Admin from suspending themselves", async () => {
+        const res = await post(
+          changeAccountStatusContract.path,
+          "token-admin",
+          { profileId: ADMIN_ID, status: "suspended" }
+        ).expect(409)
+        expect(res.body.code).toBe("CANNOT_CHANGE_OWN_ACCOUNT")
       })
     })
   })

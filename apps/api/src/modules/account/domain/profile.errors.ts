@@ -30,6 +30,22 @@ export class EmailAlreadyRegisteredError extends DomainError {
   }
 }
 
+export class ProfileNotFoundError extends DomainError {
+  constructor() {
+    super("PROFILE_NOT_FOUND", "No account matches that Profile.", 404)
+  }
+}
+
+export class CannotChangeOwnAccountError extends DomainError {
+  constructor() {
+    super(
+      "CANNOT_CHANGE_OWN_ACCOUNT",
+      "You cannot change your own role or account status.",
+      409
+    )
+  }
+}
+
 export class ProgramNotFoundError extends DomainError {
   constructor() {
     super("PROGRAM_NOT_FOUND", "Select a Program from the list.", 400)
