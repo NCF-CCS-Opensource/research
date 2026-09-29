@@ -17,12 +17,47 @@ import {
   GetCurrentAccountController,
 } from "./presentation/get-current-account.controller"
 import { RegisterController } from "./presentation/register.controller"
+import {
+  ChangeAccountStatusUseCase,
+} from "./application/change-account-status.use-case"
+import {
+  ChangeUserRoleUseCase,
+} from "./application/change-user-role.use-case"
+import { ListUsersUseCase } from "./application/list-users.use-case"
+import { UpdateProfileUseCase } from "./application/update-profile.use-case"
+import { USER_QUERY } from "./application/user-query.interface"
+import { DrizzleUserQuery } from "./infrastructure/drizzle-user-query"
+import {
+  ChangeAccountStatusController,
+} from "./presentation/change-account-status.controller"
+import {
+  ChangeUserRoleController,
+} from "./presentation/change-user-role.controller"
+import { ListUsersController } from "./presentation/list-users.controller"
+import {
+  UpdateProfileController,
+} from "./presentation/update-profile.controller"
 
 @Module({
   imports: [TaxonomyModule],
-  controllers: [RegisterController, GetCurrentAccountController],
+  controllers: [
+    RegisterController,
+    GetCurrentAccountController,
+    UpdateProfileController,
+    ListUsersController,
+    ChangeUserRoleController,
+    ChangeAccountStatusController,
+  ],
   providers: [
     RegisterUseCase,
+    UpdateProfileUseCase,
+    ListUsersUseCase,
+    ChangeUserRoleUseCase,
+    ChangeAccountStatusUseCase,
+    {
+      provide: USER_QUERY,
+      useClass: DrizzleUserQuery,
+    },
     GetCurrentAccountUseCase,
     ResolveRequestIdentityUseCase,
     {

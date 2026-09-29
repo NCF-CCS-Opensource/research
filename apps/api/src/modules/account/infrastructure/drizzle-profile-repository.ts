@@ -19,6 +19,28 @@ const EMAIL_CONSTRAINT = "profiles_email_unique"
 export class DrizzleProfileRepository implements ProfileRepository {
   constructor(@Inject(DATABASE_CONNECTION) private readonly db: Database) {}
 
+  async findById(id: string): Promise<Profile | null> {
+    const [row] = await this.db
+      .select()
+      .from(profiles)
+      .where(eq(profiles.id, id))
+      .limit(1)
+
+    return row ? toDomain(row) : null
+  }
+
+  async update(profile: Profile): Promise<void> {
+    await this.db
+      .update(profiles)
+      .set({
+        fullName: profile.fullName,
+        programId: profile.programId,
+        role: profile.role,
+        status: profile.status,
+      })
+      .where(eq(profiles.id, profile.id))
+  }
+
   async findByClerkUserId(clerkUserId: string): Promise<Profile | null> {
     const [row] = await this.db
       .select()

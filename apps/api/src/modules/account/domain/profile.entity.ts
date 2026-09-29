@@ -47,6 +47,22 @@ export class Profile {
     )
   }
 
+  withDetails(fullName: string, programId: string | null): Profile {
+    return this.with({ fullName: fullName.trim(), programId })
+  }
+
+  withRole(role: AccountRole): Profile {
+    return this.with({ role })
+  }
+
+  withStatus(status: AccountStatus): Profile {
+    return this.with({ status })
+  }
+
+  private with(changes: Partial<ProfileProperties>): Profile {
+    return Profile.fromProperties({ ...this, ...changes })
+  }
+
   static fromProperties(props: ProfileProperties): Profile {
     return new Profile(
       props.id,
