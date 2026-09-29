@@ -15,6 +15,13 @@
       "when": 1790403486469,
       "tag": "0001_white_rocket_raccoon",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1790644596689,
+      "tag": "0002_taxonomy_admin",
+      "breakpoints": true
     }
   ]
 }

@@ -12,7 +12,9 @@ export const profiles = pgTable("profiles", {
   clerkUserId: varchar("clerk_user_id", { length: 255 }).notNull().unique(),
   fullName: varchar("full_name", { length: 255 }).notNull(),
   email: varchar("email", { length: 255 }).notNull().unique(),
-  programId: uuid("program_id").references(() => programs.id),
+  programId: uuid("program_id").references(() => programs.id, {
+    onDelete: "set null",
+  }),
   role: accountRoleEnum("role").notNull().default("user"),
   status: accountStatusEnum("status").notNull().default("active"),
 })
