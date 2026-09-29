@@ -4,10 +4,11 @@ import { ApiExceptionFilter } from "./common/filters/api-exception.filter"
 import { GlobalAuthGuard } from "./common/guards/auth.guard"
 import { ZodValidationPipe } from "./common/pipes/zod-validation.pipe"
 import { DatabaseModule } from "./database/database.module"
+import { AccountModule } from "./modules/account/account.module"
 import { TaxonomyModule } from "./modules/taxonomy/taxonomy.module"
 
 @Module({
-  imports: [DatabaseModule, TaxonomyModule],
+  imports: [DatabaseModule, TaxonomyModule, AccountModule],
   providers: [
     {
       provide: APP_GUARD,
