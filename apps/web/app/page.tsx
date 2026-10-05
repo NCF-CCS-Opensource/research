@@ -17,10 +17,17 @@ export default async function Home() {
       {identity.state === "guest" ? (
         <Link href="/sign-in">Sign in</Link>
       ) : (
-        <p>
-          Signed in as {identity.account.name} (
-          {identity.account.role.toLowerCase()}).
-        </p>
+        <>
+          <p>
+            Signed in as {identity.account.name} (
+            {identity.account.role.toLowerCase()}).
+          </p>
+          {identity.account.role === "COORDINATOR" && (
+            <p>
+              <Link href="/admin/accounts">Manage accounts</Link>
+            </p>
+          )}
+        </>
       )}
     </main>
   );

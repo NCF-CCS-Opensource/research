@@ -60,3 +60,62 @@ export const updateOwnProfileContract = {
   body: updateOwnProfileInputSchema,
   response: successEnvelope(accountSchema),
 };
+
+export const ACCOUNT_STATUSES = ['ACTIVE', 'DEACTIVATED'] as const;
+export const accountStatusSchema = z.enum(ACCOUNT_STATUSES);
+
+export const managedAccountSchema = accountSchema.extend({
+  status: accountStatusSchema,
+  programName: z.string().nullable(),
+});
+export type ManagedAccount = z.infer<typeof managedAccountSchema>;
+
+export const listAccountsContract = {
+  method: 'GET' as const,
+  path: '/accounts/list' as const,
+  response: successEnvelope(z.array(managedAccountSchema)),
+};
+
+const reasonSchema = z
+  .string()
+  .trim()
+  .min(1, 'Enter a reason.')
+  .max(500, 'Reason is too long.');
+
+export const changeAccountRoleInputSchema = z.object({
+  accountId: z.uuid(),
+  role: roleSchema,
+  reason: reasonSchema,
+});
+export type ChangeAccountRoleInput = z.infer<
+  typeof changeAccountRoleInputSchema
+>;
+
+export const changeAccountRoleContract = {
+  method: 'POST' as const,
+  path: '/accounts/change-role' as const,
+  body: changeAccountRoleInputSchema,
+  response: successEnvelope(managedAccountSchema),
+};
+
+export const accountStatusChangeInputSchema = z.object({
+  accountId: z.uuid(),
+  reason: reasonSchema,
+});
+export type AccountStatusChangeInput = z.infer<
+  typeof accountStatusChangeInputSchema
+>;
+
+export const deactivateAccountContract = {
+  method: 'POST' as const,
+  path: '/accounts/deactivate' as const,
+  body: accountStatusChangeInputSchema,
+  response: successEnvelope(managedAccountSchema),
+};
+
+export const reactivateAccountContract = {
+  method: 'POST' as const,
+  path: '/accounts/reactivate' as const,
+  body: accountStatusChangeInputSchema,
+  response: successEnvelope(managedAccountSchema),
+};

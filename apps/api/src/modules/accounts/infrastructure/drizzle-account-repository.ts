@@ -7,9 +7,15 @@ import {
   auditEvents,
   programs,
 } from '../../../database/schema/index.js';
-import type { Account } from '../../../shared/domain/account.js';
+import type {
+  Account,
+  AccountStatus,
+  Role,
+} from '../../../shared/domain/account.js';
 import type {
   AccountRepository,
+  ChangeOutcome,
+  ManagedAccount,
   NewAccount,
 } from '../application/account-repository.js';
 
@@ -58,6 +64,123 @@ export class DrizzleAccountRepository implements AccountRepository {
       if (isUniqueViolation(error)) return null;
       throw error;
     }
+  }
+
+  async list(): Promise<ManagedAccount[]> {
+    return this.managedQuery().orderBy(accounts.name);
+  }
+
+  private managedQuery(executor: Pick<Database, 'select'> = this.db) {
+    return executor
+      .select({
+        id: accounts.id,
+        clerkUserId: accounts.clerkUserId,
+        name: accounts.name,
+        email: accounts.email,
+        role: accounts.role,
+        status: accounts.status,
+        programId: accounts.programId,
+        programName: programs.name,
+      })
+      .from(accounts)
+      .leftJoin(programs, eq(programs.id, accounts.programId));
+  }
+
+  changeRole(change: {
+    actorId: string;
+    accountId: string;
+    role: Role;
+    reason: string;
+  }) {
+    const { role, reason } = change;
+    return this.mutate(change, (target) =>
+      target.role === role
+        ? null
+        : {
+            set: { role },
+            keepsCoordinator: role === 'COORDINATOR',
+            action: 'ACCOUNT_ROLE_CHANGED',
+            details: { from: target.role, to: role, reason },
+          },
+    );
+  }
+
+  setStatus(change: {
+    actorId: string;
+    accountId: string;
+    status: AccountStatus;
+    reason: string;
+  }) {
+    const { status, reason } = change;
+    return this.mutate(change, (target) =>
+      target.status === status
+        ? null
+        : {
+            set: { status },
+            keepsCoordinator: status === 'ACTIVE',
+            action:
+              status === 'ACTIVE'
+                ? 'ACCOUNT_REACTIVATED'
+                : 'ACCOUNT_DEACTIVATED',
+            details: { reason },
+          },
+    );
+  }
+
+  /**
+   * Locks every active Coordinator before deciding, so two concurrent changes
+   * serialise and the second sees the first's result.
+   */
+  private mutate(
+    { actorId, accountId }: { actorId: string; accountId: string },
+    plan: (target: Account) => {
+      set: Partial<Pick<Account, 'role' | 'status'>>;
+      keepsCoordinator: boolean;
+      action: string;
+      details: object;
+    } | null,
+  ): Promise<ChangeOutcome> {
+    return this.db.transaction(async (tx) => {
+      const activeCoordinators = await tx
+        .select({ id: accounts.id })
+        .from(accounts)
+        .where(
+          and(eq(accounts.role, 'COORDINATOR'), eq(accounts.status, 'ACTIVE')),
+        )
+        .orderBy(accounts.id)
+        .for('update');
+      const [target] = await tx
+        .select()
+        .from(accounts)
+        .where(eq(accounts.id, accountId))
+        .for('update');
+      if (!target) return { outcome: 'not_found' };
+
+      const change = plan(target);
+      if (!change) return { outcome: 'unchanged' };
+      const isLastCoordinator =
+        activeCoordinators.length === 1 &&
+        activeCoordinators[0].id === target.id;
+      if (isLastCoordinator && !change.keepsCoordinator) {
+        return { outcome: 'last_coordinator' };
+      }
+
+      await tx
+        .update(accounts)
+        .set(change.set)
+        .where(eq(accounts.id, accountId));
+      await tx.insert(auditEvents).values({
+        actorAccountId: actorId,
+        action: change.action,
+        subjectType: 'ACCOUNT',
+        subjectId: accountId,
+        details: change.details,
+      });
+      const [account] = await this.managedQuery(tx).where(
+        eq(accounts.id, accountId),
+      );
+      return { outcome: 'changed', account };
+    });
   }
 
   async updateEmail(id: string, email: string) {
