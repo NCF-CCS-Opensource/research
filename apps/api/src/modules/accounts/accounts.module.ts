@@ -1,13 +1,21 @@
 import { Module } from '@nestjs/common';
 import { ACCOUNT_REPOSITORY } from './application/account-repository.js';
+import { ChangeAccountRoleUseCase } from './application/change-account-role.use-case.js';
+import { DeactivateAccountUseCase } from './application/deactivate-account.use-case.js';
 import { GetCurrentAccountUseCase } from './application/get-current-account.use-case.js';
 import { IdentityResolver } from './application/identity-resolver.js';
+import { ListAccountsUseCase } from './application/list-accounts.use-case.js';
+import { ReactivateAccountUseCase } from './application/reactivate-account.use-case.js';
 import { RegisterAccountUseCase } from './application/register-account.use-case.js';
 import { TOKEN_VERIFIER } from './application/token-verifier.js';
 import { UpdateOwnProfileUseCase } from './application/update-own-profile.use-case.js';
 import { ClerkTokenVerifier } from './infrastructure/clerk-token-verifier.js';
 import { DrizzleAccountRepository } from './infrastructure/drizzle-account-repository.js';
+import { ChangeAccountRoleController } from './presentation/change-account-role.controller.js';
+import { DeactivateAccountController } from './presentation/deactivate-account.controller.js';
 import { GetCurrentAccountController } from './presentation/get-current-account.controller.js';
+import { ListAccountsController } from './presentation/list-accounts.controller.js';
+import { ReactivateAccountController } from './presentation/reactivate-account.controller.js';
 import { RegisterAccountController } from './presentation/register-account.controller.js';
 import { UpdateOwnProfileController } from './presentation/update-own-profile.controller.js';
 
@@ -16,12 +24,20 @@ import { UpdateOwnProfileController } from './presentation/update-own-profile.co
     GetCurrentAccountController,
     RegisterAccountController,
     UpdateOwnProfileController,
+    ListAccountsController,
+    ChangeAccountRoleController,
+    DeactivateAccountController,
+    ReactivateAccountController,
   ],
   providers: [
     IdentityResolver,
     GetCurrentAccountUseCase,
     RegisterAccountUseCase,
     UpdateOwnProfileUseCase,
+    ListAccountsUseCase,
+    ChangeAccountRoleUseCase,
+    DeactivateAccountUseCase,
+    ReactivateAccountUseCase,
     { provide: ACCOUNT_REPOSITORY, useClass: DrizzleAccountRepository },
     { provide: TOKEN_VERIFIER, useClass: ClerkTokenVerifier },
   ],
