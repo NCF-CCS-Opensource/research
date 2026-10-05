@@ -4,6 +4,8 @@ const envSchema = z.object({
   DATABASE_URL: z.string().min(1),
   PORT: z.coerce.number().int().positive().default(3001),
   WEB_ORIGIN: z.string().min(1).default('http://localhost:3000'),
+  CLERK_SECRET_KEY: z.string().min(1).optional(),
+  CLERK_JWT_KEY: z.string().min(1).optional(),
 });
 
 export type Env = z.infer<typeof envSchema>;
