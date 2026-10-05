@@ -157,3 +157,15 @@ Learn more about the power of Turborepo:
 - [Filtering](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters)
 - [Configuration Options](https://turborepo.dev/docs/reference/configuration)
 - [CLI Usage](https://turborepo.dev/docs/reference/command-line-reference)
+
+## Local development
+
+```sh
+cp .env.example apps/api/.env
+docker compose up -d --wait        # PostgreSQL (set POSTGRES_PORT if 5432 is taken)
+pnpm --filter @repo/contracts build
+pnpm --filter api build && pnpm --filter api db:migrate
+pnpm dev                           # web on :3000 proxies /v1/api/* to the API on :3001
+```
+
+API tests need `DATABASE_URL` (read from `apps/api/.env` locally) and apply migrations themselves.
