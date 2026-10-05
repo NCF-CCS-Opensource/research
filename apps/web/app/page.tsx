@@ -1,28 +1,26 @@
-import { referenceDataContract } from "@repo/contracts";
+import Link from "next/link";
+import { redirect } from "next/navigation";
+import { getCurrentIdentity } from "../lib/backend";
 
 // Rendered per request so builds do not need the API running.
 export const dynamic = "force-dynamic";
 
-async function getPrograms() {
-  const origin = process.env.API_ORIGIN ?? "http://localhost:3001";
-  const res = await fetch(`${origin}/v1/api${referenceDataContract.path}`, {
-    cache: "no-store",
-  });
-  if (!res.ok) throw new Error(`Reference data request failed: ${res.status}`);
-  return referenceDataContract.response.parse(await res.json()).data.programs;
-}
-
+// Routing here is a convenience; the API decides what each identity may do.
 export default async function Home() {
-  const programs = await getPrograms();
+  const identity = await getCurrentIdentity();
+  if (identity.state === "registering") redirect("/register");
+  if (identity.state === "deactivated") redirect("/deactivated");
+
   return (
     <main style={{ padding: "2rem" }}>
       <h1>CCS Research Repository</h1>
-      <h2>Programs</h2>
-      <ul>
-        {programs.map((program) => (
-          <li key={program.id}>{program.name}</li>
-        ))}
-      </ul>
+      {identity.state === "guest" ? (
+        <Link href="/sign-in">Sign in</Link>
+      ) : (
+        <p>
+          Signed in as {identity.account.name} ({identity.account.role.toLowerCase()}).
+        </p>
+      )}
     </main>
   );
 }

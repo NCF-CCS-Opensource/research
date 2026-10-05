@@ -1,3 +1,4 @@
+import { ClerkProvider, Show, UserButton } from "@clerk/nextjs";
 import type { Metadata } from "next";
 import localFont from "next/font/local";
 import "./globals.css";
@@ -24,7 +25,14 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${geistSans.variable} ${geistMono.variable}`}>
-        {children}
+        <ClerkProvider>
+          <header style={{ display: "flex", justifyContent: "flex-end", padding: "1rem" }}>
+            <Show when="signed-in">
+              <UserButton />
+            </Show>
+          </header>
+          {children}
+        </ClerkProvider>
       </body>
     </html>
   );

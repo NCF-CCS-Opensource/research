@@ -11,10 +11,12 @@
     "check-types": "next typegen && tsc --noEmit"
   },
   "dependencies": {
+    "@clerk/nextjs": "^7.9.10",
     "@repo/contracts": "workspace:*",
     "next": "16.3.4",
     "react": "19.2.8",
-    "react-dom": "19.2.8"
+    "react-dom": "19.2.8",
+    "server-only": "^0.0.1"
   },
   "devDependencies": {
     "@types/node": "26.4.1",
