@@ -45,6 +45,8 @@ export class InMemoryAccountRepository implements AccountRepository {
   }
 
   async updateEmail(id: string, email: string) {
+    if (this.accounts.some((a) => a.id !== id && a.email === email))
+      return null;
     return this.patch(id, { email });
   }
 

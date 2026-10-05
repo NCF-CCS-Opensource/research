@@ -22,6 +22,8 @@ export class ClerkTokenVerifier implements TokenVerifier {
         jwtKey: env.CLERK_JWT_KEY,
         authorizedParties: [env.WEB_ORIGIN],
       });
+      // verifyToken skips the origin check when `azp` is absent, so require it.
+      if (claims.azp !== env.WEB_ORIGIN) return null;
       const email = (claims as Record<string, unknown>).email;
       if (typeof email !== 'string' || !email) return null;
       return { clerkUserId: claims.sub, email };

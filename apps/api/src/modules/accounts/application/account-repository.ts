@@ -15,7 +15,8 @@ export interface AccountRepository {
   isActiveProgram(programId: string): Promise<boolean>;
   /** Saves the Account and its Registration audit event together. Null when the identity or email is already registered. */
   register(account: NewAccount): Promise<Account | null>;
-  updateEmail(id: string, email: string): Promise<Account>;
+  /** Null when another Account already holds the email. */
+  updateEmail(id: string, email: string): Promise<Account | null>;
   updateProfile(
     id: string,
     profile: { name: string; programId: string | null },

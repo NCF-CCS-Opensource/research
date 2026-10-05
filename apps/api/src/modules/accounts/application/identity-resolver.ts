@@ -20,17 +20,17 @@ export class IdentityResolver {
     const identity = await this.tokens.verify(token);
     if (!identity) return GUEST;
 
+    const email = normaliseEmail(identity.email);
     let account = await this.accounts.findByClerkUserId(identity.clerkUserId);
     if (!account) {
       return {
         kind: 'registering',
         clerkUserId: identity.clerkUserId,
-        email: normaliseEmail(identity.email),
+        email,
       };
     }
-    const email = normaliseEmail(identity.email);
     if (account.email !== email) {
-      account = await this.accounts.updateEmail(account.id, email);
+      account = (await this.accounts.updateEmail(account.id, email)) ?? account;
     }
     return account.status === 'ACTIVE'
       ? { kind: 'active', account }

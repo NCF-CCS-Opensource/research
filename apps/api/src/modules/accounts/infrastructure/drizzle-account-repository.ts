@@ -61,12 +61,17 @@ export class DrizzleAccountRepository implements AccountRepository {
   }
 
   async updateEmail(id: string, email: string) {
-    const [row] = await this.db
-      .update(accounts)
-      .set({ email })
-      .where(eq(accounts.id, id))
-      .returning();
-    return row;
+    try {
+      const [row] = await this.db
+        .update(accounts)
+        .set({ email })
+        .where(eq(accounts.id, id))
+        .returning();
+      return row ?? null;
+    } catch (error) {
+      if (isUniqueViolation(error)) return null;
+      throw error;
+    }
   }
 
   async updateProfile(

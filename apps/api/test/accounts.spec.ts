@@ -181,6 +181,22 @@ describe('Sign-in and Registration', () => {
     expect(res.body.data.account.email).toBe('ana.cruz@gbox.ncf.edu.ph');
   });
 
+  it('keeps the Account email when the token email belongs to another Account', async () => {
+    signIn('t1', 'ana@gbox.ncf.edu.ph');
+    signIn('t4', 'bo@gbox.ncf.edu.ph');
+    await post(app, registerAccountContract.path, 't1', { name: 'Ana' }).expect(
+      200,
+    );
+    await post(app, registerAccountContract.path, 't4', { name: 'Bo' }).expect(
+      200,
+    );
+    signIn('t4', 'ana@gbox.ncf.edu.ph');
+    const res = await get(app, getCurrentAccountContract.path, 't4').expect(
+      200,
+    );
+    expect(res.body.data.account.email).toBe('bo@gbox.ncf.edu.ph');
+  });
+
   it('lets an Account update its own name and Program', async () => {
     signIn('t1', 'ana@gbox.ncf.edu.ph');
     await post(app, registerAccountContract.path, 't1', { name: 'Ana' }).expect(
