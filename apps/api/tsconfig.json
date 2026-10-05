@@ -1,15 +1,23 @@
 {
-  "extends": "@repo/tsconfig/base.json",
   "compilerOptions": {
-    "target": "ES2022",
-    "module": "ESNext",
-    "moduleResolution": "bundler",
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+    "resolvePackageJsonExports": true,
+    "esModuleInterop": true,
+    "isolatedModules": true,
+    "declaration": true,
+    "removeComments": true,
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true,
+    "allowSyntheticDefaultImports": true,
+    "target": "ES2023",
+    "sourceMap": true,
     "outDir": "./dist",
     "rootDir": ".",
-    "experimentalDecorators": true,
-    "emitDecoratorMetadata": true,
+    "incremental": true,
+    "skipLibCheck": true,
+    "strict": true,
     "strictPropertyInitialization": false,
-    "noImplicitAny": false
-  },
-  "include": ["src/**/*", "test/**/*", "drizzle.config.ts"]
+    "types": ["vitest/globals", "node"]
+  }
 }

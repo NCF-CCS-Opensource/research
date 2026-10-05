@@ -1,21 +1,8 @@
-import "reflect-metadata"
-import { NestFactory } from "@nestjs/core"
-import { AppModule } from "./app.module"
-import { validateEnv } from "./config/env"
+import { NestFactory } from '@nestjs/core';
+import { AppModule } from './app.module.js';
 
-try {
-  const env = validateEnv()
-
-  const app = await NestFactory.create(AppModule)
-
-  app.enableCors({
-    origin: env.WEB_ORIGIN,
-    credentials: true,
-  })
-
-  await app.listen(env.PORT)
-  console.log(`API is running on port ${env.PORT}`)
-} catch (err) {
-  console.error("Failed to start API application:", err)
-  process.exit(1)
+async function bootstrap() {
+  const app = await NestFactory.create(AppModule);
+  await app.listen(process.env.PORT ?? 3001);
 }
+await bootstrap();

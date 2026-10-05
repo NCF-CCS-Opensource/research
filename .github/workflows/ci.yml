@@ -3,7 +3,7 @@ name: CI
 on:
   pull_request:
   push:
-    branches: [develop, master]
+    branches: [master, develop]
 
 concurrency:
   group: ci-${{ github.ref }}
@@ -15,26 +15,6 @@ permissions:
 jobs:
   verify:
     runs-on: ubuntu-latest
-    services:
-      postgres:
-        image: postgres:17-alpine
-        env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: research
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-    env:
-      # Build-time placeholders; the build never contacts Supabase.
-      NEXT_PUBLIC_SUPABASE_URL: http://127.0.0.1:54321
-      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ci-placeholder
-      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/research
-      CLERK_SECRET_KEY: ci-placeholder-clerk-secret-key
     steps:
       - uses: actions/checkout@v5
       - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4.4.0
@@ -44,6 +24,6 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm lint
-      - run: pnpm typecheck
+      - run: pnpm check-types
       - run: pnpm test
       - run: pnpm build
