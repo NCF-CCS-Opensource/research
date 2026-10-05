@@ -18,7 +18,8 @@ export default async function Home() {
         <Link href="/sign-in">Sign in</Link>
       ) : (
         <p>
-          Signed in as {identity.account.name} ({identity.account.role.toLowerCase()}).
+          Signed in as {identity.account.name} (
+          {identity.account.role.toLowerCase()}).
         </p>
       )}
     </main>

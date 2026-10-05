@@ -13,8 +13,8 @@ import type { Account } from '../../src/shared/domain/account.js';
 export class FakeTokenVerifier implements TokenVerifier {
   readonly identities = new Map<string, VerifiedIdentity>();
 
-  async verify(token: string) {
-    return this.identities.get(token) ?? null;
+  verify(token: string) {
+    return Promise.resolve(this.identities.get(token) ?? null);
   }
 }
 
@@ -23,38 +23,40 @@ export class InMemoryAccountRepository implements AccountRepository {
   readonly audit: { action: string; subjectId: string }[] = [];
   readonly activePrograms = new Set<string>();
 
-  async findByClerkUserId(clerkUserId: string) {
-    return this.accounts.find((a) => a.clerkUserId === clerkUserId) ?? null;
+  findByClerkUserId(clerkUserId: string) {
+    return Promise.resolve(
+      this.accounts.find((a) => a.clerkUserId === clerkUserId) ?? null,
+    );
   }
 
-  async isActiveProgram(programId: string) {
-    return this.activePrograms.has(programId);
+  isActiveProgram(programId: string) {
+    return Promise.resolve(this.activePrograms.has(programId));
   }
 
-  async register(input: NewAccount) {
+  register(input: NewAccount) {
     const taken = this.accounts.some(
       (a) =>
         a.clerkUserId === input.clerkUserId ||
         a.email.toLowerCase() === input.email.toLowerCase(),
     );
-    if (taken) return null;
+    if (taken) return Promise.resolve(null);
     const account: Account = { id: randomUUID(), status: 'ACTIVE', ...input };
     this.accounts.push(account);
     this.audit.push({ action: 'ACCOUNT_REGISTERED', subjectId: account.id });
-    return account;
+    return Promise.resolve(account);
   }
 
-  async updateEmail(id: string, email: string) {
+  updateEmail(id: string, email: string) {
     if (this.accounts.some((a) => a.id !== id && a.email === email))
-      return null;
-    return this.patch(id, { email });
+      return Promise.resolve(null);
+    return Promise.resolve(this.patch(id, { email }));
   }
 
-  async updateProfile(
+  updateProfile(
     id: string,
     profile: { name: string; programId: string | null },
   ) {
-    return this.patch(id, profile);
+    return Promise.resolve(this.patch(id, profile));
   }
 
   private patch(id: string, change: Partial<Account>) {

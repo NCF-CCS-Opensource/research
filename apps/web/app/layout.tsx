@@ -26,7 +26,13 @@ export default function RootLayout({
     <html lang="en">
       <body className={`${geistSans.variable} ${geistMono.variable}`}>
         <ClerkProvider>
-          <header style={{ display: "flex", justifyContent: "flex-end", padding: "1rem" }}>
+          <header
+            style={{
+              display: "flex",
+              justifyContent: "flex-end",
+              padding: "1rem",
+            }}
+          >
             <Show when="signed-in">
               <UserButton />
             </Show>

@@ -13,7 +13,9 @@ export default async function RegisterPage() {
 
   const res = await apiFetch(referenceDataContract.path);
   if (!res.ok) throw new Error(`Reference data request failed: ${res.status}`);
-  const { programs } = referenceDataContract.response.parse(await res.json()).data;
+  const { programs } = referenceDataContract.response.parse(
+    await res.json(),
+  ).data;
   const user = await currentUser();
 
   return (

@@ -5,7 +5,7 @@ import { toDetails } from '../domain/account.js';
 
 @Injectable()
 export class GetCurrentAccountUseCase {
-  async execute(
+  execute(
     _input: Record<string, never>,
     actor: Actor,
   ): Promise<CurrentIdentity> {

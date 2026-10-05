@@ -167,6 +167,7 @@ describe('Sign-in and Registration', () => {
     await post(app, registerAccountContract.path, 't4', {
       name: 'Ana 2',
     }).expect(409);
+    expect(accounts.accounts).toHaveLength(1);
   });
 
   it('updates the Account email when the token email differs', async () => {

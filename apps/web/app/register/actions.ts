@@ -12,7 +12,8 @@ export async function register(
     name: formData.get("name"),
     programId: formData.get("programId") || null,
   });
-  if (!parsed.success) return parsed.error.issues[0]?.message ?? "Check your details.";
+  if (!parsed.success)
+    return parsed.error.issues[0]?.message ?? "Check your details.";
 
   const res = await apiFetch(registerAccountContract.path, {
     method: registerAccountContract.method,

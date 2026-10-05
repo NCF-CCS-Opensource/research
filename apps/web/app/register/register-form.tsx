@@ -6,19 +6,22 @@ import { register } from "./actions";
 export function RegisterForm({
   defaultName,
   programs,
-}: {
+}: Readonly<{
   defaultName: string;
   programs: { id: string; name: string }[];
-}) {
+}>) {
   const [error, action, pending] = useActionState(register, null);
   return (
-    <form action={action} style={{ display: "grid", gap: "1rem", maxWidth: "24rem" }}>
+    <form
+      action={action}
+      style={{ display: "grid", gap: "1rem", maxWidth: "24rem" }}
+    >
       <label>
-        Name
+        <span>Name</span>
         <input name="name" defaultValue={defaultName} required />
       </label>
       <label>
-        Program (optional)
+        <span>Program (optional)</span>
         <select name="programId" defaultValue="">
           <option value="">None</option>
           {programs.map((program) => (
