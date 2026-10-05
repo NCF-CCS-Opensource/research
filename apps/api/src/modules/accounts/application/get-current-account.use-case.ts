@@ -5,10 +5,7 @@ import { toDetails } from '../domain/account.js';
 
 @Injectable()
 export class GetCurrentAccountUseCase {
-  execute(
-    _input: Record<string, never>,
-    actor: Actor,
-  ): Promise<CurrentIdentity> {
+  execute(_input: Record<string, never>, actor: Actor): CurrentIdentity {
     switch (actor.kind) {
       case 'guest':
         return { state: 'guest' };
