@@ -6,5 +6,20 @@
   },
   "env": {
     "node": true
-  }
+  },
+  "overrides": [
+    {
+      "files": ["src/**/domain/**"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              { "group": ["@nestjs/*", "drizzle-orm", "drizzle-orm/*", "drizzle-kit", "zod", "zod/*"], "message": "The domain layer must not depend on NestJS, Drizzle, or Zod." }
+            ]
+          }
+        ]
+      }
+    }
+  ]
 }
