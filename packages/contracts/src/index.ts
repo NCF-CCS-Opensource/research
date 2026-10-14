@@ -3,6 +3,7 @@ export * from './reference-data.contract.js';
 export * from './accounts.contract.js';
 export * from './audit.contract.js';
 export * from './papers/index.js';
+export * from './books.contract.js';
 export * from './account/settings.contract.js';
 export * from './account/deposit-notice.contract.js';
 export * from './taxonomy/manage-programs.contract.js';
