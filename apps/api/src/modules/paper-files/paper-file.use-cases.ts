@@ -11,7 +11,7 @@ import {
 } from '@nestjs/common';
 import Busboy from 'busboy';
 import { PDFDocument } from 'pdf-lib';
-import { and, eq, gt, sql } from 'drizzle-orm';
+import { and, eq, gt, isNotNull, isNull, sql } from 'drizzle-orm';
 import { createHash, randomUUID } from 'node:crypto';
 import { Transform } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
@@ -247,6 +247,7 @@ export class PaperFileUseCases implements OnModuleInit, OnModuleDestroy {
     const [row] = await this.db
       .select({
         paperId: papers.id,
+        versionId: papers.currentVersionId,
         ownerId: papers.ownerId,
         adviserId: papers.adviserId,
         publicationStatus: papers.publicationStatus,
@@ -260,7 +261,11 @@ export class PaperFileUseCases implements OnModuleInit, OnModuleDestroy {
       .innerJoin(paperVersions, eq(paperVersions.id, papers.currentVersionId))
       .innerJoin(paperFiles, eq(paperFiles.id, paperVersions.pdfFileId))
       .where(
-        and(eq(papers.publicId, publicId), eq(paperFiles.status, 'CLEAN')),
+        and(
+          eq(papers.publicId, publicId),
+          eq(paperFiles.status, 'CLEAN'),
+          isNotNull(paperVersions.publishedAt),
+        ),
       );
     if (!row) throw new NotFoundException();
 
@@ -277,6 +282,8 @@ export class PaperFileUseCases implements OnModuleInit, OnModuleDestroy {
           and(
             eq(accessGrants.paperId, row.paperId),
             eq(accessGrants.accountId, actor.account.id),
+            eq(accessGrants.versionId, row.versionId!),
+            isNull(accessGrants.revokedAt),
             gt(accessGrants.expiresAt, new Date()),
           ),
         )

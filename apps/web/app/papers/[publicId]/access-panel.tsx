@@ -14,6 +14,7 @@ type AccessState =
   | "eligible"
   | "pending"
   | "approved"
+  | "revoked"
   | "denied"
   | "expired"
   | "cancelled"
@@ -69,6 +70,7 @@ export function AccessPanel({
     eligible: "Explain why you need to read this Paper.",
     pending: "Your Access Request is pending.",
     approved: "Access approved.",
+    revoked: "Your Access Grant was revoked.",
     denied: "Your Access Request was denied.",
     expired: "Your Access Request expired.",
     cancelled: "Your Access Request was cancelled.",
@@ -91,6 +93,7 @@ export function AccessPanel({
         </p>
       )}
       {state === "denied" && reason && <p>Reason: {reason}</p>}
+      {state === "revoked" && reason && <p>Reason: {reason}</p>}
       {state === "pending" && requestId && (
         <button
           disabled={busy}
@@ -107,7 +110,9 @@ export function AccessPanel({
           Cancel request
         </button>
       )}
-      {["eligible", "denied", "expired", "cancelled"].includes(state) && (
+      {["eligible", "denied", "expired", "cancelled", "revoked"].includes(
+        state,
+      ) && (
         <form
           onSubmit={(event) => {
             event.preventDefault();

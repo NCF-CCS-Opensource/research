@@ -2,6 +2,7 @@
 
 import { getPaperContentContract } from "@repo/contracts";
 import { useEffect, useRef, useState, type KeyboardEvent } from "react";
+import Link from "next/link";
 import type { PDFDocumentProxy } from "pdfjs-dist";
 import styles from "./reader.module.css";
 
@@ -165,7 +166,14 @@ export function PaperReader({ publicId }: Readonly<{ publicId: string }>) {
         </button>
       </div>
       {loading && <p role="status">Loading PDF…</p>}
-      {error && <p role="alert">{error}</p>}
+      {error && (
+        <p role="alert">
+          {error}{" "}
+          <Link href={`/papers/${encodeURIComponent(publicId)}`}>
+            Return to access status
+          </Link>
+        </p>
+      )}
       {!error && (
         <div
           className={styles.page}
@@ -174,7 +182,7 @@ export function PaperReader({ publicId }: Readonly<{ publicId: string }>) {
           aria-label={`Page ${pageNumber}. Use arrow keys to change pages and plus or minus to zoom.`}
         >
           <canvas ref={canvas} aria-label={`PDF page ${pageNumber}`} />
-        <div ref={text} className={styles.textLayer} />
+          <div ref={text} className={styles.textLayer} />
         </div>
       )}
     </section>

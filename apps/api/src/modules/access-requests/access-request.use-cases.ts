@@ -6,7 +6,18 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { and, count, desc, eq, gt, gte, inArray, lt, sql } from 'drizzle-orm';
+import {
+  and,
+  count,
+  desc,
+  eq,
+  gt,
+  gte,
+  inArray,
+  isNull,
+  lt,
+  sql,
+} from 'drizzle-orm';
 import { DATABASE } from '../../database/database.module.js';
 import type { Database } from '../../database/database.js';
 import {
@@ -31,12 +42,19 @@ export class AccessRequestUseCases {
     const account = this.active(actor);
     const now = new Date();
     const result = await this.db.transaction(async (tx) => {
+      const [lockedAccount] = await tx
+        .select({ status: accounts.status })
+        .from(accounts)
+        .where(eq(accounts.id, account.id))
+        .for('update');
+      if (lockedAccount?.status !== 'ACTIVE') throw new NotFoundException();
       await tx.execute(
         sql`SELECT pg_advisory_xact_lock(hashtext(${account.id}))`,
       );
       const [paper] = await tx
         .select({
           id: papers.id,
+          versionId: papers.currentVersionId,
           ownerId: papers.ownerId,
           adviserId: papers.adviserId,
           publicId: papers.publicId,
@@ -67,6 +85,8 @@ export class AccessRequestUseCases {
           and(
             eq(accessGrants.accountId, account.id),
             eq(accessGrants.paperId, paper.id),
+            eq(accessGrants.versionId, paper.versionId!),
+            isNull(accessGrants.revokedAt),
             gt(accessGrants.expiresAt, now),
           ),
         );
@@ -218,11 +238,24 @@ export class AccessRequestUseCases {
   ) {
     const account = this.active(actor);
     const saved = await this.db.transaction(async (tx) => {
+      const [initial] = await tx
+        .select({ accountId: accessRequests.accountId })
+        .from(accessRequests)
+        .where(eq(accessRequests.id, requestId));
+      if (!initial) throw new NotFoundException();
+      const [requester] = await tx
+        .select({ status: accounts.status })
+        .from(accounts)
+        .where(eq(accounts.id, initial.accountId))
+        .for('update');
+      if (requester?.status !== 'ACTIVE')
+        throw new ConflictException('The requester Account is inactive.');
       const [request] = await tx
         .select({
           request: accessRequests,
           adviserId: papers.adviserId,
           publicId: papers.publicId,
+          versionId: papers.currentVersionId,
           title: paperVersions.title,
         })
         .from(accessRequests)
@@ -278,6 +311,7 @@ export class AccessRequestUseCases {
         await tx.insert(accessGrants).values({
           requestId: request.request.id,
           paperId: request.request.paperId,
+          versionId: request.versionId!,
           accountId: request.request.accountId,
           expiresAt: grantExpiresAt,
         });
@@ -330,6 +364,90 @@ export class AccessRequestUseCases {
     return rows.map(({ request, publicId, title }) =>
       this.shape(request, publicId, title),
     );
+  }
+
+  async grants(actor: Actor, management = false) {
+    const account = this.active(actor);
+    if (management && !['INSTRUCTOR', 'COORDINATOR'].includes(account.role))
+      throw new ForbiddenException();
+    const rows = await this.db
+      .select({
+        id: accessGrants.id,
+        publicId: papers.publicId,
+        paperTitle: paperVersions.title,
+        accountName: accounts.name,
+        expiresAt: accessGrants.expiresAt,
+        revokedAt: accessGrants.revokedAt,
+        revocationReason: accessGrants.revocationReason,
+      })
+      .from(accessGrants)
+      .innerJoin(papers, eq(papers.id, accessGrants.paperId))
+      .innerJoin(paperVersions, eq(paperVersions.id, accessGrants.versionId))
+      .innerJoin(accounts, eq(accounts.id, accessGrants.accountId))
+      .where(
+        management
+          ? account.role === 'COORDINATOR'
+            ? sql`true`
+            : eq(papers.adviserId, account.id)
+          : eq(accessGrants.accountId, account.id),
+      )
+      .orderBy(desc(accessGrants.createdAt));
+    return rows.map((row) => ({
+      ...row,
+      expiresAt: row.expiresAt.toISOString(),
+      revokedAt: row.revokedAt?.toISOString() ?? null,
+    }));
+  }
+
+  async revoke(actor: Actor, grantId: string, reason: string) {
+    const account = this.active(actor);
+    await this.db.transaction(async (tx) => {
+      const [grant] = await tx
+        .select({
+          grant: accessGrants,
+          adviserId: papers.adviserId,
+          publicId: papers.publicId,
+          title: paperVersions.title,
+        })
+        .from(accessGrants)
+        .innerJoin(papers, eq(papers.id, accessGrants.paperId))
+        .innerJoin(paperVersions, eq(paperVersions.id, accessGrants.versionId))
+        .where(eq(accessGrants.id, grantId))
+        .for('update');
+      if (!grant) throw new NotFoundException();
+      if (account.role !== 'COORDINATOR' && account.id !== grant.adviserId)
+        throw new ForbiddenException();
+      if (grant.grant.revokedAt)
+        throw new ConflictException(
+          'This Access Grant has already been revoked.',
+        );
+      const now = new Date();
+      await tx
+        .update(accessGrants)
+        .set({ revokedAt: now, revocationReason: reason })
+        .where(eq(accessGrants.id, grantId));
+      await tx.insert(auditEvents).values({
+        actorAccountId: account.id,
+        action: 'ACCESS_GRANT_REVOKED',
+        subjectType: 'ACCESS_GRANT',
+        subjectId: grantId,
+        details: { reason },
+      });
+      const [to] = await tx
+        .select({ email: accounts.email, name: accounts.name })
+        .from(accounts)
+        .where(eq(accounts.id, grant.grant.accountId));
+      if (to)
+        await tx.insert(emailJobs).values({
+          event: 'access_grant_revoked',
+          recipientEmail: to.email,
+          recipientName: to.name,
+          paperPublicId: grant.publicId,
+          paperTitle: grant.title,
+          details: { reason },
+        });
+    });
+    return { revoked: true as const };
   }
 
   async queue(actor: Actor) {
@@ -436,6 +554,7 @@ export class AccessRequestUseCases {
     const [paper] = await this.db
       .select({
         id: papers.id,
+        versionId: papers.currentVersionId,
         ownerId: papers.ownerId,
         adviserId: papers.adviserId,
         publicationStatus: papers.publicationStatus,
@@ -470,22 +589,24 @@ export class AccessRequestUseCases {
         requestId: null,
       };
     const now = new Date();
-    const [grant] = await this.db
+    const [activeGrant] = await this.db
       .select()
       .from(accessGrants)
       .where(
         and(
           eq(accessGrants.accountId, account.id),
           eq(accessGrants.paperId, paper.id),
+          eq(accessGrants.versionId, paper.versionId!),
+          isNull(accessGrants.revokedAt),
           gt(accessGrants.expiresAt, now),
         ),
       )
       .orderBy(desc(accessGrants.expiresAt))
       .limit(1);
-    if (grant)
+    if (activeGrant)
       return {
         state: 'approved' as const,
-        expiresAt: grant.expiresAt.toISOString(),
+        expiresAt: activeGrant.expiresAt.toISOString(),
         reason: null,
         requestId: null,
       };
@@ -507,6 +628,25 @@ export class AccessRequestUseCases {
         reason: null,
         requestId: null,
       };
+    if (request.status === 'approved') {
+      const [revokedGrant] = await this.db
+        .select({ reason: accessGrants.revocationReason })
+        .from(accessGrants)
+        .where(
+          and(
+            eq(accessGrants.requestId, request.id),
+            eq(accessGrants.versionId, paper.versionId!),
+            sql`${accessGrants.revokedAt} IS NOT NULL`,
+          ),
+        );
+      if (revokedGrant)
+        return {
+          state: 'revoked' as const,
+          expiresAt: null,
+          reason: revokedGrant.reason,
+          requestId: request.id,
+        };
+    }
     if (request.status === 'pending' && request.expiresAt <= now) {
       await this.db
         .update(accessRequests)

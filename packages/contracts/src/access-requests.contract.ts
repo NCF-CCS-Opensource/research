@@ -27,6 +27,31 @@ export const listMyAccessRequestsContract = {
   path: '/access-requests/mine' as const,
   response: z.array(requestSummarySchema),
 };
+const grantSummarySchema = z.object({
+  id: z.string().uuid(),
+  publicId: z.string(),
+  paperTitle: z.string(),
+  accountName: z.string(),
+  expiresAt: z.string().datetime(),
+  revokedAt: z.string().datetime().nullable(),
+  revocationReason: z.string().nullable(),
+});
+export const listMyAccessGrantsContract = {
+  method: 'GET' as const,
+  path: '/access-grants/mine' as const,
+  response: z.array(grantSummarySchema),
+};
+export const listAccessGrantQueueContract = {
+  method: 'GET' as const,
+  path: '/access-grants/queue' as const,
+  response: z.array(grantSummarySchema),
+};
+export const revokeAccessGrantContract = {
+  method: 'POST' as const,
+  path: '/access-grants/revoke/:grantId' as const,
+  request: z.object({ reason: z.string().trim().min(1).max(2000) }),
+  response: z.object({ revoked: z.literal(true) }),
+};
 export const listAccessRequestQueueContract = {
   method: 'GET' as const,
   path: '/access-requests/queue' as const,
@@ -71,6 +96,7 @@ export const checkPaperAccessContract = {
       'eligible',
       'pending',
       'approved',
+      'revoked',
       'denied',
       'expired',
       'cancelled',

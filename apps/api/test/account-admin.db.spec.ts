@@ -93,6 +93,102 @@ describe('Account administration (database)', () => {
     ]);
   });
 
+  it('revokes grants and cancels pending Access Requests with deactivation', async () => {
+    const coordinatorId = await newCoordinator();
+    const accountId = randomUUID();
+    const programId = randomUUID();
+    const paperId = randomUUID();
+    const versionId = randomUUID();
+    const requestId = randomUUID();
+    try {
+      await db
+        .insert(schema.programs)
+        .values({ id: programId, name: `Deactivate ${programId}` });
+      await db.insert(accounts).values({
+        id: accountId,
+        clerkUserId: `user_${accountId}`,
+        name: 'Requester',
+        email: `${accountId}@gbox.ncf.edu.ph`,
+        role: 'STUDENT',
+      });
+      await db.insert(schema.papers).values({
+        id: paperId,
+        publicId: paperId.replaceAll('-', ''),
+        ownerId: accountId,
+        adviserId: coordinatorId,
+        programId,
+        status: 'endorsed',
+        publicationStatus: 'published',
+        currentVersionId: versionId,
+      });
+      await db.insert(schema.paperVersions).values({
+        id: versionId,
+        paperId,
+        versionNumber: 1,
+        title: 'Reader',
+        abstract: 'Abstract',
+        year: 2026,
+        researchType: 'THESIS',
+        keywords: ['reader'],
+        authors: [],
+        publishedAt: new Date(),
+      });
+      await db.insert(schema.accessRequests).values({
+        id: requestId,
+        paperId,
+        accountId,
+        purpose: 'A legitimate academic purpose long enough.',
+        status: 'approved',
+        expiresAt: new Date(Date.now() + 60_000),
+      });
+      await db.insert(schema.accessGrants).values({
+        requestId,
+        paperId,
+        versionId,
+        accountId,
+        expiresAt: new Date(Date.now() + 60_000),
+      });
+      const [pendingRequest] = await db
+        .insert(schema.accessRequests)
+        .values({
+          paperId,
+          accountId,
+          purpose: 'Another legitimate academic purpose long enough.',
+          status: 'pending',
+          expiresAt: new Date(Date.now() + 60_000),
+        })
+        .returning();
+
+      await repo.setStatus({
+        actorId: coordinatorId,
+        accountId,
+        status: 'DEACTIVATED',
+        reason: 'Left the college',
+      });
+
+      const [grant] = await db
+        .select()
+        .from(schema.accessGrants)
+        .where(eq(schema.accessGrants.accountId, accountId));
+      const [request] = await db
+        .select()
+        .from(schema.accessRequests)
+        .where(eq(schema.accessRequests.id, pendingRequest.id));
+      expect(grant).toMatchObject({
+        revokedAt: expect.any(Date),
+        revocationReason: 'Account deactivated.',
+      });
+      expect(request).toMatchObject({
+        status: 'cancelled',
+        decidedAt: expect.any(Date),
+      });
+    } finally {
+      await db.delete(schema.papers).where(eq(schema.papers.id, paperId));
+      await db.delete(accounts).where(eq(accounts.id, accountId));
+      await db.delete(schema.programs).where(eq(schema.programs.id, programId));
+    }
+  });
+
   it('audits changes with reasons and filters the log', async () => {
     const [a, b] = [await newCoordinator(), await newCoordinator()];
     await repo.changeRole({

@@ -1,10 +1,12 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { and, eq } from 'drizzle-orm';
+import { and, eq, isNull } from 'drizzle-orm';
 import { DATABASE } from '../../../database/database.module.js';
 import type { Database } from '../../../database/database.js';
 import {
   accounts,
   auditEvents,
+  accessGrants,
+  accessRequests,
   programs,
 } from '../../../database/schema/index.js';
 import type {
@@ -169,6 +171,27 @@ export class DrizzleAccountRepository implements AccountRepository {
         .update(accounts)
         .set(change.set)
         .where(eq(accounts.id, accountId));
+      if (change.set.status === 'DEACTIVATED') {
+        const now = new Date();
+        await tx
+          .update(accessGrants)
+          .set({ revokedAt: now, revocationReason: 'Account deactivated.' })
+          .where(
+            and(
+              eq(accessGrants.accountId, accountId),
+              isNull(accessGrants.revokedAt),
+            ),
+          );
+        await tx
+          .update(accessRequests)
+          .set({ status: 'cancelled', decidedAt: now })
+          .where(
+            and(
+              eq(accessRequests.accountId, accountId),
+              eq(accessRequests.status, 'pending'),
+            ),
+          );
+      }
       await tx.insert(auditEvents).values({
         actorAccountId: actorId,
         action: change.action,

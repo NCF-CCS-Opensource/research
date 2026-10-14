@@ -5,6 +5,9 @@ import {
   decidePaperAccessRequestContract,
   listAccessRequestQueueContract,
   listMyAccessRequestsContract,
+  listMyAccessGrantsContract,
+  listAccessGrantQueueContract,
+  revokeAccessGrantContract,
   requestPaperAccessContract,
 } from '@repo/contracts';
 import { CurrentActor } from '../../common/current-actor.decorator.js';
@@ -32,6 +35,23 @@ export class AccessRequestController {
   @Get(listMyAccessRequestsContract.path)
   mine(@CurrentActor() actor: Actor) {
     return this.requests.mine(actor);
+  }
+  @Get(listMyAccessGrantsContract.path)
+  myGrants(@CurrentActor() actor: Actor) {
+    return this.requests.grants(actor);
+  }
+  @Get(listAccessGrantQueueContract.path)
+  grantQueue(@CurrentActor() actor: Actor) {
+    return this.requests.grants(actor, true);
+  }
+  @Post(revokeAccessGrantContract.path)
+  revoke(
+    @CurrentActor() actor: Actor,
+    @Param('grantId') id: string,
+    @Body(new ZodBody(revokeAccessGrantContract.request))
+    body: { reason: string },
+  ) {
+    return this.requests.revoke(actor, id, body.reason);
   }
   @Get(listAccessRequestQueueContract.path)
   queue(@CurrentActor() actor: Actor) {
