@@ -40,11 +40,24 @@ export default async function Home() {
               <p>
                 <Link href="/papers/legacy-deposit">Create Legacy Deposit</Link>
               </p>
+              <p>
+                <Link href="/papers/access-management">Access Requests</Link>
+              </p>
             </>
           )}
           {identity.account.role === "STUDENT" && (
+            <>
+              <p>
+                <Link href="/papers">My Papers</Link>
+              </p>
+              <p>
+                <Link href="/papers/access-requests">My Access Requests</Link>
+              </p>
+            </>
+          )}
+          {identity.account.role === "INSTRUCTOR" && (
             <p>
-              <Link href="/papers">My Papers</Link>
+              <Link href="/papers/access-management">Access Requests</Link>
             </p>
           )}
         </>

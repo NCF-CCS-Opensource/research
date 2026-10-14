@@ -1,4 +1,8 @@
-import { getPaperContract, getPublicPaperContract } from "@repo/contracts";
+import {
+  checkPaperAccessContract,
+  getPaperContract,
+  getPublicPaperContract,
+} from "@repo/contracts";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { apiFetch, getCurrentIdentity } from "../../../lib/backend";
@@ -7,6 +11,7 @@ import { SubmissionPanel } from "./submission-panel";
 import { PaperDecision } from "../adviser-queue/paper-decision";
 import { CitationActions } from "./citation-actions";
 import { publishLegacyDeposit } from "../legacy-deposit/actions";
+import { AccessPanel } from "./access-panel";
 
 export const dynamic = "force-dynamic";
 
@@ -31,6 +36,16 @@ export default async function PaperPage({
         `/papers/${encodeURIComponent(publicId)}`,
         siteOrigin,
       ).toString();
+      const accessPath = checkPaperAccessContract.path.replace(
+        ":publicId",
+        encodeURIComponent(publicId),
+      );
+      const accessResponse = await apiFetch(accessPath);
+      const access = accessResponse.ok
+        ? checkPaperAccessContract.response.safeParse(
+            (await accessResponse.json())?.data,
+          )
+        : null;
       return (
         <main style={{ padding: "2rem", display: "grid", gap: "1rem" }}>
           <h1>{paper.data.title}</h1>
@@ -58,13 +73,23 @@ export default async function PaperPage({
               })}
             </dd>
           </dl>
-          <aside>
-            <h2>Full text access</h2>
-            <p>
-              The full text is restricted. Guests must{" "}
-              <Link href="/sign-in">sign in</Link> to request access.
-            </p>
-          </aside>
+          {access?.success ? (
+            <AccessPanel
+              publicId={publicId}
+              initialState={access.data.state}
+              expiresAt={access.data.expiresAt}
+              reason={access.data.reason}
+              requestId={access.data.requestId ?? undefined}
+            />
+          ) : (
+            <aside>
+              <h2>Full text access</h2>
+              <p>
+                The full text is restricted. Guests must{" "}
+                <Link href="/sign-in">sign in</Link> to request access.
+              </p>
+            </aside>
+          )}
         </main>
       );
     }
