@@ -15,6 +15,7 @@ import { HealthModule } from './modules/health/health.module.js';
 import { ReferenceDataModule } from './modules/reference-data/reference-data.module.js';
 import { PaperModule } from './modules/paper/paper.module.js';
 import { SettingsModule } from './modules/settings/settings.module.js';
+import { PaperFileModule } from './modules/paper-files/paper-file.module.js';
 
 @Module({
   imports: [
@@ -25,6 +26,7 @@ import { SettingsModule } from './modules/settings/settings.module.js';
     HealthModule,
     PaperModule,
     SettingsModule,
+    PaperFileModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: AuthGuard },

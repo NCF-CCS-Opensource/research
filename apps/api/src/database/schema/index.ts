@@ -4,3 +4,4 @@ export * from './audit-events.js';
 export * from './papers.js';
 export * from './settings.js';
 export * from './deposit-notices.js';
+export * from './paper-files.js';
