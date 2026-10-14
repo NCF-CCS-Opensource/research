@@ -16,7 +16,7 @@ Create one Clerk application per environment, then configure it:
 
 4. **Keys**: copy them into the environment (`.env.example` lists the names).
    - API: `CLERK_SECRET_KEY` (or `CLERK_JWT_KEY`, the instance's public key). `WEB_ORIGIN` must equal the web app's origin; the API accepts only tokens issued for it.
-   - Web: `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`, `CLERK_SECRET_KEY`, `NEXT_PUBLIC_CLERK_SIGN_IN_URL=/sign-in`.
+   - Web: `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`, `CLERK_SECRET_KEY`, `NEXT_PUBLIC_CLERK_SIGN_IN_URL=/sign-in`, and `WEB_ORIGIN` set to the public web app origin (also used in Paper citations).
 
 ## Promoting the first Coordinator
 

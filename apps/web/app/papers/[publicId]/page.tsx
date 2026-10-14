@@ -5,6 +5,7 @@ import { apiFetch, getCurrentIdentity } from "../../../lib/backend";
 import { PaperFileUpload } from "./paper-file-upload";
 import { SubmissionPanel } from "./submission-panel";
 import { PaperDecision } from "../adviser-queue/paper-decision";
+import { CitationActions } from "./citation-actions";
 
 export const dynamic = "force-dynamic";
 
@@ -21,10 +22,18 @@ export default async function PaperPage({
     const paper = getPublicPaperContract.response.safeParse(
       (await publicResponse.json())?.data,
     );
-    if (paper.success)
+    if (paper.success) {
+      const siteOrigin = new URL(
+        process.env.WEB_ORIGIN ?? "http://localhost:3000",
+      ).origin;
+      const canonicalUrl = new URL(
+        `/papers/${encodeURIComponent(publicId)}`,
+        siteOrigin,
+      ).toString();
       return (
         <main style={{ padding: "2rem", display: "grid", gap: "1rem" }}>
           <h1>{paper.data.title}</h1>
+          <CitationActions paper={paper.data} url={canonicalUrl} />
           <p>
             {paper.data.authors.map((author) => author.displayName).join(", ")}
           </p>
@@ -57,6 +66,7 @@ export default async function PaperPage({
           </aside>
         </main>
       );
+    }
   }
   const path = getPaperContract.path.replace(
     ":publicId",
