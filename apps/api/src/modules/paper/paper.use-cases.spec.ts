@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { listPublishedPapersContract } from '@repo/contracts';
 import type { Database } from '../../database/database.js';
 import {
   PaperUseCases,
@@ -56,6 +57,20 @@ describe('PaperUseCases', () => {
         paperId: 'paper-1',
         versionId: 'version-2',
       }),
+    ).toBe(false);
+  });
+});
+
+describe('catalog query', () => {
+  it('accepts multilingual names and punctuation in full-text queries', () => {
+    expect(
+      listPublishedPapersContract.query.parse({ q: '李 O’Connor-Cruz' }),
+    ).toMatchObject({ q: '李 O’Connor-Cruz', page: 1, pageSize: 20 });
+  });
+
+  it('caps page size at 100', () => {
+    expect(
+      listPublishedPapersContract.query.safeParse({ pageSize: '101' }).success,
     ).toBe(false);
   });
 });

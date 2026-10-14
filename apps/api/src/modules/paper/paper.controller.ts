@@ -1,8 +1,10 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Delete,
   Get,
+  Query,
   Param,
   Patch,
   Post,
@@ -50,8 +52,10 @@ export class PaperController {
   @Public()
   @Header('Cache-Control', 'no-store')
   @Get(listPublishedPapersContract.path)
-  listPublished() {
-    return this.papers.listPublished();
+  listPublished(@Query() query: Record<string, string | undefined>) {
+    const parsed = listPublishedPapersContract.query.safeParse(query);
+    if (!parsed.success) throw new BadRequestException(parsed.error.flatten());
+    return this.papers.listPublished(parsed.data);
   }
 
   @Get(listPublicationQueueContract.path)

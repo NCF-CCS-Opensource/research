@@ -68,15 +68,22 @@
     {
       "idx": 9,
       "version": "7",
-      "when": 1792281600002,
-      "tag": "0009_legacy_deposits",
+      "when": 1792368000000,
+      "tag": "0009_catalog_search",
       "breakpoints": true
     },
     {
       "idx": 10,
       "version": "7",
+      "when": 1792281600002,
+      "tag": "0011_legacy_deposits",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
       "when": 1792281600003,
-      "tag": "0010_books",
+      "tag": "0012_books",
       "breakpoints": true
     }
   ]

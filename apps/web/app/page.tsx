@@ -51,9 +51,12 @@ export default async function Home() {
       )}
       <h2>Recently published Papers</h2>
       <p><Link href="/books">Browse Books</Link></p>
-      {catalog?.success && catalog.data.length ? (
+      <p>
+        <Link href="/papers/catalog">Search the catalog</Link>
+      </p>
+      {catalog?.success && catalog.data.items.length ? (
         <ul>
-          {catalog.data.map((paper) => (
+          {catalog.data.items.map((paper) => (
             <li key={paper.publicId}>
               <Link href={`/papers/${paper.publicId}`}>{paper.title}</Link> —{" "}
               {paper.year} · {paper.program}
