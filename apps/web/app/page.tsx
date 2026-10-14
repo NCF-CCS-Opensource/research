@@ -38,6 +38,14 @@ export default async function Home() {
                 <Link href="/papers/publication-queue">Publication queue</Link>
               </p>
               <p>
+                <Link href="/books/publication-queue">
+                  Book publication queue
+                </Link>
+              </p>
+              <p>
+                <Link href="/books/create">Upload a Book</Link>
+              </p>
+              <p>
                 <Link href="/papers/legacy-deposit">Create Legacy Deposit</Link>
               </p>
               <p>
@@ -52,18 +60,26 @@ export default async function Home() {
               </p>
               <p>
                 <Link href="/papers/access-requests">My Access Requests</Link>
+                <br />
+                <Link href="/books/mine">My Books</Link> ·{" "}
+                <Link href="/books/create">Upload a Book</Link>
               </p>
             </>
           )}
           {identity.account.role === "INSTRUCTOR" && (
             <p>
               <Link href="/papers/access-management">Access Requests</Link>
+              <br />
+              <Link href="/books/mine">My Books</Link> ·{" "}
+              <Link href="/books/create">Upload a Book</Link>
             </p>
           )}
         </>
       )}
       <h2>Recently published Papers</h2>
-      <p><Link href="/books">Browse Books</Link></p>
+      <p>
+        <Link href="/books">Browse Books</Link>
+      </p>
       <p>
         <Link href="/papers/catalog">Search the catalog</Link>
       </p>

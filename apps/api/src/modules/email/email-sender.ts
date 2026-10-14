@@ -73,7 +73,8 @@ export function emailMessage(job: {
   recipientEmail: string;
   recipientName: string;
   paperTitle: string;
-  paperPublicId: string;
+  paperPublicId: string | null;
+  bookPublicId?: string | null;
   details: unknown;
 }): EmailMessage {
   const env = validateEnv();
@@ -93,10 +94,18 @@ export function emailMessage(job: {
     access_request_approved: 'Your Access Request was approved',
     access_request_denied: 'Your Access Request was denied',
     access_request_cancelled: 'Your Access Request was cancelled',
+    book_submitted: 'A Book was submitted for publication',
+    book_published: 'Your Book was published',
+    book_rejected: 'Your Book was rejected',
+    book_withdrawn: 'Your Book was withdrawn',
   };
   const subject = labels[job.event] ?? 'Paper workflow update';
   const url = new URL(
-    `/papers/${encodeURIComponent(job.paperPublicId)}`,
+    job.bookPublicId
+      ? job.event === 'book_submitted'
+        ? '/books/publication-queue'
+        : '/books/mine'
+      : `/papers/${encodeURIComponent(job.paperPublicId ?? '')}`,
     env.WEB_ORIGIN,
   ).toString();
   const text = `${job.recipientName},\n\n${subject}: ${title}.${detail ? `\n\nReason: ${detail}` : ''}\n\nOpen the application: ${url}`;

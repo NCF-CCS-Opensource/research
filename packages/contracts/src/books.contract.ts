@@ -88,6 +88,10 @@ export const publicBookSchema = bookDetailsSchema.extend({
   edition: z.string().optional(),
   isbn: z.string().optional(),
 });
+export const managedBookSchema = publicBookSchema.extend({
+  status: z.enum(['draft', 'submitted', 'published', 'rejected', 'withdrawn']),
+  rejectionReason: z.string().optional(),
+});
 export const getPublicBookContract = {
   method: 'GET' as const,
   path: '/books/get/:publicId' as const,
@@ -103,6 +107,46 @@ export const createBookContract = {
   path: '/books/create' as const,
   request: bookUploadMetadataSchema,
   response: publicBookSchema,
+};
+export const updateBookContract = {
+  method: 'PATCH' as const,
+  path: '/books/manage/:publicId' as const,
+  request: bookDetailsSchema,
+  response: managedBookSchema,
+};
+export const getManagedBookContract = {
+  method: 'GET' as const,
+  path: '/books/manage/:publicId' as const,
+  response: managedBookSchema,
+};
+export const listMyBooksContract = {
+  method: 'GET' as const,
+  path: '/books/manage/mine' as const,
+  response: z.array(managedBookSchema),
+};
+export const listBookQueueContract = {
+  method: 'GET' as const,
+  path: '/books/manage/queue' as const,
+  response: z.array(managedBookSchema),
+};
+export const decideBookContract = {
+  method: 'POST' as const,
+  path: '/books/manage/:publicId/decision' as const,
+  request: z.object({
+    decision: z.enum(['publish', 'reject']),
+    reason: z.string().trim().min(1).max(1000).optional(),
+  }),
+  response: managedBookSchema,
+};
+export const withdrawBookContract = {
+  method: 'POST' as const,
+  path: '/books/manage/:publicId/withdraw' as const,
+  response: managedBookSchema,
+};
+export const restoreBookContract = {
+  method: 'POST' as const,
+  path: '/books/manage/:publicId/restore' as const,
+  response: managedBookSchema,
 };
 export const getBookContentContract = {
   method: 'GET' as const,

@@ -46,5 +46,7 @@ export async function createBook(formData: FormData) {
       "Book upload failed. Check the details and PDF, then try again.",
     );
   const envelope = await response.json();
-  redirect(`/books/${encodeURIComponent(envelope.data.publicId)}`);
+  redirect(
+    `/books/mine?uploaded=${encodeURIComponent(envelope.data.publicId)}`,
+  );
 }

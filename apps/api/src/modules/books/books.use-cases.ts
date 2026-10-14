@@ -8,7 +8,7 @@ import {
 } from '@nestjs/common';
 import Busboy from 'busboy';
 import { PDFDocument } from 'pdf-lib';
-import { asc, eq } from 'drizzle-orm';
+import { and, asc, eq, inArray } from 'drizzle-orm';
 import { createHash, randomUUID } from 'node:crypto';
 import { Transform } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
@@ -16,7 +16,12 @@ import type { Request, Response } from 'express';
 import { bookUploadMetadataSchema, type BookDetails } from '@repo/contracts';
 import { DATABASE } from '../../database/database.module.js';
 import type { Database } from '../../database/database.js';
-import { books } from '../../database/schema/index.js';
+import {
+  accounts,
+  auditEvents,
+  books,
+  emailJobs,
+} from '../../database/schema/index.js';
 import type { Actor } from '../../shared/domain/actor.js';
 import {
   PAPER_FILE_STORAGE,
@@ -42,8 +47,7 @@ export class BooksUseCases {
   ) {}
 
   async create(actor: Actor, req: Request) {
-    if (actor.kind !== 'active' || actor.account.role !== 'COORDINATOR')
-      throw new NotFoundException();
+    if (actor.kind !== 'active') throw new NotFoundException();
     const id = randomUUID();
     const publicId = randomUUID().replaceAll('-', '');
     const key = `books/${randomUUID()}`;
@@ -190,20 +194,55 @@ export class BooksUseCases {
         throw new HttpException('PDF active content is not accepted.', 415);
       if ((await this.scanner.scan(pdfBytes)) !== 'clean')
         throw new HttpException('PDF failed malware scanning.', 415);
-      const [saved] = await this.db
-        .insert(books)
-        .values({
-          id,
-          publicId,
-          ownerId: actor.account.id,
-          ...details!,
-          objectKey: key,
-          filename,
-          byteCount: bytes,
-          sha256: digest,
-        })
-        .returning();
-      return this.toPublic(saved);
+      const coordinator = actor.account.role === 'COORDINATOR';
+      const [saved] = await this.db.transaction(async (tx) => {
+        const [book] = await tx
+          .insert(books)
+          .values({
+            id,
+            publicId,
+            ownerId: actor.account.id,
+            status: coordinator ? 'published' : 'submitted',
+            publishedAt: coordinator ? new Date() : null,
+            ...details!,
+            objectKey: key,
+            filename,
+            byteCount: bytes,
+            sha256: digest,
+          })
+          .returning();
+        await tx.insert(auditEvents).values({
+          actorAccountId: actor.account.id,
+          action: coordinator ? 'BOOK_PUBLISHED' : 'BOOK_SUBMITTED',
+          subjectType: 'BOOK',
+          subjectId: id,
+          details: null,
+        });
+        if (!coordinator) {
+          const coordinators = await tx
+            .select({ email: accounts.email, name: accounts.name })
+            .from(accounts)
+            .where(
+              and(
+                eq(accounts.status, 'ACTIVE'),
+                eq(accounts.role, 'COORDINATOR'),
+              ),
+            );
+          if (coordinators.length)
+            await tx.insert(emailJobs).values(
+              coordinators.map((recipient) => ({
+                event: 'book_submitted',
+                recipientEmail: recipient.email,
+                recipientName: recipient.name,
+                paperPublicId: null,
+                bookPublicId: publicId,
+                paperTitle: details!.title,
+              })),
+            );
+        }
+        return [book];
+      });
+      return this.toManaged(saved);
     } catch (error) {
       await this.storage.delete(key).catch(() => undefined);
       throw error;
@@ -211,7 +250,11 @@ export class BooksUseCases {
   }
 
   async list(query: string) {
-    const rows = await this.db.select().from(books).orderBy(asc(books.title));
+    const rows = await this.db
+      .select()
+      .from(books)
+      .where(eq(books.status, 'published'))
+      .orderBy(asc(books.title));
     const needle = query.trim().toLocaleLowerCase();
     return rows
       .filter(
@@ -228,9 +271,205 @@ export class BooksUseCases {
     const [row] = await this.db
       .select()
       .from(books)
-      .where(eq(books.publicId, publicId));
+      .where(and(eq(books.publicId, publicId), eq(books.status, 'published')));
     if (!row) throw new NotFoundException();
     return this.toPublic(row);
+  }
+
+  async listMine(actor: Actor) {
+    if (actor.kind !== 'active') throw new NotFoundException();
+    const rows = await this.db
+      .select()
+      .from(books)
+      .where(eq(books.ownerId, actor.account.id))
+      .orderBy(asc(books.title));
+    return rows.map((row) => this.toManaged(row));
+  }
+
+  async getManaged(actor: Actor, publicId: string) {
+    if (actor.kind !== 'active') throw new NotFoundException();
+    const [book] = await this.db
+      .select()
+      .from(books)
+      .where(eq(books.publicId, publicId));
+    if (
+      !book ||
+      (book.ownerId !== actor.account.id &&
+        actor.account.role !== 'COORDINATOR')
+    )
+      throw new NotFoundException();
+    return this.toManaged(book);
+  }
+
+  async listQueue(actor: Actor) {
+    this.requireCoordinator(actor);
+    const rows = await this.db
+      .select()
+      .from(books)
+      .where(
+        inArray(books.status, [
+          'submitted',
+          'published',
+          'rejected',
+          'withdrawn',
+        ]),
+      )
+      .orderBy(asc(books.title));
+    return rows.map((row) => this.toManaged(row));
+  }
+
+  async update(actor: Actor, publicId: string, details: BookDetails) {
+    if (actor.kind !== 'active') throw new NotFoundException();
+    return this.db.transaction(async (tx) => {
+      const [book] = await tx
+        .select()
+        .from(books)
+        .where(eq(books.publicId, publicId))
+        .for('update');
+      if (
+        !book ||
+        (book.ownerId !== actor.account.id &&
+          actor.account.role !== 'COORDINATOR')
+      )
+        throw new NotFoundException();
+      if (!canEditBook(book.status, actor.account.role === 'COORDINATOR'))
+        throw new NotFoundException();
+      const [saved] = await tx
+        .update(books)
+        .set({
+          ...details,
+          sourceUrl: details.sourceUrl || null,
+          publisher: details.publisher || null,
+          edition: details.edition || null,
+          isbn: details.isbn || null,
+          description: details.description || null,
+        })
+        .where(eq(books.id, book.id))
+        .returning();
+      if (actor.account.role === 'COORDINATOR')
+        await tx.insert(auditEvents).values({
+          actorAccountId: actor.account.id,
+          action: 'BOOK_DETAILS_UPDATED',
+          subjectType: 'BOOK',
+          subjectId: book.id,
+          details: null,
+        });
+      return this.toManaged(saved);
+    });
+  }
+
+  async decide(
+    actor: Actor,
+    publicId: string,
+    decision: 'publish' | 'reject',
+    reason?: string,
+  ) {
+    const coordinator = this.requireCoordinator(actor);
+    if (decision === 'reject' && !reason?.trim())
+      throw new HttpException('A reason is required to reject a Book.', 400);
+    return this.db.transaction(async (tx) => {
+      const [book] = await tx
+        .select()
+        .from(books)
+        .where(eq(books.publicId, publicId))
+        .for('update');
+      if (!book || book.status !== 'submitted') throw new NotFoundException();
+      const status = decision === 'publish' ? 'published' : 'rejected';
+      const [saved] = await tx
+        .update(books)
+        .set({
+          status,
+          rejectionReason: decision === 'reject' ? reason!.trim() : null,
+          publishedAt: decision === 'publish' ? new Date() : null,
+        })
+        .where(eq(books.id, book.id))
+        .returning();
+      await tx.insert(auditEvents).values({
+        actorAccountId: coordinator.id,
+        action: decision === 'publish' ? 'BOOK_PUBLISHED' : 'BOOK_REJECTED',
+        subjectType: 'BOOK',
+        subjectId: book.id,
+        details: decision === 'reject' ? { reason: reason!.trim() } : null,
+      });
+      await this.emailOwner(
+        tx,
+        book,
+        decision === 'publish' ? 'book_published' : 'book_rejected',
+        decision === 'reject' ? { reason: reason!.trim() } : null,
+      );
+      return this.toManaged(saved);
+    });
+  }
+
+  async withdraw(actor: Actor, publicId: string) {
+    const coordinator = this.requireCoordinator(actor);
+    return this.setWithdrawal(coordinator.id, publicId, true);
+  }
+
+  async restore(actor: Actor, publicId: string) {
+    const coordinator = this.requireCoordinator(actor);
+    return this.setWithdrawal(coordinator.id, publicId, false);
+  }
+
+  private async setWithdrawal(
+    actorId: string,
+    publicId: string,
+    withdraw: boolean,
+  ) {
+    return this.db.transaction(async (tx) => {
+      const [book] = await tx
+        .select()
+        .from(books)
+        .where(eq(books.publicId, publicId))
+        .for('update');
+      if (!book || book.status !== (withdraw ? 'published' : 'withdrawn'))
+        throw new NotFoundException();
+      const [saved] = await tx
+        .update(books)
+        .set({
+          status: withdraw ? 'withdrawn' : 'published',
+          withdrawnAt: withdraw ? new Date() : null,
+        })
+        .where(eq(books.id, book.id))
+        .returning();
+      await tx.insert(auditEvents).values({
+        actorAccountId: actorId,
+        action: withdraw ? 'BOOK_WITHDRAWN' : 'BOOK_RESTORED',
+        subjectType: 'BOOK',
+        subjectId: book.id,
+        details: null,
+      });
+      if (withdraw) await this.emailOwner(tx, book, 'book_withdrawn');
+      return this.toManaged(saved);
+    });
+  }
+
+  private async emailOwner(
+    tx: Parameters<Parameters<Database['transaction']>[0]>[0],
+    book: typeof books.$inferSelect,
+    event: string,
+    details: unknown = null,
+  ) {
+    const [owner] = await tx
+      .select({ email: accounts.email, name: accounts.name })
+      .from(accounts)
+      .where(eq(accounts.id, book.ownerId));
+    if (owner)
+      await tx.insert(emailJobs).values({
+        event,
+        recipientEmail: owner.email,
+        recipientName: owner.name,
+        paperPublicId: null,
+        bookPublicId: book.publicId,
+        paperTitle: book.title,
+        details,
+      });
+  }
+
+  private requireCoordinator(actor: Actor) {
+    if (actor.kind !== 'active' || actor.account.role !== 'COORDINATOR')
+      throw new NotFoundException();
+    return actor.account;
   }
 
   async content(
@@ -244,7 +483,7 @@ export class BooksUseCases {
     const [book] = await this.db
       .select()
       .from(books)
-      .where(eq(books.publicId, publicId));
+      .where(and(eq(books.publicId, publicId), eq(books.status, 'published')));
     if (!book) throw new NotFoundException();
     const headers = {
       'Content-Type': 'application/pdf',
@@ -315,6 +554,18 @@ export class BooksUseCases {
       keywords: row.keywords,
     };
   }
+
+  private toManaged(row: typeof books.$inferSelect) {
+    return {
+      ...this.toPublic(row),
+      status: row.status,
+      rejectionReason: row.rejectionReason || undefined,
+    };
+  }
+}
+
+export function canEditBook(status: string, coordinator: boolean) {
+  return coordinator || status === 'draft' || status === 'submitted';
 }
 
 export function parseBookRange(value: string | undefined, total: number) {

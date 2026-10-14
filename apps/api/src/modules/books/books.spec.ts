@@ -3,7 +3,7 @@ import {
   formatBookCitations,
   type PublicBook,
 } from '@repo/contracts';
-import { parseBookRange } from './books.use-cases.js';
+import { canEditBook, parseBookRange } from './books.use-cases.js';
 
 const book: PublicBook = {
   publicId: 'book-1',
@@ -15,6 +15,15 @@ const book: PublicBook = {
 };
 
 describe('Book public behavior', () => {
+  it('limits owner edits to drafts and submissions while coordinators may edit any status', () => {
+    expect(canEditBook('draft', false)).toBe(true);
+    expect(canEditBook('submitted', false)).toBe(true);
+    expect(canEditBook('published', false)).toBe(false);
+    expect(canEditBook('rejected', false)).toBe(false);
+    expect(canEditBook('withdrawn', false)).toBe(false);
+    expect(canEditBook('withdrawn', true)).toBe(true);
+  });
+
   it('accepts listed licences and attested named open licences, but rejects closed terms', () => {
     const base = {
       title: 'Open Book',
