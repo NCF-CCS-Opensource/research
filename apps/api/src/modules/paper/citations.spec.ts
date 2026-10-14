@@ -24,10 +24,13 @@ describe('Paper citation formatting', () => {
     );
     expect(citations.apa).toContain('Madonna & World Health Organization');
     expect(citations.ieee).toContain('Madonna, World Health Organization');
+    expect(citations.bibtex).toContain(
+      'Madonna and {World Health Organization}',
+    );
     expect(citations.bibtex).toContain('{World Health Organization}');
   });
 
-  it('preserves suffixes and abbreviates long author lists for both styles', () => {
+  it('preserves suffixes and abbreviates long author lists in each style', () => {
     const authors = Array.from({ length: 21 }, (_, i) => ({
       displayName: `Author ${i + 1}`,
       kind: 'person' as const,
@@ -41,7 +44,10 @@ describe('Paper citation formatting', () => {
     );
     expect(citations.apa).toContain('Family1, G., Jr.');
     expect(citations.apa).toContain('… Family21, G.');
+    expect(citations.ieee).toContain('Family1, Jr.');
     expect(citations.ieee).toContain('et al.');
+    expect(citations.bibtex).toContain('Family1, Given1, Jr.');
+    expect(citations.bibtex).toContain('Family21, Given21');
   });
 
   it('warns when citation metadata is missing instead of inventing it', () => {
