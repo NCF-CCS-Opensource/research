@@ -89,6 +89,10 @@ export function emailMessage(job: {
     rejection: 'A Paper was rejected',
     endorsement: 'A Paper was endorsed',
     published: 'A Paper was published',
+    access_request_created: 'A new Access Request needs your decision',
+    access_request_approved: 'Your Access Request was approved',
+    access_request_denied: 'Your Access Request was denied',
+    access_request_cancelled: 'Your Access Request was cancelled',
   };
   const subject = labels[job.event] ?? 'Paper workflow update';
   const url = new URL(

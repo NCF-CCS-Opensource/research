@@ -64,6 +64,13 @@
       "when": 1792281600001,
       "tag": "0008_paper_version_publication",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1792454400000,
+      "tag": "0010_access_requests",
+      "breakpoints": true
     }
   ]
 }
