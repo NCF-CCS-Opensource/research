@@ -43,6 +43,22 @@ describe('email delivery', () => {
     expect(message.text).toContain('https://research.example/papers/paper-id');
   });
 
+  it('sends the public withdrawal notice without the internal reason', () => {
+    vi.stubEnv('DATABASE_URL', 'postgres://localhost/test');
+    vi.stubEnv('WEB_ORIGIN', 'https://research.example');
+    const message = emailMessage({
+      event: 'paper_withdrawn',
+      recipientEmail: 'owner@ncf.edu.ph',
+      recipientName: 'Owner',
+      paperTitle: 'A Study',
+      paperPublicId: 'paper-id',
+      details: { reason: 'This Paper has been withdrawn.' },
+    });
+    expect(message.subject).toBe('A Paper was withdrawn');
+    expect(message.text).toContain('This Paper has been withdrawn.');
+    expect(message.text).not.toContain('internal reason');
+  });
+
   it('sends through Resend with the job id as its idempotency key', async () => {
     vi.stubEnv('DATABASE_URL', 'postgres://localhost/test');
     vi.stubEnv('RESEND_API_KEY', 'test-key');

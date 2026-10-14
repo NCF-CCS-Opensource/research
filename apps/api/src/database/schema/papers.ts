@@ -45,6 +45,8 @@ export const papers = pgTable('papers', {
   publicationStatus: paperPublicationStatusEnum('publication_status')
     .notNull()
     .default('unpublished'),
+  withdrawalReason: text('withdrawal_reason'),
+  publicWithdrawalNotice: text('public_withdrawal_notice'),
   currentVersionId: uuid('current_version_id'),
   createdAt: timestamp('created_at', { withTimezone: true })
     .notNull()

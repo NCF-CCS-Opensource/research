@@ -15,7 +15,8 @@ export async function GET(
   const parsed = getPublicPaperContract.response.safeParse(
     (await response.json())?.data,
   );
-  if (!parsed.success) return new Response("Paper not found", { status: 404 });
+  if (!parsed.success || parsed.data.withdrawn)
+    return new Response("Paper not found", { status: 404 });
   const siteOrigin = new URL(process.env.WEB_ORIGIN ?? "http://localhost:3000")
     .origin;
   const url = new URL(

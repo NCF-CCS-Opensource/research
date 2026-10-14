@@ -27,6 +27,8 @@ import {
   publishPaperContract,
   createLegacyDepositContract,
   publishLegacyDepositContract,
+  restorePaperContract,
+  withdrawPaperContract,
   type CreatePaperRequest,
   type CreateLegacyDepositRequest,
   type Paper,
@@ -83,6 +85,26 @@ export class PaperController {
     @Param('publicId') publicId: string,
   ) {
     return this.papers.publishLegacyDeposit(actor, publicId);
+  }
+
+  @Post(withdrawPaperContract.path)
+  withdraw(
+    @CurrentActor() actor: Actor,
+    @Param('publicId') publicId: string,
+    @Body(new ZodBody(withdrawPaperContract.request))
+    body: { reason: string; publicNotice: string },
+  ) {
+    return this.papers.withdraw(
+      actor,
+      publicId,
+      body.reason,
+      body.publicNotice,
+    );
+  }
+
+  @Post(restorePaperContract.path)
+  restore(@CurrentActor() actor: Actor, @Param('publicId') publicId: string) {
+    return this.papers.restore(actor, publicId);
   }
 
   @Get(listAdvisersContract.path)

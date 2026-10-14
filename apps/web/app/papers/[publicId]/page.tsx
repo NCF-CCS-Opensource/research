@@ -12,6 +12,7 @@ import { PaperDecision } from "../adviser-queue/paper-decision";
 import { CitationActions } from "./citation-actions";
 import { publishLegacyDeposit } from "../legacy-deposit/actions";
 import { AccessPanel } from "./access-panel";
+import { restorePaper, withdrawPaper } from "../management-actions";
 
 export const dynamic = "force-dynamic";
 
@@ -29,6 +30,33 @@ export default async function PaperPage({
       (await publicResponse.json())?.data,
     );
     if (paper.success) {
+      const identity = await getCurrentIdentity().catch(() => null);
+      const coordinator =
+        identity?.state === "active" && identity.account.role === "COORDINATOR";
+      if (paper.data.withdrawn) {
+        return (
+          <main style={{ padding: "2rem", display: "grid", gap: "1rem" }}>
+            <h1>{paper.data.title}</h1>
+            <p>
+              {paper.data.authors
+                .map((author) => author.displayName)
+                .join(", ")}
+            </p>
+            <p>Year: {paper.data.year}</p>
+            <p role="status">{paper.data.withdrawalNotice}</p>
+            {coordinator && (
+              <form action={restorePaper}>
+                <input type="hidden" name="publicId" value={publicId} />
+                <label>
+                  <input type="checkbox" name="confirm" value="yes" required />I
+                  confirm restoration of this Paper.
+                </label>
+                <button type="submit">Restore Paper</button>
+              </form>
+            )}
+          </main>
+        );
+      }
       const siteOrigin = new URL(
         process.env.WEB_ORIGIN ?? "http://localhost:3000",
       ).origin;
@@ -49,6 +77,24 @@ export default async function PaperPage({
       return (
         <main style={{ padding: "2rem", display: "grid", gap: "1rem" }}>
           <h1>{paper.data.title}</h1>
+          {coordinator && (
+            <form action={withdrawPaper}>
+              <input type="hidden" name="publicId" value={publicId} />
+              <label>
+                Internal reason
+                <textarea name="reason" required maxLength={2000} />
+              </label>
+              <label>
+                Public notice
+                <textarea name="publicNotice" required maxLength={1000} />
+              </label>
+              <label>
+                <input type="checkbox" name="confirm" value="yes" required />I
+                confirm withdrawal of this Paper.
+              </label>
+              <button type="submit">Withdraw Paper</button>
+            </form>
+          )}
           <CitationActions paper={paper.data} url={canonicalUrl} />
           <p>
             {paper.data.authors.map((author) => author.displayName).join(", ")}
