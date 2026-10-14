@@ -1,45 +1,20 @@
-import { describe, expect, it } from "vitest"
-import { validateEnv } from "./env"
+import { validateEnv } from './env.js';
 
-describe("validateEnv", () => {
-  it("returns parsed environment when valid", () => {
-    const env = validateEnv({
-      DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/research",
-      PORT: "3001",
-      NODE_ENV: "test",
-      CLERK_SECRET_KEY: "sk_test_secret",
-    })
-    expect(env.DATABASE_URL).toBe(
-      "postgresql://postgres:postgres@localhost:5432/research"
-    )
-    expect(env.PORT).toBe(3001)
-    expect(env.NODE_ENV).toBe("test")
-  })
+const DATABASE_URL = 'postgresql://postgres:postgres@localhost:5432/research';
 
-  it("throws when DATABASE_URL is missing", () => {
-    expect(() =>
-      validateEnv({
-        PORT: "3001",
-        CLERK_SECRET_KEY: "sk_test_secret",
-      })
-    ).toThrowError(/DATABASE_URL is required/)
-  })
+describe('validateEnv', () => {
+  it('parses valid configuration and applies defaults', () => {
+    const env = validateEnv({ DATABASE_URL });
+    expect(env.DATABASE_URL).toBe(DATABASE_URL);
+    expect(env.PORT).toBe(3001);
+    expect(env.WEB_ORIGIN).toBe('http://localhost:3000');
+  });
 
-  it("throws when CLERK_SECRET_KEY is missing", () => {
-    expect(() =>
-      validateEnv({
-        DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/research",
-      })
-    ).toThrowError(/CLERK_SECRET_KEY is required/)
-  })
+  it('throws when DATABASE_URL is missing', () => {
+    expect(() => validateEnv({})).toThrow(/DATABASE_URL/);
+  });
 
-  it("applies defaults for optional values", () => {
-    const env = validateEnv({
-      DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/research",
-      CLERK_SECRET_KEY: "sk_test_secret",
-    })
-    expect(env.PORT).toBe(3001)
-    expect(env.NODE_ENV).toBe("development")
-    expect(env.WEB_ORIGIN).toBe("http://localhost:3000")
-  })
-})
+  it('throws when PORT is not a number', () => {
+    expect(() => validateEnv({ DATABASE_URL, PORT: 'abc' })).toThrow(/PORT/);
+  });
+});

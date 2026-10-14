@@ -1,4 +1,3 @@
-ALTER TABLE "programs" ADD COLUMN "is_active" boolean DEFAULT true NOT NULL;
 CREATE TABLE "settings" (
 	"id" smallint PRIMARY KEY DEFAULT 1 NOT NULL,
 	"default_access_grant_days" integer DEFAULT 7 NOT NULL,
@@ -16,15 +15,6 @@ CREATE TABLE "deposit_notices" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"version" serial NOT NULL UNIQUE,
 	"text" text NOT NULL,
-	"published_by" uuid NOT NULL REFERENCES "profiles"("id"),
+	"published_by" uuid NOT NULL REFERENCES "accounts"("id"),
 	"published_at" timestamptz DEFAULT now() NOT NULL
-);
-CREATE TABLE "audit_events" (
-	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
-	"actor_profile_id" uuid NOT NULL REFERENCES "profiles"("id"),
-	"action" text NOT NULL,
-	"entity_id" text NOT NULL,
-	"old_value" jsonb,
-	"new_value" jsonb,
-	"created_at" timestamptz DEFAULT now() NOT NULL
 );

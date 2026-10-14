@@ -3,41 +3,34 @@ import {
   Inject,
   Module,
   type OnApplicationShutdown,
-} from "@nestjs/common"
-import { drizzle } from "drizzle-orm/postgres-js"
-import postgres from "postgres"
-import { validateEnv } from "../config/env"
-import * as schema from "./schema"
+} from '@nestjs/common';
+import { drizzle } from 'drizzle-orm/postgres-js';
+import postgres from 'postgres';
+import { validateEnv } from '../config/env.js';
+import * as schema from './schema/index.js';
 
-export const DATABASE_CONNECTION = Symbol("DATABASE_CONNECTION")
-export const POSTGRES_CLIENT = Symbol("POSTGRES_CLIENT")
+export const POSTGRES = Symbol('POSTGRES');
+export const DATABASE = Symbol('DATABASE');
 
 @Global()
 @Module({
   providers: [
     {
-      provide: POSTGRES_CLIENT,
-      useFactory: () => {
-        const env = validateEnv()
-        return postgres(env.DATABASE_URL, { max: 10 })
-      },
+      provide: POSTGRES,
+      useFactory: () => postgres(validateEnv().DATABASE_URL, { max: 10 }),
     },
     {
-      provide: DATABASE_CONNECTION,
-      inject: [POSTGRES_CLIENT],
-      useFactory: (client: postgres.Sql) => {
-        return drizzle(client, { schema })
-      },
+      provide: DATABASE,
+      inject: [POSTGRES],
+      useFactory: (client: postgres.Sql) => drizzle(client, { schema }),
     },
   ],
-  exports: [DATABASE_CONNECTION, POSTGRES_CLIENT],
+  exports: [DATABASE],
 })
 export class DatabaseModule implements OnApplicationShutdown {
-  constructor(
-    @Inject(POSTGRES_CLIENT) private readonly client: postgres.Sql
-  ) {}
+  constructor(@Inject(POSTGRES) private readonly client: postgres.Sql) {}
 
   async onApplicationShutdown() {
-    await this.client.end()
+    await this.client.end();
   }
 }

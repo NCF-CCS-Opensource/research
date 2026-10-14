@@ -1,15 +1,16 @@
-import swc from "unplugin-swc"
-import { defineConfig } from "vitest/config"
+import { existsSync } from 'node:fs';
+import { defineConfig } from 'vitest/config';
+import tsconfigPaths from 'vite-tsconfig-paths';
+
+// Local convenience: pick up apps/api/.env; CI sets DATABASE_URL directly.
+if (existsSync('.env')) process.loadEnvFile();
 
 export default defineConfig({
-  plugins: [
-    swc.vite({
-      tsconfigFile: "./tsconfig.json",
-    }),
-  ],
+  plugins: [tsconfigPaths()],
   test: {
-    include: ["src/**/*.spec.ts", "test/**/*.spec.ts"],
-    environment: "node",
-    fileParallelism: false,
+    globals: true,
+    root: './',
+    include: ['**/*.spec.ts'],
+    exclude: ['**/node_modules/**', 'dist/**'],
   },
-})
+});

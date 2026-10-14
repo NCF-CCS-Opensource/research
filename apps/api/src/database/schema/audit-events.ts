@@ -1,12 +1,15 @@
-import { jsonb, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core"
-import { profiles } from "./profiles"
+import { jsonb, pgTable, timestamp, uuid, varchar } from 'drizzle-orm/pg-core';
+import { accounts } from './accounts.js';
 
-export const auditEvents = pgTable("audit_events", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  actorProfileId: uuid("actor_profile_id").notNull().references(() => profiles.id),
-  action: text("action").notNull(),
-  entityId: text("entity_id").notNull(),
-  oldValue: jsonb("old_value"),
-  newValue: jsonb("new_value"),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-})
+/** Append-only: a database trigger rejects UPDATE and DELETE. */
+export const auditEvents = pgTable('audit_events', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  occurredAt: timestamp('occurred_at', { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  actorAccountId: uuid('actor_account_id').references(() => accounts.id),
+  action: varchar('action', { length: 100 }).notNull(),
+  subjectType: varchar('subject_type', { length: 100 }).notNull(),
+  subjectId: uuid('subject_id').notNull(),
+  details: jsonb('details'),
+});

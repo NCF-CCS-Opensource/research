@@ -1,0 +1,3 @@
+# Accept only openly licensed or public-domain Books
+
+Books are public to Guests, skip the Access Request flow, and can be downloaded, so the repository accepts only Books whose Licence allows free sharing: an open licence such as Creative Commons, or public domain. We considered purchased copies and PDFs that are merely downloadable somewhere, and rejected both. Buying a book does not grant the right to copy and redistribute it, and under RA 8293 the college, as host, would carry the infringement exposure. Each Book declares its Licence at upload, and a Coordinator checks it before publishing any upload that a Coordinator did not make.

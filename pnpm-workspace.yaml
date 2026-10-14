@@ -1,10 +1,7 @@
 packages:
-  - 'apps/*'
-  - 'packages/*'
+  - "apps/*"
+  - "packages/*"
 
 allowBuilds:
-  sharp: true
+  esbuild: false
   unrs-resolver: true
-  msw: false
-  '@swc/core': true
-  esbuild: true

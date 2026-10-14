@@ -1,0 +1,3 @@
+# Use Clerk for sign-in; the database owns roles and account status
+
+People sign in through Clerk, with Google or with a one-time code sent to their email, and admission is limited to the `gbox.ncf.edu.ph` and `ncf.edu.ph` domains. This replaces the PRD's own password, verification, recovery, and PostgreSQL session design (FR-AUTH-01 to FR-AUTH-08). The API verifies the Clerk session token on every request and loads the Account row, which stays the only authority for role and status, so a deactivation takes effect immediately. We accept a hosted identity dependency so that we do not build password storage and recovery flows; the pre-reset API (commit `f32a943`) used the same split.

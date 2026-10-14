@@ -1,12 +1,4 @@
-import {
-  Body,
-  Controller,
-  Get,
-  Param,
-  Patch,
-  Post,
-  UnauthorizedException,
-} from "@nestjs/common"
+import { Body, Controller, Get, Param, Patch, Post } from '@nestjs/common';
 import {
   createProgramContract,
   getCurrentDepositNoticeContract,
@@ -15,90 +7,79 @@ import {
   publishDepositNoticeContract,
   updateProgramContract,
   updateSettingsContract,
-} from "@repo/contracts"
-import type { UpdateSettingsRequest } from "@repo/contracts"
-import { CoordinatorOnly } from "../../common/decorators/coordinator-only.decorator"
-import {
-  CurrentIdentity,
-  type RequestIdentity,
-} from "../../common/decorators/current-identity.decorator"
-import { ZodValidationPipe } from "../../common/pipes/zod-validation.pipe"
-import { SettingsService } from "./settings.service"
+} from '@repo/contracts';
+import type { UpdateSettingsRequest } from '@repo/contracts';
+import { CurrentActor } from '../../common/current-actor.decorator.js';
+import { requireCoordinator, type Actor } from '../../shared/domain/actor.js';
+import { DomainError } from '../../shared/domain/domain-error.js';
+import { ZodBody } from '../../common/zod-body.pipe.js';
+import { SettingsService } from './settings.service.js';
 
 @Controller()
 export class SettingsController {
   constructor(private readonly service: SettingsService) {}
 
-  @CoordinatorOnly()
   @Get(getSettingsContract.path)
-  getSettings() {
-    return this.service.getSettings()
+  getSettings(@CurrentActor() actor: Actor) {
+    requireCoordinator(actor);
+    return this.service.getSettings();
   }
 
-  @CoordinatorOnly()
   @Patch(updateSettingsContract.path)
   updateSettings(
-    @CurrentIdentity() identity: RequestIdentity,
-    @Body(new ZodValidationPipe(updateSettingsContract.request))
-    body: UpdateSettingsRequest
+    @CurrentActor() actor: Actor,
+    @Body(new ZodBody(updateSettingsContract.request))
+    body: UpdateSettingsRequest,
   ) {
-    if (identity.state !== "active")
-      throw new UnauthorizedException("Authentication required")
-    return this.service.updateSettings(identity.profileId, body)
+    const account = requireCoordinator(actor);
+    return this.service.updateSettings(account.id, body);
   }
 
   @Get(getCurrentDepositNoticeContract.path)
-  currentNotice(@CurrentIdentity() identity: RequestIdentity) {
-    if (identity.state !== "active")
-      throw new UnauthorizedException("Active account required")
-    return this.service.currentDepositNotice()
+  currentNotice(@CurrentActor() actor: Actor) {
+    if (actor.kind !== 'active')
+      throw new DomainError(
+        'UNAUTHENTICATED',
+        'Sign in to continue.',
+        'unauthenticated',
+      );
+    return this.service.currentDepositNotice();
   }
 
-  @CoordinatorOnly()
   @Get(listDepositNoticesContract.path)
-  listNotices() {
-    return this.service.listDepositNotices()
+  listNotices(@CurrentActor() actor: Actor) {
+    requireCoordinator(actor);
+    return this.service.listDepositNotices();
   }
 
-  @CoordinatorOnly()
   @Post(publishDepositNoticeContract.path)
   publishNotice(
-    @CurrentIdentity() identity: RequestIdentity,
-    @Body(new ZodValidationPipe(publishDepositNoticeContract.request))
-    body: { text: string }
+    @CurrentActor() actor: Actor,
+    @Body(new ZodBody(publishDepositNoticeContract.request))
+    body: { text: string },
   ) {
-    if (identity.state !== "active")
-      throw new UnauthorizedException("Authentication required")
-    return this.service.publishDepositNotice(identity.profileId, body.text)
+    const account = requireCoordinator(actor);
+    return this.service.publishDepositNotice(account.id, body.text);
   }
 
-  @CoordinatorOnly()
   @Post(createProgramContract.path)
   createProgram(
-    @CurrentIdentity() identity: RequestIdentity,
-    @Body(new ZodValidationPipe(createProgramContract.request))
-    body: { name: string }
+    @CurrentActor() actor: Actor,
+    @Body(new ZodBody(createProgramContract.request))
+    body: { name: string },
   ) {
-    if (identity.state !== "active")
-      throw new UnauthorizedException("Authentication required")
-    return this.service.createProgram(identity.profileId, body.name)
+    const account = requireCoordinator(actor);
+    return this.service.createProgram(account.id, body.name);
   }
 
-  @CoordinatorOnly()
   @Patch(updateProgramContract.path)
   updateProgram(
-    @CurrentIdentity() identity: RequestIdentity,
-    @Param("programId") id: string,
-    @Body(new ZodValidationPipe(updateProgramContract.request))
-    body: { name: string; active: boolean }
+    @CurrentActor() actor: Actor,
+    @Param('programId') id: string,
+    @Body(new ZodBody(updateProgramContract.request))
+    body: { name: string; active: boolean },
   ) {
-    if (identity.state !== "active")
-      throw new UnauthorizedException("Authentication required")
-    return this.service.updateProgram(
-      identity.profileId,
-      id,
-      body.name,
-      body.active
-    )
+    const account = requireCoordinator(actor);
+    return this.service.updateProgram(account.id, id, body.name, body.active);
   }
 }

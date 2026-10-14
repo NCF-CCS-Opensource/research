@@ -1,43 +1,28 @@
-import Link from "next/link"
+import { currentUser } from "@clerk/nextjs/server";
+import { referenceDataContract } from "@repo/contracts";
+import { redirect } from "next/navigation";
+import { apiFetch, getCurrentIdentity } from "../../lib/backend";
+import { RegisterForm } from "./register-form";
 
-import { RegisterForm } from "@/components/forms/register-form"
-import { PublicShell } from "@/components/layout/public-shell"
-import { createServerSupabase } from "@/lib/supabase-server"
+export const dynamic = "force-dynamic";
 
 export default async function RegisterPage() {
-  const supabase = await createServerSupabase()
-  const [institutions, programs] = await Promise.all([
-    supabase.from("institutions").select("id,name").order("name"),
-    supabase.from("programs").select("id,name,institution_id").order("name"),
-  ])
+  const identity = await getCurrentIdentity();
+  if (identity.state === "guest") redirect("/sign-in");
+  if (identity.state !== "registering") redirect("/");
+
+  const res = await apiFetch(referenceDataContract.path);
+  if (!res.ok) throw new Error(`Reference data request failed: ${res.status}`);
+  const { programs } = referenceDataContract.response.parse(
+    await res.json(),
+  ).data;
+  const user = await currentUser();
 
   return (
-    <PublicShell>
-      <section className="mx-auto flex max-w-7xl justify-center px-4 py-12 sm:px-6 lg:px-8">
-        <div className="w-full max-w-2xl rounded-3xl border bg-card p-8 shadow-sm">
-          <h1 className="text-2xl font-semibold tracking-tight">
-            Create Account
-          </h1>
-          <p className="mt-2 text-sm text-muted-foreground">
-            Add your account and Profile details in one Registration.
-          </p>
-          <div className="mt-6">
-            <RegisterForm
-              institutions={institutions.data ?? []}
-              programs={programs.data ?? []}
-            />
-          </div>
-          <p className="mt-6 text-sm text-muted-foreground">
-            Already registered?{" "}
-            <Link
-              href="/login"
-              className="font-medium text-foreground hover:text-primary"
-            >
-              Sign in
-            </Link>
-          </p>
-        </div>
-      </section>
-    </PublicShell>
-  )
+    <main style={{ padding: "2rem" }}>
+      <h1>Register</h1>
+      <p>Signed in as {identity.email}.</p>
+      <RegisterForm defaultName={user?.fullName ?? ""} programs={programs} />
+    </main>
+  );
 }

@@ -1,0 +1,3 @@
+# Use Drizzle and shared Zod contracts instead of Prisma and OpenAPI
+
+The API uses Drizzle with the `postgres` driver, and one shared Zod contracts package types and validates every endpoint for both apps. This replaces the PRD's proposed Prisma and generated OpenAPI. The design depends on row locks, `SKIP LOCKED` job claims, partial unique indexes, and `tsvector` search: Drizzle expresses these directly, while Prisma needs raw SQL for locks and `tsvector`. The pre-reset API (commit `f32a943`) already used this stack, so we port its foundation instead of rewriting it. Add OpenAPI only when an outside consumer needs it.

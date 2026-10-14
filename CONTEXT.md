@@ -1,129 +1,119 @@
-# NCF Research Nexus
+# CCS Research Repository
 
-NCF Research Nexus supports public research discovery, authenticated research sharing, owner-controlled PDF access, and administrative moderation.
+The College of Computer Studies' repository for depositing, publishing, and citing student research, with controlled reading of each Paper's full text. It also hosts openly licensed Books that anyone can read and download.
 
 ## Language
 
-**Auth Boundary**:
-The rule that trusted server-side components are the authority for authentication and authorization; client session state and roles are only hints for routing and presentation.
-_Avoid_: Frontend auth enforcement, client-side permissions
-
-**Direct Object Upload**:
-The upload model where a trusted server-side component creates metadata and issues a presigned storage URL, while the client sends file bytes directly to object storage and then confirms completion.
-_Avoid_: Backend-proxied upload, multipart research upload
-
-**Research PDF**:
-The PDF file attached by an owner to a research record. Its metadata remains public, but download is limited to the owner, an admin with Moderation Access, or a user with a PDF Access Grant.
-_Avoid_: Private PDF, public PDF, uploaded paper
-
-**PDF Replacement**:
-An owner's attachment of a different research PDF to an existing research record. It resets Approval to pending, closes pending PDF Access Requests, and revokes PDF Access Grants for the replaced file.
-_Avoid_: PDF edit, file update, grant transfer
-
-**PDF Access Request**:
-A User's request to download the Research PDF of an approved Research Record with a Completed Upload, which the Owner approves or rejects after notification. Admins may see anonymous aggregate request counts and trends, but not individual requests, Request Notes, or Requester Identities. Only one request may be pending per User and Research PDF; the requester may cancel it, and another attempt after cancellation, rejection, or revocation requires a 24-hour cooldown.
-_Avoid_: PDF message, public PDF request, partial PDF request
-
-**Request Note**:
-The single required plain-text explanation attached to a PDF Access Request, trimmed to 1–1,000 characters. It gives the owner context for the decision but does not start a conversation.
-_Avoid_: Message, chat, reply, conversation
-
-**Requester Identity**:
-The requester's full name and optional Program, shown to the Owner with a PDF Access Request. The requester's email address remains hidden.
-_Avoid_: Contact details, requester email, anonymous request
-
-**PDF Access Grant**:
-An owner's persistent permission for one authenticated requester to download one research PDF. Approval creates the grant, which may be used repeatedly until the owner revokes it; each download still requires authentication and increments the research record's download count.
-_Avoid_: Download link, emailed PDF access, permanent URL
-
-**PDF Access Notification**:
-An in-app notice to the owner when a PDF Access Request arrives or to the requester when access is approved, rejected, or revoked. Email may repeat the notice for convenience but carries no Request Note, Requester Identity, or download URL.
-_Avoid_: Email grant, download email, access link
-
-**Moderation Notification**:
-An in-app notice to the Owner when an Admin approves or rejects their Research Record. Email may repeat the notice for convenience.
-_Avoid_: Approval email, rejection email
-
-**Moderation Access**:
-An admin's authority to download a research PDF solely to moderate its research record, without a PDF Access Request or PDF Access Grant. Every moderation download is recorded in the Audit Log.
-_Avoid_: Owner approval, public PDF access, admin PDF grant
+### People and roles
 
 **Guest**:
-An unauthenticated visitor who may browse public research metadata but cannot submit a PDF Access Request. Guest is a browsing state, not an account role.
-_Avoid_: Guest account, guest role, anonymous user
+A visitor who is not signed in. Guest is a browsing state, not a role.
+_Avoid_: anonymous user, guest account, guest role
 
-**NCF Google Account**:
-A Google account on the student domain `gbox.ncf.edu.ph` or the faculty and employee domain `ncf.edu.ph`. It is the only kind of account that may complete Registration, and its domain does not change what a User may do.
-_Avoid_: Any Google account, personal Gmail
+**Account**:
+An admitted NCF person's record in the repository, holding their role, status, and Program.
+_Avoid_: User, Profile, member
 
 **Registration**:
-A person's first sign-in with an NCF Google Account followed by saving their complete Profile details. The person becomes a User only when the Profile is saved; there is no separate email confirmation.
-_Avoid_: Onboarding, profile completion, sign-up
-
-**Profile**:
-A User's personal details: full name, the email address of their NCF Google Account, and an optional Program. Registration saves the first complete Profile.
-_Avoid_: Account, user record
+The first sign-in, which creates a person's Account.
+_Avoid_: sign-up, onboarding, profile completion
 
 **Program**:
-An NCF academic program from the list Admins maintain. A Profile may reference one Program; free-text Programs are not allowed.
-_Avoid_: Course, custom program
+An NCF degree program, such as BS Computer Science, chosen from the list Coordinators maintain.
+_Avoid_: course, department, major
 
-**User**:
-A person who completed Registration and can authenticate, upload a research record, and submit a PDF Access Request for another owner's research PDF.
-_Avoid_: Guest, visitor, unregistered account
+**Student**:
+The role of every Account with an NCF student email.
+_Avoid_: learner, user
 
-**Active Account**:
-A registered account whose administrative status permits authentication and normal User activity. It does not mean the User has logged in or interacted recently.
-_Avoid_: Active User, monthly active user, recent visitor
+**Instructor**:
+The role of every Account with an NCF employee email, whether or not the person teaches. Instructors can be selected as Advisers.
+_Avoid_: faculty, staff, teacher
 
-**Admin**:
-An authenticated User with authority to moderate Research Records and exercise audited Moderation Access. An Admin may separately be an Owner and switch to their personal research workspace; administrative and personal analytics remain distinct.
-_Avoid_: Owner-only role, moderator account
+**Coordinator**:
+The staff role with authority over the whole repository, including publication, withdrawal, accounts, settings, and access decisions on any Paper. The dean and delegates such as the research coordinator hold it with equal powers.
+_Avoid_: Dean (as a role name), Admin, administrator
+
+**Adviser**:
+The Instructor or Coordinator a student selects for a Paper. The Adviser endorses the Paper's deposit and decides its Access Requests.
+_Avoid_: assigned instructor, reviewer, supervising instructor, panelist
 
 **Owner**:
-The authenticated user who uploaded a research record and is stored as its uploader; ownership is separate from bibliographic authorship.
-_Avoid_: Author, creator
+The Account that manages a Paper's deposit or uploaded a Book. A Paper's Owner is the depositing student, or a Coordinator for a Legacy Deposit. Ownership is separate from authorship.
+_Avoid_: Author, uploader, creator
 
 **Author**:
-A bibliographic person credited on a research paper; an author is not necessarily a system user or the owner of the uploaded record.
-_Avoid_: Owner, uploader
+A person or organisation credited on a Paper's or Book's byline. An Author need not have an Account and gains no permissions from authorship.
+_Avoid_: Owner, coauthor account
 
-**Approval**:
-The moderation decision that makes a research record eligible for public discovery; owners and admins can still see non-approved records in their private workflows.
-_Avoid_: Upload completion, publication
+### Deposit and publication
 
-**Rejection Reason**:
-The required explanation an Admin gives when rejecting a Research Record, visible to its Owner and to Admins.
-_Avoid_: Rejection note, feedback, comment
+**Paper**:
+A deposited student research work, such as a thesis or capstone report, with a stable public ID and restricted full text.
+_Avoid_: Research Record, research, submission, upload
 
-**Research Record**:
-The metadata entity created for a paper before or after its PDF file is uploaded; it can exist without a completed file upload.
-_Avoid_: Uploaded paper, PDF
+**Research Type**:
+The kind of Paper: thesis, capstone, research paper, or project report.
+_Avoid_: category, document type
 
-**Completed Upload**:
-The state after a direct object upload succeeds and a trusted server-side component confirms the file exists in storage.
-_Avoid_: Metadata creation, approval
+**Year**:
+The year a Paper's work was completed, or the year a Book's edition was published. It is used in citations and browsing, and is separate from the date of Publication.
+_Avoid_: research year, academic year, publication date
 
-**Ready for Moderation**:
-A pending Research Record with a Completed Upload that an Admin can approve or reject. A pending record with an incomplete upload still requires Owner action and is not part of the Admin moderation queue.
-_Avoid_: All pending records, stalled upload, pending approval
+**Legacy Deposit**:
+A Paper that a Coordinator deposits and publishes without Endorsement, for Authors who have left the college.
+_Avoid_: import, backfill, migration
 
-**Collection**:
-A user's private saved-paper list containing references to research records; removing an item from a collection does not affect the research record.
-_Avoid_: Public folder, curated playlist, citation library
+**Deposit Notice**:
+The statement an Owner acknowledges before submitting a Paper, confirming they may deposit it. Each wording is a new version, and each acknowledgement keeps the version it accepted.
+_Avoid_: deposit agreement, terms
 
-**Engagement Count**:
-A Research Record's cumulative number of Research Views, authorized downloads, or Citation Exports. Passive renders and Owner downloads are excluded; Moderation Access belongs only in the Audit Log.
-_Avoid_: Analytics Event, trend history, page prefetch
+**Endorsement**:
+The Adviser's confirmation that a submitted Paper is the defended, approved final manuscript with correct details.
+_Avoid_: approval, review, peer review
 
-**Research View**:
-An opening of an approved Research Record's detail page. Repeat openings count separately; the measure does not identify unique visitors or claim audience reach.
-_Avoid_: Unique visitor, reach, search-result impression
+**Revision Request**:
+The return of a submitted Paper to its Owner for changes, with a reason, by its Adviser or a Coordinator.
+_Avoid_: rejection, change request
+
+**Rejection**:
+A final refusal to publish a submitted Paper or Book. The Owner of a rejected Paper may start a new Paper instead.
+_Avoid_: revision request, decline, denial
+
+**Publication**:
+A Coordinator's decision that makes a Paper or Book visible. For a Paper it normally follows Endorsement.
+_Avoid_: approval, moderation, publishing approval
+
+**Withdrawal**:
+A Coordinator's removal of a published Paper or Book from the catalog. A withdrawn Paper keeps a citation notice at its address, and restoring reverses a Withdrawal.
+_Avoid_: deletion, takedown, unpublish
+
+### Reading access
+
+**Access Request**:
+An Account's request to read a published Paper's full text, decided by the Paper's Adviser or a Coordinator.
+_Avoid_: PDF access request, download request
+
+**Access Grant**:
+Time-limited permission for one Account to read one Paper's full text, created when an Access Request is approved.
+_Avoid_: download link, PDF access grant, permanent access
+
+**Denial**:
+The refusal of an Access Request, with a reason the requester sees.
+_Avoid_: rejection, decline
+
+### Books
+
+**Book**:
+An openly licensed or public-domain book of any subject, which anyone, Guests included, can read in full and download without an Access Request. Books can be cited like Papers.
+_Avoid_: e-book, reference material, library item
+
+**Licence**:
+The open licence, or public-domain status, that lets a Book be shared freely. Every Book declares one.
+_Avoid_: rights basis, permission, copyright
+
+### Citation
 
 **Citation Export**:
-A successful copy or BibTeX download of a Research Record's generated citation. It measures citation intent, not a confirmed citation in another work.
-_Avoid_: Citation, citation impact, academic citation
-
-**Engagement Trend**:
-A daily, anonymous aggregate of Research Views, authorized downloads, and Citation Exports for a Research Record, used to compare activity over 30- or 90-day periods without identifying viewers.
-_Avoid_: Viewer history, raw clickstream, individual tracking
+A copy or BibTeX download of a generated citation. It shows intent to cite, not a confirmed citation.
+_Avoid_: citation, citation count

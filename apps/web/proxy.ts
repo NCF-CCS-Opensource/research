@@ -1,13 +1,11 @@
-import type { NextRequest } from "next/server"
+import { clerkMiddleware } from "@clerk/nextjs/server";
 
-import { updateSession } from "@/lib/supabase-proxy"
-
-export async function proxy(request: NextRequest) {
-  return updateSession(request)
-}
+// Sign-in is enforced by the API; this only makes the Clerk session available.
+export default clerkMiddleware();
 
 export const config = {
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    "/((?!_next|[^?]*[.](?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)",
+    "/(api|trpc)(.*)",
   ],
-}
+};

@@ -1,7 +1,5 @@
 CREATE TYPE "public"."paper_status" AS ENUM('draft', 'submitted');--> statement-breakpoint
-CREATE TYPE "public"."research_type" AS ENUM('quantitative', 'qualitative', 'mixed_methods', 'developmental');--> statement-breakpoint
-ALTER TYPE "public"."account_role" ADD VALUE 'instructor';--> statement-breakpoint
-ALTER TYPE "public"."account_role" ADD VALUE 'coordinator';--> statement-breakpoint
+CREATE TYPE "public"."research_type" AS ENUM('THESIS', 'CAPSTONE', 'RESEARCH_PAPER', 'PROJECT_REPORT');--> statement-breakpoint
 CREATE TABLE "paper_versions" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"paper_id" uuid NOT NULL,
@@ -29,6 +27,6 @@ CREATE TABLE "papers" (
 );
 --> statement-breakpoint
 ALTER TABLE "paper_versions" ADD CONSTRAINT "paper_versions_paper_id_papers_id_fk" FOREIGN KEY ("paper_id") REFERENCES "public"."papers"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "papers" ADD CONSTRAINT "papers_owner_id_profiles_id_fk" FOREIGN KEY ("owner_id") REFERENCES "public"."profiles"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "papers" ADD CONSTRAINT "papers_adviser_id_profiles_id_fk" FOREIGN KEY ("adviser_id") REFERENCES "public"."profiles"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "papers" ADD CONSTRAINT "papers_owner_id_accounts_id_fk" FOREIGN KEY ("owner_id") REFERENCES "public"."accounts"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "papers" ADD CONSTRAINT "papers_adviser_id_accounts_id_fk" FOREIGN KEY ("adviser_id") REFERENCES "public"."accounts"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "papers" ADD CONSTRAINT "papers_program_id_programs_id_fk" FOREIGN KEY ("program_id") REFERENCES "public"."programs"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint

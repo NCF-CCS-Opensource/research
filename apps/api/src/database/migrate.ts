@@ -1,34 +1,23 @@
-import path from "node:path"
-import { fileURLToPath } from "node:url"
-import { drizzle } from "drizzle-orm/postgres-js"
-import { migrate } from "drizzle-orm/postgres-js/migrator"
-import postgres from "postgres"
+import { fileURLToPath } from 'node:url';
+import { drizzle } from 'drizzle-orm/postgres-js';
+import { migrate } from 'drizzle-orm/postgres-js/migrator';
+import postgres from 'postgres';
+import { validateEnv } from '../config/env.js';
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url))
-
-export async function runMigrations(connectionString?: string) {
-  const url = connectionString || process.env.DATABASE_URL
-  if (!url) {
-    throw new Error(
-      "DATABASE_URL is required to run migrations. Please provide it in the environment."
-    )
+export async function runMigrations(url = validateEnv().DATABASE_URL) {
+  const client = postgres(url, { max: 1 });
+  try {
+    await migrate(drizzle(client), {
+      migrationsFolder: fileURLToPath(
+        new URL('../../drizzle', import.meta.url),
+      ),
+    });
+  } finally {
+    await client.end();
   }
-
-  const client = postgres(url, { max: 1 })
-  const db = drizzle(client)
-
-  const migrationsFolder = path.resolve(__dirname, "../../drizzle")
-  await migrate(db, { migrationsFolder })
-  await client.end()
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
-  try {
-    await runMigrations()
-    console.log("Migrations applied successfully.")
-    process.exit(0)
-  } catch (err) {
-    console.error("Migration failed:", err)
-    process.exit(1)
-  }
+  await runMigrations();
+  console.log('Migrations applied.');
 }

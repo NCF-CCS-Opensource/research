@@ -1,29 +1,39 @@
-import { Module } from "@nestjs/common"
-import { APP_FILTER, APP_GUARD, APP_PIPE } from "@nestjs/core"
-import { ApiExceptionFilter } from "./common/filters/api-exception.filter"
-import { GlobalAuthGuard } from "./common/guards/auth.guard"
-import { ZodValidationPipe } from "./common/pipes/zod-validation.pipe"
-import { DatabaseModule } from "./database/database.module"
-import { AccountModule } from "./modules/account/account.module"
-import { TaxonomyModule } from "./modules/taxonomy/taxonomy.module"
-import { PaperModule } from "./modules/paper/paper.module"
-import { SettingsModule } from "./modules/settings/settings.module"
+import {
+  type MiddlewareConsumer,
+  Module,
+  type NestModule,
+} from '@nestjs/common';
+import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
+import { AuthGuard } from './common/auth.guard.js';
+import { EnvelopeInterceptor } from './common/envelope.interceptor.js';
+import { ErrorEnvelopeFilter } from './common/error-envelope.filter.js';
+import { requestId } from './common/request-id.middleware.js';
+import { DatabaseModule } from './database/database.module.js';
+import { AccountsModule } from './modules/accounts/accounts.module.js';
+import { AuditModule } from './modules/audit/audit.module.js';
+import { HealthModule } from './modules/health/health.module.js';
+import { ReferenceDataModule } from './modules/reference-data/reference-data.module.js';
+import { PaperModule } from './modules/paper/paper.module.js';
+import { SettingsModule } from './modules/settings/settings.module.js';
 
 @Module({
-  imports: [DatabaseModule, TaxonomyModule, AccountModule, PaperModule, SettingsModule],
+  imports: [
+    DatabaseModule,
+    AccountsModule,
+    AuditModule,
+    ReferenceDataModule,
+    HealthModule,
+    PaperModule,
+    SettingsModule,
+  ],
   providers: [
-    {
-      provide: APP_GUARD,
-      useClass: GlobalAuthGuard,
-    },
-    {
-      provide: APP_FILTER,
-      useClass: ApiExceptionFilter,
-    },
-    {
-      provide: APP_PIPE,
-      useClass: ZodValidationPipe,
-    },
+    { provide: APP_GUARD, useClass: AuthGuard },
+    { provide: APP_INTERCEPTOR, useClass: EnvelopeInterceptor },
+    { provide: APP_FILTER, useClass: ErrorEnvelopeFilter },
   ],
 })
-export class AppModule {}
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer) {
+    consumer.apply(requestId).forRoutes('*path');
+  }
+}

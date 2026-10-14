@@ -6,7 +6,7 @@ import {
   Param,
   Patch,
   Post,
-} from "@nestjs/common"
+} from '@nestjs/common';
 import {
   createPaperContract,
   deletePaperContract,
@@ -17,13 +17,11 @@ import {
   type CreatePaperRequest,
   type Paper,
   type UpdatePaperRequest,
-} from "@repo/contracts"
-import {
-  CurrentIdentity,
-  type RequestIdentity,
-} from "../../common/decorators/current-identity.decorator"
-import { ZodValidationPipe } from "../../common/pipes/zod-validation.pipe"
-import { PaperUseCases } from "./paper.use-cases"
+} from '@repo/contracts';
+import { CurrentActor } from '../../common/current-actor.decorator.js';
+import type { Actor } from '../../shared/domain/actor.js';
+import { ZodBody } from '../../common/zod-body.pipe.js';
+import { PaperUseCases } from './paper.use-cases.js';
 
 @Controller()
 export class PaperController {
@@ -31,46 +29,43 @@ export class PaperController {
 
   @Get(listAdvisersContract.path)
   listAdvisers() {
-    return this.papers.listAdvisers()
+    return this.papers.listAdvisers();
   }
 
   @Post(createPaperContract.path)
   create(
-    @CurrentIdentity() identity: RequestIdentity,
-    @Body(new ZodValidationPipe(createPaperContract.request))
-    input: CreatePaperRequest
+    @CurrentActor() identity: Actor,
+    @Body(new ZodBody(createPaperContract.request))
+    input: CreatePaperRequest,
   ): Promise<Paper> {
-    return this.papers.create(identity, input)
+    return this.papers.create(identity, input);
   }
 
   @Get(listMyPapersContract.path)
-  listMine(@CurrentIdentity() identity: RequestIdentity) {
-    return this.papers.listMine(identity)
+  listMine(@CurrentActor() identity: Actor) {
+    return this.papers.listMine(identity);
   }
 
   @Get(getPaperContract.path)
   get(
-    @CurrentIdentity() identity: RequestIdentity,
-    @Param("publicId") publicId: string
+    @CurrentActor() identity: Actor,
+    @Param('publicId') publicId: string,
   ): Promise<Paper> {
-    return this.papers.get(identity, publicId)
+    return this.papers.get(identity, publicId);
   }
 
   @Patch(updatePaperContract.path)
   update(
-    @CurrentIdentity() identity: RequestIdentity,
-    @Param("publicId") publicId: string,
-    @Body(new ZodValidationPipe(updatePaperContract.request))
-    input: UpdatePaperRequest
+    @CurrentActor() identity: Actor,
+    @Param('publicId') publicId: string,
+    @Body(new ZodBody(updatePaperContract.request))
+    input: UpdatePaperRequest,
   ): Promise<Paper> {
-    return this.papers.update(identity, publicId, input)
+    return this.papers.update(identity, publicId, input);
   }
 
   @Delete(deletePaperContract.path)
-  delete(
-    @CurrentIdentity() identity: RequestIdentity,
-    @Param("publicId") publicId: string
-  ) {
-    return this.papers.delete(identity, publicId)
+  delete(@CurrentActor() identity: Actor, @Param('publicId') publicId: string) {
+    return this.papers.delete(identity, publicId);
   }
 }

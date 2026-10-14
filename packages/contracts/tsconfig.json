@@ -1,7 +1,16 @@
 {
-  "extends": "@repo/tsconfig/base.json",
   "compilerOptions": {
-    "rootDir": "src"
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+    "target": "ES2023",
+    "strict": true,
+    "declaration": true,
+    "isolatedModules": true,
+    "skipLibCheck": true,
+    "rootDir": "src",
+    "outDir": "dist",
+    "types": []
   },
-  "include": ["src/**/*"]
+  "include": ["src"],
+  "exclude": ["src/**/*.spec.ts"]
 }

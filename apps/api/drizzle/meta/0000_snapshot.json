@@ -1,11 +1,11 @@
 {
-  "id": "c2096c99-44bd-4730-9d24-50a078ab7390",
+  "id": "e01bbed7-432c-4fba-a8c4-7928ffabcd25",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
-    "public.categories": {
-      "name": "categories",
+    "public.programs": {
+      "name": "programs",
       "schema": "",
       "columns": {
         "id": {
@@ -20,14 +20,21 @@
           "type": "varchar(255)",
           "primaryKey": false,
           "notNull": true
+        },
+        "active": {
+          "name": "active",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
         }
       },
       "indexes": {},
       "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {
-        "categories_name_unique": {
-          "name": "categories_name_unique",
+        "programs_name_unique": {
+          "name": "programs_name_unique",
           "nullsNotDistinct": false,
           "columns": [
             "name"
