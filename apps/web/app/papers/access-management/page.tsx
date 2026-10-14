@@ -29,6 +29,9 @@ export default async function AccessManagementPage() {
                 {request.program ? ` — ${request.program}` : ""}
               </p>
               <p>{request.purpose}</p>
+              <p>
+                Request expires {new Date(request.expiresAt).toLocaleString()}
+              </p>
               {request.earlierDecisions.length > 0 && (
                 <details>
                   <summary>Earlier decisions on this Paper</summary>
