@@ -225,6 +225,7 @@ export class PaperUseCases {
       adviserId: row.paper.adviserId,
       programId: row.paper.programId,
       status: row.paper.status,
+      publicationStatus: row.paper.publicationStatus,
       authors: row.version.authors as Paper['authors'],
     };
   }

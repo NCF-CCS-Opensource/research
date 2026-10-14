@@ -9,7 +9,12 @@ import type { Request } from 'express';
 import { IdentityResolver } from '../modules/accounts/application/identity-resolver.js';
 import { GUEST, type Actor } from '../shared/domain/actor.js';
 import { DomainError } from '../shared/domain/domain-error.js';
-import { ACCESS, type Access } from './public.decorator.js';
+import { validateEnv } from '../config/env.js';
+import {
+  ACCESS,
+  SESSION_COOKIE_ACCESS,
+  type Access,
+} from './public.decorator.js';
 
 export type ActorRequest = Request & { actor: Actor };
 
@@ -36,7 +41,18 @@ export class AuthGuard implements CanActivate {
     }
 
     const match = /^Bearer (.+)$/.exec(req.headers.authorization ?? '');
-    const actor = (req.actor = await this.identities.resolve(match?.[1]));
+    const acceptsCookie = this.reflector.getAllAndOverride<boolean>(
+      SESSION_COOKIE_ACCESS,
+      [context.getHandler(), context.getClass()],
+    );
+    const token =
+      match?.[1] ??
+      (acceptsCookie &&
+      req.method === 'GET' &&
+      req.headers.origin === validateEnv().WEB_ORIGIN
+        ? sessionCookie(req.headers.cookie)
+        : undefined);
+    const actor = (req.actor = await this.identities.resolve(token));
     if (access === 'any-identity') return true;
 
     switch (actor.kind) {
@@ -63,5 +79,18 @@ export class AuthGuard implements CanActivate {
           'conflict',
         );
     }
+  }
+}
+
+function sessionCookie(header: string | undefined): string | undefined {
+  const values = (header ?? '').split(';').flatMap((part) => {
+    const [name, ...rest] = part.trim().split('=');
+    return name === '__session' ? [rest.join('=')] : [];
+  });
+  if (values.length !== 1 || !values[0]) return undefined;
+  try {
+    return decodeURIComponent(values[0]);
+  } catch {
+    return undefined;
   }
 }

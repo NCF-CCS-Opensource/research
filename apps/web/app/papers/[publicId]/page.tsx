@@ -1,4 +1,5 @@
 import { getPaperContract } from "@repo/contracts";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { apiFetch } from "../../../lib/backend";
 import { PaperFileUpload } from "./paper-file-upload";
@@ -22,6 +23,12 @@ export default async function PaperDraftPage({
   return (
     <main style={{ padding: "2rem", display: "grid", gap: "1.5rem" }}>
       <h1>{parsed.data.title}</h1>
+      <Link
+        prefetch={false}
+        href={`/papers/${encodeURIComponent(publicId)}/read`}
+      >
+        Read PDF
+      </Link>
       <PaperFileUpload publicId={publicId} />
     </main>
   );

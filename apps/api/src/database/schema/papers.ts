@@ -13,6 +13,11 @@ import { programs } from './programs.js';
 import { RESEARCH_TYPE_VALUES } from '@repo/contracts';
 
 export const paperStatusEnum = pgEnum('paper_status', ['draft', 'submitted']);
+export const paperPublicationStatusEnum = pgEnum('paper_publication_status', [
+  'unpublished',
+  'published',
+  'withdrawn',
+]);
 export const researchTypeEnum = pgEnum('research_type', RESEARCH_TYPE_VALUES);
 
 export const papers = pgTable('papers', {
@@ -28,6 +33,9 @@ export const papers = pgTable('papers', {
     .notNull()
     .references(() => programs.id),
   status: paperStatusEnum('status').notNull().default('draft'),
+  publicationStatus: paperPublicationStatusEnum('publication_status')
+    .notNull()
+    .default('unpublished'),
   currentVersionId: uuid('current_version_id'),
   createdAt: timestamp('created_at', { withTimezone: true })
     .notNull()
