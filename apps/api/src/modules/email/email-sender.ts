@@ -98,6 +98,7 @@ export function emailMessage(job: {
     book_published: 'Your Book was published',
     book_rejected: 'Your Book was rejected',
     book_withdrawn: 'Your Book was withdrawn',
+    access_grant_revoked: 'Your Access Grant was revoked',
   };
   const subject = labels[job.event] ?? 'Paper workflow update';
   let path: string;

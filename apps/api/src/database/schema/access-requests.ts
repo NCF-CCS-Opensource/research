@@ -9,7 +9,7 @@ import {
   uuid,
 } from 'drizzle-orm/pg-core';
 import { accounts } from './accounts.js';
-import { papers } from './papers.js';
+import { paperVersions, papers } from './papers.js';
 
 export const accessRequestStatusEnum = pgEnum('access_request_status', [
   'pending',
@@ -60,10 +60,15 @@ export const accessGrants = pgTable(
     paperId: uuid('paper_id')
       .notNull()
       .references(() => papers.id, { onDelete: 'cascade' }),
+    versionId: uuid('version_id')
+      .notNull()
+      .references(() => paperVersions.id),
     accountId: uuid('account_id')
       .notNull()
       .references(() => accounts.id),
     expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+    revokedAt: timestamp('revoked_at', { withTimezone: true }),
+    revocationReason: text('revocation_reason'),
     createdAt: timestamp('created_at', { withTimezone: true })
       .notNull()
       .defaultNow(),

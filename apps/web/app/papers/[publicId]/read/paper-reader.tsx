@@ -2,6 +2,7 @@
 
 import { getPaperContentContract } from "@repo/contracts";
 import { useEffect, useRef, useState, type KeyboardEvent } from "react";
+import { useRouter } from "next/navigation";
 import type { PDFDocumentProxy } from "pdfjs-dist";
 import styles from "./reader.module.css";
 
@@ -9,6 +10,7 @@ const contentUrl = (publicId: string) =>
   `/v1/api${getPaperContentContract.path.replace(":publicId", encodeURIComponent(publicId))}`;
 
 export function PaperReader({ publicId }: Readonly<{ publicId: string }>) {
+  const router = useRouter();
   const canvas = useRef<HTMLCanvasElement>(null);
   const text = useRef<HTMLDivElement>(null);
   const [document, setDocument] = useState<PDFDocumentProxy>();
@@ -44,8 +46,12 @@ export function PaperReader({ publicId }: Readonly<{ publicId: string }>) {
           },
           (cause: unknown) => {
             if (!alive) return;
-            setError(readError(cause));
-            setLoading(false);
+            if (isAccessEnded(cause))
+              router.replace(`/papers/${encodeURIComponent(publicId)}`);
+            else {
+              setError(readError(cause));
+              setLoading(false);
+            }
           },
         );
       })
@@ -59,7 +65,7 @@ export function PaperReader({ publicId }: Readonly<{ publicId: string }>) {
       alive = false;
       void task?.destroy();
     };
-  }, [publicId]);
+  }, [publicId, router]);
 
   useEffect(() => {
     if (!document || !canvas.current || !text.current) return;
@@ -95,8 +101,12 @@ export function PaperReader({ publicId }: Readonly<{ publicId: string }>) {
       })
       .catch((cause: unknown) => {
         if (alive) {
-          setError(readError(cause));
-          setLoading(false);
+          if (isAccessEnded(cause))
+            router.replace(`/papers/${encodeURIComponent(publicId)}`);
+          else {
+            setError(readError(cause));
+            setLoading(false);
+          }
         }
       });
     return () => {
@@ -104,7 +114,7 @@ export function PaperReader({ publicId }: Readonly<{ publicId: string }>) {
       render?.cancel();
       textLayer?.cancel();
     };
-  }, [document, pageNumber, zoom]);
+  }, [document, pageNumber, publicId, router, zoom]);
 
   function keyControl(event: KeyboardEvent<HTMLElement>) {
     if (event.key === "ArrowRight" || event.key === "PageDown") {
@@ -174,7 +184,7 @@ export function PaperReader({ publicId }: Readonly<{ publicId: string }>) {
           aria-label={`Page ${pageNumber}. Use arrow keys to change pages and plus or minus to zoom.`}
         >
           <canvas ref={canvas} aria-label={`PDF page ${pageNumber}`} />
-        <div ref={text} className={styles.textLayer} />
+          <div ref={text} className={styles.textLayer} />
         </div>
       )}
     </section>
@@ -188,4 +198,9 @@ function readError(cause: unknown) {
   if (/403|404/.test(message))
     return "This PDF is unavailable or you do not have access.";
   return "The PDF could not be loaded. Reload the page to try again.";
+}
+
+function isAccessEnded(cause: unknown) {
+  const message = cause instanceof Error ? cause.message : String(cause);
+  return /(?:403|404)/.test(message);
 }
