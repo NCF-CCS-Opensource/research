@@ -1,12 +1,17 @@
 ALTER TABLE paper_versions
-  ADD COLUMN search_document tsvector NOT NULL DEFAULT ''::tsvector;
+  ADD COLUMN search_document tsvector;
 
 UPDATE paper_versions
 SET search_document =
   setweight(to_tsvector('english', title), 'A') ||
   setweight(to_tsvector('english', abstract), 'C') ||
   setweight(to_tsvector('simple', authors::text), 'B') ||
-  setweight(to_tsvector('simple', array_to_string(keywords, ' ')), 'A');
+  setweight(to_tsvector('simple', array_to_string(keywords, ' ')), 'A')
+WHERE search_document IS NULL;
+
+ALTER TABLE paper_versions
+  ALTER COLUMN search_document SET DEFAULT ''::tsvector,
+  ALTER COLUMN search_document SET NOT NULL;
 
 CREATE FUNCTION update_paper_version_search_document() RETURNS trigger
 LANGUAGE plpgsql AS $$
