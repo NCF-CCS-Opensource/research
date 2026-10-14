@@ -218,7 +218,7 @@ export class PaperUseCases {
     return { deleted: true as const };
   }
 
-  async submit(
+  submit(
     identity: Actor,
     publicId: string,
     noticeVersion: number,
@@ -230,7 +230,7 @@ export class PaperUseCases {
         .from(papers)
         .where(eq(papers.publicId, publicId))
         .for('update');
-      if (!paper || paper.ownerId !== ownerId) throw new NotFoundException();
+      if (paper?.ownerId !== ownerId) throw new NotFoundException();
       if (!['draft', 'revision_requested'].includes(paper.status))
         throw new InvalidPaperTransitionError();
       const [currentNotice] = await tx
@@ -256,7 +256,7 @@ export class PaperUseCases {
             .from(paperFiles)
             .where(eq(paperFiles.id, version.pdfFileId))
         : [];
-      if (!file || file.status !== 'CLEAN')
+      if (file?.status !== 'CLEAN')
         throw new SubmissionIncompleteError('CLEAN PDF');
       await this.validateAdviser(paper.adviserId);
       await tx
@@ -269,15 +269,13 @@ export class PaperUseCases {
       await tx
         .insert(paperDecisions)
         .values({ paperId: paper.id, actorId: ownerId, decision: 'SUBMITTED' });
-      await tx
-        .insert(auditEvents)
-        .values({
-          actorAccountId: ownerId,
-          action: 'PAPER_SUBMITTED',
-          subjectType: 'PAPER',
-          subjectId: paper.id,
-          details: { noticeVersion },
-        });
+      await tx.insert(auditEvents).values({
+        actorAccountId: ownerId,
+        action: 'PAPER_SUBMITTED',
+        subjectType: 'PAPER',
+        subjectId: paper.id,
+        details: { noticeVersion },
+      });
       return this.getForOwner(tx, publicId, ownerId);
     });
   }
@@ -305,7 +303,7 @@ export class PaperUseCases {
     );
   }
 
-  async decide(
+  decide(
     identity: Actor,
     publicId: string,
     decision: 'endorse' | 'revision_request' | 'reject',
@@ -332,43 +330,35 @@ export class PaperUseCases {
         paper.adviserId !== identity.account.id
       )
         throw new PaperDecisionForbiddenError();
-      if (
-        decision === 'endorse'
-          ? paper.status !== 'submitted'
-          : coordinator
-            ? !['submitted', 'endorsed'].includes(paper.status)
-            : paper.status !== 'submitted'
-      )
+      const allowedStatuses =
+        coordinator && decision !== 'endorse'
+          ? ['submitted', 'endorsed']
+          : ['submitted'];
+      if (!allowedStatuses.includes(paper.status))
         throw new InvalidPaperTransitionError();
-      const status =
-        decision === 'endorse'
-          ? 'endorsed'
-          : decision === 'revision_request'
-            ? 'revision_requested'
-            : 'rejected';
+      let status: 'endorsed' | 'revision_requested' | 'rejected';
+      if (decision === 'endorse') status = 'endorsed';
+      else if (decision === 'revision_request') status = 'revision_requested';
+      else status = 'rejected';
       await tx.update(papers).set({ status }).where(eq(papers.id, paper.id));
-      await tx
-        .insert(paperDecisions)
-        .values({
-          paperId: paper.id,
-          actorId: identity.account.id,
-          decision: decision.toUpperCase(),
-          reason: reason?.trim() ?? null,
-        });
-      await tx
-        .insert(auditEvents)
-        .values({
-          actorAccountId: identity.account.id,
-          action: `PAPER_${decision.toUpperCase()}`,
-          subjectType: 'PAPER',
-          subjectId: paper.id,
-          details: { reason: reason?.trim() ?? null },
-        });
+      await tx.insert(paperDecisions).values({
+        paperId: paper.id,
+        actorId: identity.account.id,
+        decision: decision.toUpperCase(),
+        reason: reason?.trim() ?? null,
+      });
+      await tx.insert(auditEvents).values({
+        actorAccountId: identity.account.id,
+        action: `PAPER_${decision.toUpperCase()}`,
+        subjectType: 'PAPER',
+        subjectId: paper.id,
+        details: { reason: reason?.trim() ?? null },
+      });
       return this.getForOwner(tx, publicId, paper.ownerId);
     });
   }
 
-  async changeAdviser(
+  changeAdviser(
     identity: Actor,
     publicId: string,
     adviserId: string,
@@ -395,23 +385,19 @@ export class PaperUseCases {
         .update(papers)
         .set({ adviserId, status })
         .where(eq(papers.id, paper.id));
-      await tx
-        .insert(paperDecisions)
-        .values({
-          paperId: paper.id,
-          actorId: identity.account.id,
-          decision: 'ADVISER_CHANGED',
-          reason: `${paper.adviserId} -> ${adviserId}`,
-        });
-      await tx
-        .insert(auditEvents)
-        .values({
-          actorAccountId: identity.account.id,
-          action: 'PAPER_ADVISER_CHANGED',
-          subjectType: 'PAPER',
-          subjectId: paper.id,
-          details: { previousAdviserId: paper.adviserId, adviserId, status },
-        });
+      await tx.insert(paperDecisions).values({
+        paperId: paper.id,
+        actorId: identity.account.id,
+        decision: 'ADVISER_CHANGED',
+        reason: `${paper.adviserId} -> ${adviserId}`,
+      });
+      await tx.insert(auditEvents).values({
+        actorAccountId: identity.account.id,
+        action: 'PAPER_ADVISER_CHANGED',
+        subjectType: 'PAPER',
+        subjectId: paper.id,
+        details: { previousAdviserId: paper.adviserId, adviserId, status },
+      });
       return this.getForOwner(tx, publicId, paper.ownerId);
     });
   }

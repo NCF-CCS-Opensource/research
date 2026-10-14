@@ -10,12 +10,12 @@ export function PaperDecision({
   canEndorse = true,
   canReturnOrReject = true,
   visible = true,
-}: {
+}: Readonly<{
   publicId: string;
   canEndorse?: boolean;
   canReturnOrReject?: boolean;
   visible?: boolean;
-}) {
+}>) {
   const { getToken } = useAuth();
   const [error, setError] = useState("");
   if (!visible) return null;
@@ -47,9 +47,10 @@ export function PaperDecision({
       onSubmit={(event) => {
         event.preventDefault();
         const form = new FormData(event.currentTarget);
+        const reason = form.get("reason");
         void decide(
           form.get("decision") as "revision_request" | "reject",
-          String(form.get("reason")),
+          typeof reason === "string" ? reason : undefined,
         );
       }}
     >
@@ -65,10 +66,10 @@ export function PaperDecision({
       )}
       {canReturnOrReject && (
         <>
-          <button name="decision" value="revision_request">
+          <button type="submit" name="decision" value="revision_request">
             Request revision
           </button>
-          <button name="decision" value="reject">
+          <button type="submit" name="decision" value="reject">
             Reject
           </button>
         </>

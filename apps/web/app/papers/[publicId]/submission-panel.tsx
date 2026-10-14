@@ -9,10 +9,10 @@ const apiOrigin = process.env.NEXT_PUBLIC_API_ORIGIN ?? "http://localhost:3001";
 export function SubmissionPanel({
   publicId,
   notice,
-}: {
+}: Readonly<{
   publicId: string;
   notice: { version: number; text: string };
-}) {
+}>) {
   const { getToken } = useAuth();
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -57,7 +57,7 @@ export function SubmissionPanel({
           <input type="checkbox" required /> I acknowledge this Deposit Notice
           and confirm I may deposit this Paper.
         </label>
-        <button disabled={busy}>
+        <button type="submit" disabled={busy}>
           {busy ? "Submitting…" : "Submit for endorsement"}
         </button>
       </form>
