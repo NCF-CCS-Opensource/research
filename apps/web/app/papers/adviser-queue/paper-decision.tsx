@@ -5,9 +5,20 @@ import { useAuth } from "@clerk/nextjs";
 import { useState } from "react";
 
 const apiOrigin = process.env.NEXT_PUBLIC_API_ORIGIN ?? "http://localhost:3001";
-export function PaperDecision({ publicId }: { publicId: string }) {
+export function PaperDecision({
+  publicId,
+  canEndorse = true,
+  canReturnOrReject = true,
+  visible = true,
+}: {
+  publicId: string;
+  canEndorse?: boolean;
+  canReturnOrReject?: boolean;
+  visible?: boolean;
+}) {
   const { getToken } = useAuth();
   const [error, setError] = useState("");
+  if (!visible) return null;
   async function decide(
     decision: "endorse" | "revision_request" | "reject",
     reason?: string,
@@ -42,18 +53,26 @@ export function PaperDecision({ publicId }: { publicId: string }) {
         );
       }}
     >
-      <label>
-        Reason for revision or rejection <input name="reason" />
-      </label>
-      <button type="button" onClick={() => void decide("endorse")}>
-        Endorse
-      </button>
-      <button name="decision" value="revision_request">
-        Request revision
-      </button>
-      <button name="decision" value="reject">
-        Reject
-      </button>
+      {canReturnOrReject && (
+        <label>
+          Reason for revision or rejection <input name="reason" />
+        </label>
+      )}
+      {canEndorse && (
+        <button type="button" onClick={() => void decide("endorse")}>
+          Endorse
+        </button>
+      )}
+      {canReturnOrReject && (
+        <>
+          <button name="decision" value="revision_request">
+            Request revision
+          </button>
+          <button name="decision" value="reject">
+            Reject
+          </button>
+        </>
+      )}
       {error && <p role="alert">{error}</p>}
     </form>
   );

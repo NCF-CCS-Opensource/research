@@ -1,7 +1,7 @@
 import { getPaperContract } from "@repo/contracts";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { apiFetch } from "../../../lib/backend";
+import { apiFetch, getCurrentIdentity } from "../../../lib/backend";
 import { PaperFileUpload } from "./paper-file-upload";
 import { SubmissionPanel } from "./submission-panel";
 import { PaperDecision } from "../adviser-queue/paper-decision";
@@ -22,6 +22,7 @@ export default async function PaperDraftPage({
     (await response.json())?.data,
   );
   if (!parsed.success) notFound();
+  const identity = await getCurrentIdentity();
   const editable = ["draft", "revision_requested"].includes(parsed.data.status);
   const noticeResponse = editable
     ? await apiFetch("/deposit-notices/get-current")
@@ -52,8 +53,25 @@ export default async function PaperDraftPage({
           </li>
         ))}
       </ol>
-      {["submitted", "endorsed"].includes(parsed.data.status) && (
-        <PaperDecision publicId={publicId} />
+      {identity.state === "active" && identity.account.role !== "STUDENT" && (
+        <PaperDecision
+          publicId={publicId}
+          canEndorse={
+            parsed.data.status === "submitted" &&
+            parsed.data.adviserId === identity.account.id
+          }
+          canReturnOrReject={
+            parsed.data.status === "submitted" ||
+            (identity.account.role === "COORDINATOR" &&
+              parsed.data.status === "endorsed")
+          }
+          visible={
+            (identity.account.role === "COORDINATOR" &&
+              ["submitted", "endorsed"].includes(parsed.data.status)) ||
+            (identity.account.id === parsed.data.adviserId &&
+              parsed.data.status === "submitted")
+          }
+        />
       )}
     </main>
   );
