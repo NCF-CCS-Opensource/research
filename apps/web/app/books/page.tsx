@@ -22,7 +22,7 @@ export default async function BooksPage({
         <label>
           Search Books <input name="q" defaultValue={q} />
         </label>
-        <button>Search</button>
+        <button type="submit">Search</button>
       </form>
       {parsed?.success && parsed.data.length ? (
         <ul>
