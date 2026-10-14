@@ -481,7 +481,7 @@ export class PaperUseCases {
     page: number;
     pageSize: number;
   }) {
-    const textVector = sql`setweight(to_tsvector('english', ${paperVersions.title}), 'A') || setweight(to_tsvector('english', ${paperVersions.abstract}), 'C') || setweight(to_tsvector('simple', ${paperVersions.authors}::text), 'B') || setweight(to_tsvector('simple', array_to_string(${paperVersions.keywords}, ' ')), 'A')`;
+    const textVector = paperVersions.searchDocument;
     const search = query.q?.trim();
     const conditions = [
       eq(papers.publicationStatus, 'published'),
