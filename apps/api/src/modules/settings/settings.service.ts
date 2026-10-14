@@ -103,6 +103,10 @@ export class SettingsService {
   }
 }
 
-function isUniqueViolation(error: unknown): error is { code: string } {
-  return typeof error === "object" && error !== null && "code" in error && error.code === "23505"
+function isUniqueViolation(error: unknown): boolean {
+  // Drizzle wraps Postgres errors; uniqueness details live on its cause.
+  const cause = error instanceof Error ? (error.cause ?? error) : error
+  return typeof cause === "object" && cause !== null &&
+    (cause as { code?: string }).code === "23505" &&
+    (cause as { constraint_name?: string }).constraint_name === "programs_name_unique"
 }
