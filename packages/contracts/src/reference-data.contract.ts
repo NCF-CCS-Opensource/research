@@ -1,11 +1,17 @@
 import { z } from 'zod';
 import { successEnvelope } from './envelope.js';
 
+export const RESEARCH_TYPE_VALUES = [
+  'THESIS',
+  'CAPSTONE',
+  'RESEARCH_PAPER',
+  'PROJECT_REPORT',
+] as const;
 export const RESEARCH_TYPES = [
-  { value: 'THESIS', label: 'Thesis' },
-  { value: 'CAPSTONE', label: 'Capstone' },
-  { value: 'RESEARCH_PAPER', label: 'Research paper' },
-  { value: 'PROJECT_REPORT', label: 'Project report' },
+  { value: RESEARCH_TYPE_VALUES[0], label: 'Thesis' },
+  { value: RESEARCH_TYPE_VALUES[1], label: 'Capstone' },
+  { value: RESEARCH_TYPE_VALUES[2], label: 'Research paper' },
+  { value: RESEARCH_TYPE_VALUES[3], label: 'Project report' },
 ] as const;
 
 // Open licences and public domain only (ADR 0003).

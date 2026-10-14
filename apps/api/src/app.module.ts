@@ -13,6 +13,8 @@ import { AccountsModule } from './modules/accounts/accounts.module.js';
 import { AuditModule } from './modules/audit/audit.module.js';
 import { HealthModule } from './modules/health/health.module.js';
 import { ReferenceDataModule } from './modules/reference-data/reference-data.module.js';
+import { PaperModule } from './modules/paper/paper.module.js';
+import { SettingsModule } from './modules/settings/settings.module.js';
 
 @Module({
   imports: [
@@ -21,6 +23,8 @@ import { ReferenceDataModule } from './modules/reference-data/reference-data.mod
     AuditModule,
     ReferenceDataModule,
     HealthModule,
+    PaperModule,
+    SettingsModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: AuthGuard },
