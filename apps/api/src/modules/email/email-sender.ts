@@ -88,6 +88,7 @@ export function emailMessage(job: {
     revision_request: 'A Paper needs revision',
     rejection: 'A Paper was rejected',
     endorsement: 'A Paper was endorsed',
+    published: 'A Paper was published',
   };
   const subject = labels[job.event] ?? 'Paper workflow update';
   const url = new URL(

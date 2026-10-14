@@ -28,6 +28,21 @@ describe('email delivery', () => {
     expect(fakeSender.send).toHaveBeenCalledWith(message, 'job-id');
   });
 
+  it('describes publication without exposing the full text address', () => {
+    vi.stubEnv('DATABASE_URL', 'postgres://localhost/test');
+    vi.stubEnv('WEB_ORIGIN', 'https://research.example');
+    const message = emailMessage({
+      event: 'published',
+      recipientEmail: 'owner@ncf.edu.ph',
+      recipientName: 'Owner',
+      paperTitle: 'A Study',
+      paperPublicId: 'paper-id',
+      details: null,
+    });
+    expect(message.subject).toBe('A Paper was published');
+    expect(message.text).toContain('https://research.example/papers/paper-id');
+  });
+
   it('sends through Resend with the job id as its idempotency key', async () => {
     vi.stubEnv('DATABASE_URL', 'postgres://localhost/test');
     vi.stubEnv('RESEND_API_KEY', 'test-key');

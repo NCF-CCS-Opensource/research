@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { getCurrentIdentity } from "../lib/backend";
+import { apiFetch, getCurrentIdentity } from "../lib/backend";
+import { listPublishedPapersContract } from "@repo/contracts";
 
 // Rendered per request so builds do not need the API running.
 export const dynamic = "force-dynamic";
@@ -10,6 +11,12 @@ export default async function Home() {
   const identity = await getCurrentIdentity();
   if (identity.state === "registering") redirect("/register");
   if (identity.state === "deactivated") redirect("/deactivated");
+  const catalogResponse = await apiFetch(listPublishedPapersContract.path);
+  const catalog = catalogResponse.ok
+    ? listPublishedPapersContract.response.safeParse(
+        (await catalogResponse.json())?.data,
+      )
+    : null;
 
   return (
     <main style={{ padding: "2rem" }}>
@@ -23,9 +30,14 @@ export default async function Home() {
             {identity.account.role.toLowerCase()}).
           </p>
           {identity.account.role === "COORDINATOR" && (
-            <p>
-              <Link href="/admin/accounts">Manage accounts</Link>
-            </p>
+            <>
+              <p>
+                <Link href="/admin/accounts">Manage accounts</Link>
+              </p>
+              <p>
+                <Link href="/papers/publication-queue">Publication queue</Link>
+              </p>
+            </>
           )}
           {identity.account.role === "STUDENT" && (
             <p>
@@ -33,6 +45,19 @@ export default async function Home() {
             </p>
           )}
         </>
+      )}
+      <h2>Recently published Papers</h2>
+      {catalog?.success && catalog.data.length ? (
+        <ul>
+          {catalog.data.map((paper) => (
+            <li key={paper.publicId}>
+              <Link href={`/papers/${paper.publicId}`}>{paper.title}</Link> —{" "}
+              {paper.year} · {paper.program}
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p>No Papers have been published yet.</p>
       )}
     </main>
   );

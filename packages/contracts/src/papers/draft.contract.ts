@@ -136,6 +136,39 @@ export const changePaperAdviserContract = {
   response: paperSchema,
 };
 
+export const publicPaperSchema = z.object({
+  publicId: z.string(),
+  title: z.string(),
+  authors: paperDetailsSchema.shape.authors,
+  abstract: z.string(),
+  keywords: paperDetailsSchema.shape.keywords,
+  program: z.string(),
+  year: z.number().int(),
+  researchType: paperDetailsSchema.shape.researchType,
+  publishedAt: z.string().datetime(),
+});
+export type PublicPaper = z.infer<typeof publicPaperSchema>;
+export const getPublicPaperContract = {
+  method: 'GET' as const,
+  path: '/papers/get/:publicId' as const,
+  response: publicPaperSchema,
+};
+export const listPublishedPapersContract = {
+  method: 'GET' as const,
+  path: '/papers/catalog' as const,
+  response: z.array(publicPaperSchema),
+};
+export const listPublicationQueueContract = {
+  method: 'GET' as const,
+  path: '/papers/publication-queue' as const,
+  response: z.array(paperSchema),
+};
+export const publishPaperContract = {
+  method: 'POST' as const,
+  path: '/papers/publish/:publicId' as const,
+  response: paperSchema,
+};
+
 export const paperFileStatusSchema = z.enum([
   'PENDING',
   'CLEAN',
