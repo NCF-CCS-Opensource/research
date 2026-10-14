@@ -3,7 +3,7 @@ import { Readable } from 'node:stream';
 import type { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { getPaperContentContract } from '@repo/contracts';
-import { and, eq, gt, inArray, isNull } from 'drizzle-orm';
+import { and, eq, gt, isNull } from 'drizzle-orm';
 import request from 'supertest';
 import { vi } from 'vitest';
 import { AppModule } from '../src/app.module.js';
@@ -201,15 +201,9 @@ describe('Access Grants (database)', () => {
 
   async function cleanFixture(
     fixture: Awaited<ReturnType<typeof paperFixture>>,
-    ...accountIds: string[]
   ) {
-    await db
-      .delete(schema.auditEvents)
-      .where(inArray(schema.auditEvents.actorAccountId, accountIds));
     await db.delete(paperFiles).where(eq(paperFiles.id, fixture.fileId));
     await db.delete(papers).where(eq(papers.id, fixture.paperId));
-    for (const id of accountIds)
-      await db.delete(accounts).where(eq(accounts.id, id));
     await db
       .delete(schema.programs)
       .where(eq(schema.programs.id, fixture.programId));
@@ -247,7 +241,7 @@ describe('Access Grants (database)', () => {
         .expect(404);
     } finally {
       vi.useRealTimers();
-      await cleanFixture(fixture, reader.row.id, owner.row.id, adviser.row.id);
+      await cleanFixture(fixture);
     }
   });
 
@@ -268,13 +262,7 @@ describe('Access Grants (database)', () => {
       ).expect(404);
       expect(response.text).not.toContain('%PDF-');
     } finally {
-      await cleanFixture(
-        fixture,
-        reader.row.id,
-        other.row.id,
-        owner.row.id,
-        adviser.row.id,
-      );
+      await cleanFixture(fixture);
     }
   });
 
@@ -348,13 +336,7 @@ describe('Access Grants (database)', () => {
         expect(savedRequest.status).toBe('cancelled');
       }
     } finally {
-      await cleanFixture(
-        fixture,
-        requester.row.id,
-        owner.row.id,
-        adviser.row.id,
-        coordinator.row.id,
-      );
+      await cleanFixture(fixture);
     }
   });
 });
