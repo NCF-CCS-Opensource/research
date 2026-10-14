@@ -10,11 +10,18 @@ import { ErrorEnvelopeFilter } from './common/error-envelope.filter.js';
 import { requestId } from './common/request-id.middleware.js';
 import { DatabaseModule } from './database/database.module.js';
 import { AccountsModule } from './modules/accounts/accounts.module.js';
+import { AuditModule } from './modules/audit/audit.module.js';
 import { HealthModule } from './modules/health/health.module.js';
 import { ReferenceDataModule } from './modules/reference-data/reference-data.module.js';
 
 @Module({
-  imports: [DatabaseModule, AccountsModule, ReferenceDataModule, HealthModule],
+  imports: [
+    DatabaseModule,
+    AccountsModule,
+    AuditModule,
+    ReferenceDataModule,
+    HealthModule,
+  ],
   providers: [
     { provide: APP_GUARD, useClass: AuthGuard },
     { provide: APP_INTERCEPTOR, useClass: EnvelopeInterceptor },

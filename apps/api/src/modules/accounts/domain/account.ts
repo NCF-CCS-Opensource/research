@@ -1,5 +1,12 @@
-import { DomainError } from '../../../shared/domain/domain-error.js';
+import {
+  DomainError,
+  type DomainErrorKind,
+} from '../../../shared/domain/domain-error.js';
 import type { Account, Role } from '../../../shared/domain/account.js';
+import type {
+  ChangeOutcome,
+  ManagedAccount,
+} from '../application/account-repository.js';
 
 const ROLE_BY_DOMAIN: Record<string, Role> = {
   'gbox.ncf.edu.ph': 'STUDENT',
@@ -22,6 +29,34 @@ export function roleForEmail(email: string): Role {
     );
   }
   return role;
+}
+
+export function toManaged(account: ManagedAccount) {
+  return {
+    ...toDetails(account),
+    status: account.status,
+    programName: account.programName,
+  };
+}
+
+const REFUSALS: Record<
+  Exclude<ChangeOutcome['outcome'], 'changed'>,
+  [code: string, message: string, kind: DomainErrorKind]
+> = {
+  not_found: ['ACCOUNT_NOT_FOUND', 'Account not found.', 'not_found'],
+  unchanged: ['NO_CHANGE', 'The Account already has this setting.', 'conflict'],
+  last_coordinator: [
+    'LAST_COORDINATOR',
+    'The repository must keep at least one active Coordinator.',
+    'conflict',
+  ],
+};
+
+/** The changed Account, or the authored refusal for any other outcome. */
+export function unwrapChange(result: ChangeOutcome) {
+  if (result.outcome === 'changed') return toManaged(result.account);
+  const [code, message, kind] = REFUSALS[result.outcome];
+  throw new DomainError(code, message, kind);
 }
 
 export function toDetails(account: Account) {

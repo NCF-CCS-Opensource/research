@@ -1,13 +1,18 @@
 import { randomUUID } from 'node:crypto';
 import type {
   AccountRepository,
+  ChangeOutcome,
   NewAccount,
 } from '../../src/modules/accounts/application/account-repository.js';
 import type {
   TokenVerifier,
   VerifiedIdentity,
 } from '../../src/modules/accounts/application/token-verifier.js';
-import type { Account } from '../../src/shared/domain/account.js';
+import type {
+  Account,
+  AccountStatus,
+  Role,
+} from '../../src/shared/domain/account.js';
 
 /** Maps test tokens to identities, replacing Clerk verification. */
 export class FakeTokenVerifier implements TokenVerifier {
@@ -44,6 +49,63 @@ export class InMemoryAccountRepository implements AccountRepository {
     this.accounts.push(account);
     this.audit.push({ action: 'ACCOUNT_REGISTERED', subjectId: account.id });
     return Promise.resolve(account);
+  }
+
+  list() {
+    return Promise.resolve(
+      this.accounts.map((a) => ({ ...a, programName: null })),
+    );
+  }
+
+  changeRole(c: {
+    actorId: string;
+    accountId: string;
+    role: Role;
+    reason: string;
+  }) {
+    return this.change(c, { role: c.role }, 'ACCOUNT_ROLE_CHANGED');
+  }
+
+  setStatus(c: {
+    actorId: string;
+    accountId: string;
+    status: AccountStatus;
+    reason: string;
+  }) {
+    return this.change(
+      c,
+      { status: c.status },
+      c.status === 'ACTIVE' ? 'ACCOUNT_REACTIVATED' : 'ACCOUNT_DEACTIVATED',
+    );
+  }
+
+  private change(
+    c: { accountId: string },
+    patch: Partial<Account>,
+    action: string,
+  ): Promise<ChangeOutcome> {
+    const target = this.accounts.find((a) => a.id === c.accountId);
+    if (!target) return Promise.resolve({ outcome: 'not_found' });
+    const [[key, value]] = Object.entries(patch);
+    if (target[key as keyof Account] === value)
+      return Promise.resolve({ outcome: 'unchanged' });
+    const activeCoordinators = this.accounts.filter(
+      (a) => a.role === 'COORDINATOR' && a.status === 'ACTIVE',
+    );
+    const staysCoordinator =
+      patch.role === 'COORDINATOR' || patch.status === 'ACTIVE';
+    if (
+      activeCoordinators.length === 1 &&
+      activeCoordinators[0] === target &&
+      !staysCoordinator
+    )
+      return Promise.resolve({ outcome: 'last_coordinator' });
+    Object.assign(target, patch);
+    this.audit.push({ action, subjectId: target.id });
+    return Promise.resolve({
+      outcome: 'changed',
+      account: { ...target, programName: null },
+    });
   }
 
   updateEmail(id: string, email: string) {
