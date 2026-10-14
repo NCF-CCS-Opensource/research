@@ -66,6 +66,13 @@
       "breakpoints": true
     },
     {
+      "idx": 9,
+      "version": "7",
+      "when": 1792368000000,
+      "tag": "0009_catalog_search",
+      "breakpoints": true
+    },
+    {
       "idx": 10,
       "version": "7",
       "when": 1792454400000,

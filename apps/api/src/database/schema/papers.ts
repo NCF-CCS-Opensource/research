@@ -1,4 +1,5 @@
 import {
+  customType,
   integer,
   jsonb,
   pgEnum,
@@ -8,6 +9,7 @@ import {
   uuid,
   varchar,
 } from 'drizzle-orm/pg-core';
+import { sql } from 'drizzle-orm';
 import { accounts } from './accounts.js';
 import { programs } from './programs.js';
 import { RESEARCH_TYPE_VALUES } from '@repo/contracts';
@@ -25,6 +27,7 @@ export const paperPublicationStatusEnum = pgEnum('paper_publication_status', [
   'withdrawn',
 ]);
 export const researchTypeEnum = pgEnum('research_type', RESEARCH_TYPE_VALUES);
+const tsvector = customType<{ data: string }>({ dataType: () => 'tsvector' });
 
 export const papers = pgTable('papers', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -61,6 +64,9 @@ export const paperVersions = pgTable('paper_versions', {
   researchType: researchTypeEnum('research_type').notNull(),
   keywords: text('keywords').array().notNull(),
   authors: jsonb('authors').notNull(),
+  searchDocument: tsvector('search_document')
+    .notNull()
+    .default(sql`''::tsvector`),
   pdfFileId: uuid('pdf_file_id'),
   publishedAt: timestamp('published_at', { withTimezone: true }),
   createdAt: timestamp('created_at', { withTimezone: true })
