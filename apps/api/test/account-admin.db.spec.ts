@@ -8,6 +8,7 @@ import { runMigrations } from '../src/database/migrate.js';
 import * as schema from '../src/database/schema/index.js';
 import { DrizzleAccountRepository } from '../src/modules/accounts/infrastructure/drizzle-account-repository.js';
 import { DrizzleAuditReader } from '../src/modules/audit/infrastructure/drizzle-audit-reader.js';
+import { PaperUseCases } from '../src/modules/paper/paper.use-cases.js';
 
 const { accounts } = schema;
 
@@ -18,6 +19,7 @@ describe('Account administration (database)', () => {
   const db: Database = drizzle(client, { schema });
   const repo = new DrizzleAccountRepository(db);
   const reader = new DrizzleAuditReader(db);
+  const papers = new PaperUseCases(db);
 
   const newCoordinator = async () => {
     const id = randomUUID();
@@ -137,5 +139,63 @@ describe('Account administration (database)', () => {
     expect(
       await reader.find({ subjectId: b }, { limit: 1, offset: 1 }),
     ).toHaveLength(1);
+  });
+
+  it('matches multilingual and punctuated Author names in published results', async () => {
+    const accountId = randomUUID();
+    const programId = randomUUID();
+    const paperId = randomUUID();
+    const publicId = randomUUID().replaceAll('-', '');
+    try {
+      await db
+        .insert(schema.programs)
+        .values({ id: programId, name: `Search test ${programId}` });
+      await db.insert(accounts).values({
+        id: accountId,
+        clerkUserId: `search_${accountId}`,
+        name: 'Catalog test account',
+        email: `${accountId}@ncf.edu.ph`,
+        role: 'STUDENT',
+      });
+      await db.insert(schema.papers).values({
+        id: paperId,
+        publicId,
+        ownerId: accountId,
+        adviserId: accountId,
+        programId,
+        status: 'endorsed',
+        publicationStatus: 'published',
+      });
+      const [version] = await db
+        .insert(schema.paperVersions)
+        .values({
+          paperId,
+          versionNumber: 1,
+          title: 'A multilingual catalog search fixture',
+          abstract:
+            'An abstract used to verify multilingual author full-text search. '.repeat(
+              3,
+            ),
+          year: 2026,
+          researchType: 'THESIS',
+          keywords: ['catalog', 'search', 'research'],
+          authors: [{ displayName: '李 O’Connor-Cruz', kind: 'person' }],
+          publishedAt: new Date(),
+        })
+        .returning();
+      await db
+        .update(schema.papers)
+        .set({ currentVersionId: version.id })
+        .where(eq(schema.papers.id, paperId));
+
+      for (const q of ['李', 'O’Connor-Cruz']) {
+        const result = await papers.listPublished({ q, page: 1, pageSize: 20 });
+        expect(result.items.map(({ publicId: id }) => id)).toContain(publicId);
+      }
+    } finally {
+      await db.delete(schema.papers).where(eq(schema.papers.id, paperId));
+      await db.delete(accounts).where(eq(accounts.id, accountId));
+      await db.delete(schema.programs).where(eq(schema.programs.id, programId));
+    }
   });
 });
