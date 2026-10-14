@@ -16,6 +16,7 @@ import { ReferenceDataModule } from './modules/reference-data/reference-data.mod
 import { PaperModule } from './modules/paper/paper.module.js';
 import { SettingsModule } from './modules/settings/settings.module.js';
 import { PaperFileModule } from './modules/paper-files/paper-file.module.js';
+import { EmailModule } from './modules/email/email.module.js';
 
 @Module({
   imports: [
@@ -27,6 +28,7 @@ import { PaperFileModule } from './modules/paper-files/paper-file.module.js';
     PaperModule,
     SettingsModule,
     PaperFileModule,
+    EmailModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: AuthGuard },

@@ -17,7 +17,8 @@ export default async function AccountsPage() {
     <main style={{ padding: "2rem" }}>
       <h1>Accounts</h1>
       <p>
-        <Link href="/admin/audit">Audit log</Link>
+        <Link href="/admin/audit">Audit log</Link> ·{" "}
+        <Link href="/admin/emails">Failed emails</Link>
       </p>
       <table>
         <thead>

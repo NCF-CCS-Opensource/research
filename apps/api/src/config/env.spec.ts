@@ -17,4 +17,10 @@ describe('validateEnv', () => {
   it('throws when PORT is not a number', () => {
     expect(() => validateEnv({ DATABASE_URL, PORT: 'abc' })).toThrow(/PORT/);
   });
+
+  it('requires Resend outside development and tests', () => {
+    expect(() => validateEnv({ DATABASE_URL, NODE_ENV: 'production' })).toThrow(
+      /RESEND_API_KEY/,
+    );
+  });
 });
