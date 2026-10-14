@@ -1,7 +1,8 @@
 import "reflect-metadata"
 import type { INestApplication } from "@nestjs/common"
 import { Test } from "@nestjs/testing"
-import { getCurrentDepositNoticeContract, getSettingsContract, publishDepositNoticeContract, updateSettingsContract } from "@repo/contracts"
+import { getCurrentDepositNoticeContract, getSettingsContract, listProgramsContract, publishDepositNoticeContract, updateSettingsContract } from "@repo/contracts"
+import { eq } from "drizzle-orm"
 import request from "supertest"
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest"
 import { AppModule } from "../src/app.module"
@@ -67,5 +68,27 @@ describe("Settings API", () => {
     })
     expect(await db.select().from(depositNotices)).toHaveLength(2)
     expect(await db.select().from(auditEvents)).toHaveLength(2)
+    await request(app.getHttpServer()).get("/deposit-notices/get-all").set("Authorization", "Bearer admin").expect(200).expect([
+      expect.objectContaining({ version: 2, text: "Updated notice" }),
+      expect.objectContaining({ version: 1, text: "First notice" }),
+    ])
+  })
+
+  it("deactivates Programs from reference data without removing existing profile links", async () => {
+    const created = await request(app.getHttpServer()).post("/programs/create").set("Authorization", "Bearer admin").send({ name: "Computing" }).expect(201)
+    const id = created.body.id as string
+    await db.update(profiles).set({ programId: id }).where(eq(profiles.id, "30000000-0000-0000-0000-000000000002"))
+    await request(app.getHttpServer()).patch(`/programs/update/${id}`).set("Authorization", "Bearer admin").send({ name: "Computing", active: false }).expect(200)
+    await request(app.getHttpServer()).get(listProgramsContract.path).expect(200).expect([])
+    const [member] = await db.select().from(profiles).where(eq(profiles.id, "30000000-0000-0000-0000-000000000002"))
+    expect(member.programId).toBe(id)
+    expect(await db.select().from(auditEvents)).toHaveLength(2)
+    await request(app.getHttpServer()).post("/programs/create").set("Authorization", "Bearer member").send({ name: "Denied" }).expect(403)
+  })
+
+  it("returns an authored conflict when a Program name is duplicated", async () => {
+    await request(app.getHttpServer()).post("/programs/create").set("Authorization", "Bearer admin").send({ name: "Computing" }).expect(201)
+    const conflict = await request(app.getHttpServer()).post("/programs/create").set("Authorization", "Bearer admin").send({ name: "Computing" }).expect(409)
+    expect(conflict.body.message).toBe("A Program with this name already exists.")
   })
 })

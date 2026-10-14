@@ -1,5 +1,5 @@
 import { Body, Controller, Get, Param, Patch, Post, UnauthorizedException } from "@nestjs/common"
-import { createProgramContract, getCurrentDepositNoticeContract, getSettingsContract, publishDepositNoticeContract, updateProgramContract, updateSettingsContract } from "@repo/contracts"
+import { createProgramContract, getCurrentDepositNoticeContract, getSettingsContract, listDepositNoticesContract, publishDepositNoticeContract, updateProgramContract, updateSettingsContract } from "@repo/contracts"
 import type { UpdateSettingsRequest } from "@repo/contracts"
 import { AdminOnly } from "../../common/decorators/admin-only.decorator"
 import { CurrentIdentity, type RequestIdentity } from "../../common/decorators/current-identity.decorator"
@@ -26,6 +26,10 @@ export class SettingsController {
     if (identity.state !== "active") throw new UnauthorizedException("Active account required")
     return this.service.currentDepositNotice()
   }
+
+  @AdminOnly()
+  @Get(listDepositNoticesContract.path)
+  listNotices() { return this.service.listDepositNotices() }
 
   @AdminOnly()
   @Post(publishDepositNoticeContract.path)

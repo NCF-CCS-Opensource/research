@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from "@nestjs/common"
+import { ConflictException, Injectable, NotFoundException } from "@nestjs/common"
 import { desc, eq } from "drizzle-orm"
 import type { Database } from "../../database/database"
 import { DATABASE_CONNECTION } from "../../database/database.module"
@@ -52,6 +52,11 @@ export class SettingsService {
     return row ? { version: row.version, text: row.text, publishedAt: row.publishedAt.toISOString() } : null
   }
 
+  async listDepositNotices() {
+    const rows = await this.db.select().from(depositNotices).orderBy(desc(depositNotices.version))
+    return rows.map(({ version, text, publishedAt }) => ({ version, text, publishedAt: publishedAt.toISOString() }))
+  }
+
   async publishDepositNotice(actorId: string, text: string) {
     return this.db.transaction(async (tx) => {
       const [old] = await tx.select().from(depositNotices).orderBy(desc(depositNotices.version)).limit(1).for("update")
@@ -68,22 +73,36 @@ export class SettingsService {
   }
 
   async createProgram(actorId: string, name: string) {
-    const [row] = await this.db.transaction(async (tx) => {
-      const inserted = await tx.insert(programs).values({ name, isActive: true }).returning()
-      await tx.insert(auditEvents).values({ actorProfileId: actorId, action: "program.created", entityId: inserted[0].id, oldValue: null, newValue: { name, active: true } })
-      return inserted
-    })
-    return row
+    try {
+      const [row] = await this.db.transaction(async (tx) => {
+        const [inserted] = await tx.insert(programs).values({ name, isActive: true }).returning()
+        await tx.insert(auditEvents).values({ actorProfileId: actorId, action: "program.created", entityId: inserted.id, oldValue: null, newValue: { name, active: true } })
+        return [inserted]
+      })
+      return row
+    } catch (error) {
+      if (isUniqueViolation(error)) throw new ConflictException("A Program with this name already exists.")
+      throw error
+    }
   }
 
   async updateProgram(actorId: string, id: string, name: string, active: boolean) {
-    return this.db.transaction(async (tx) => {
-      const [old] = await tx.select().from(programs).where(eq(programs.id, id)).for("update")
-      if (!old) throw new NotFoundException("Program not found.")
-      const next = { name, isActive: active }
-      await tx.update(programs).set(next).where(eq(programs.id, id))
-      await tx.insert(auditEvents).values({ actorProfileId: actorId, action: "program.updated", entityId: id, oldValue: { name: old.name, active: old.isActive }, newValue: { name, active } })
-      return { id, name, isActive: active }
-    })
+    try {
+      return await this.db.transaction(async (tx) => {
+        const [old] = await tx.select().from(programs).where(eq(programs.id, id)).for("update")
+        if (!old) throw new NotFoundException("Program not found.")
+        const next = { name, isActive: active }
+        await tx.update(programs).set(next).where(eq(programs.id, id))
+        await tx.insert(auditEvents).values({ actorProfileId: actorId, action: "program.updated", entityId: id, oldValue: { name: old.name, active: old.isActive }, newValue: { name, active } })
+        return { id, name, isActive: active }
+      })
+    } catch (error) {
+      if (isUniqueViolation(error)) throw new ConflictException("A Program with this name already exists.")
+      throw error
+    }
   }
+}
+
+function isUniqueViolation(error: unknown): error is { code: string } {
+  return typeof error === "object" && error !== null && "code" in error && error.code === "23505"
 }
