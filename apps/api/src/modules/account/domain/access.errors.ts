@@ -21,3 +21,9 @@ export class AdminOnlyError extends DomainError {
     super("ADMIN_ONLY", "This action requires an administrator.", 403)
   }
 }
+
+export class CoordinatorOnlyError extends DomainError {
+  constructor() {
+    super("COORDINATOR_ONLY", "This action requires a Coordinator.", 403)
+  }
+}

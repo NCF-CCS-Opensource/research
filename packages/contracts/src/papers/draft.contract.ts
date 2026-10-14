@@ -55,24 +55,24 @@ export type PaperDetails = z.infer<typeof paperDetailsSchema>
 export type Paper = z.infer<typeof paperSchema>
 export const createPaperContract = {
   method: "POST" as const,
-  path: "/papers/create-draft" as const,
+  path: "/papers/create" as const,
   request: paperDetailsSchema.extend({ adviserId: z.string().uuid() }),
   response: paperSchema,
 }
 export type CreatePaperRequest = z.infer<typeof createPaperContract.request>
 export const listMyPapersContract = {
   method: "GET" as const,
-  path: "/papers/list-mine" as const,
+  path: "/papers/get-mine" as const,
   response: z.array(paperSchema),
 }
 export const getPaperContract = {
   method: "GET" as const,
-  path: "/papers/get/:publicId" as const,
+  path: "/papers/get-for-management/:publicId" as const,
   response: paperSchema,
 }
 export const updatePaperContract = {
   method: "PATCH" as const,
-  path: "/papers/update/:publicId" as const,
+  path: "/papers/update-draft/:publicId" as const,
   request: paperDetailsSchema.extend({
     adviserId: z.string().uuid(),
     expectedLockVersion: z.number().int().nonnegative(),
@@ -82,11 +82,11 @@ export const updatePaperContract = {
 export type UpdatePaperRequest = z.infer<typeof updatePaperContract.request>
 export const deletePaperContract = {
   method: "DELETE" as const,
-  path: "/papers/delete/:publicId" as const,
+  path: "/papers/delete-draft/:publicId" as const,
   response: z.object({ deleted: z.literal(true) }),
 }
 export const listAdvisersContract = {
   method: "GET" as const,
-  path: "/papers/list-advisers" as const,
+  path: "/papers/list-selectable-advisers" as const,
   response: z.array(z.object({ id: z.string().uuid(), fullName: z.string() })),
 }

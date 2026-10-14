@@ -9,17 +9,15 @@ import type { Request } from "express"
 import {
   AccountSuspendedError,
   AdminOnlyError,
+  CoordinatorOnlyError,
   RegistrationRequiredError,
 } from "../../modules/account/domain/access.errors"
-import {
-  ResolveRequestIdentityUseCase,
-} from "../../modules/account/application/resolve-request-identity.use-case"
+import { ResolveRequestIdentityUseCase } from "../../modules/account/application/resolve-request-identity.use-case"
 import { IS_ADMIN_ONLY_KEY } from "../decorators/admin-only.decorator"
+import { IS_COORDINATOR_ONLY_KEY } from "../decorators/coordinator-only.decorator"
 import { IS_PUBLIC_KEY } from "../decorators/public.decorator"
 import { IS_REGISTERING_KEY } from "../decorators/registering.decorator"
-import type {
-  RequestWithIdentity,
-} from "../decorators/current-identity.decorator"
+import type { RequestWithIdentity } from "../decorators/current-identity.decorator"
 
 @Injectable()
 export class GlobalAuthGuard implements CanActivate {
@@ -39,6 +37,10 @@ export class GlobalAuthGuard implements CanActivate {
     )
     const isAdminOnly = this.reflector.getAllAndOverride<boolean>(
       IS_ADMIN_ONLY_KEY,
+      [context.getHandler(), context.getClass()]
+    )
+    const isCoordinatorOnly = this.reflector.getAllAndOverride<boolean>(
+      IS_COORDINATOR_ONLY_KEY,
       [context.getHandler(), context.getClass()]
     )
 
@@ -69,8 +71,15 @@ export class GlobalAuthGuard implements CanActivate {
       throw new RegistrationRequiredError()
     }
 
-    if (isAdminOnly && identity.role !== "admin" && identity.role !== "coordinator") {
+    if (
+      isAdminOnly &&
+      identity.role !== "admin" &&
+      identity.role !== "coordinator"
+    ) {
       throw new AdminOnlyError()
+    }
+    if (isCoordinatorOnly && identity.role !== "coordinator") {
+      throw new CoordinatorOnlyError()
     }
 
     return true

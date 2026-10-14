@@ -2,6 +2,7 @@ import "reflect-metadata"
 import type { INestApplication } from "@nestjs/common"
 import { Test, type TestingModule } from "@nestjs/testing"
 import { createPaperContract } from "@repo/contracts"
+import { listAdvisersContract } from "@repo/contracts"
 import { eq } from "drizzle-orm"
 import request from "supertest"
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest"
@@ -81,6 +82,14 @@ describe("Paper drafts API", () => {
         role: "user",
         status: "active",
       },
+      {
+        id: "40000000-0000-0000-0000-000000000005",
+        clerkUserId: "paper_admin",
+        fullName: "Legacy Admin",
+        email: "legacy-admin@ncf.edu.ph",
+        role: "admin",
+        status: "active",
+      },
     ])
   })
 
@@ -110,13 +119,23 @@ describe("Paper drafts API", () => {
       lockVersion: 0,
       status: "draft",
     })
+    await request(app.getHttpServer())
+      .get(listAdvisersContract.path)
+      .set("Authorization", "Bearer owner")
+      .expect(200)
+      .expect([
+        {
+          id: "40000000-0000-0000-0000-000000000003",
+          fullName: "Paper Adviser",
+        },
+      ])
     const publicId = created.body.publicId as string
     await request(app.getHttpServer())
-      .get(`/papers/get/${publicId}`)
+      .get(`/papers/get-for-management/${publicId}`)
       .set("Authorization", "Bearer adviser")
       .expect(200)
     await request(app.getHttpServer())
-      .get(`/papers/get/${publicId}`)
+      .get(`/papers/get-for-management/${publicId}`)
       .set("Authorization", "Bearer other")
       .expect(404)
 
@@ -126,21 +145,21 @@ describe("Paper drafts API", () => {
       expectedLockVersion: 0,
     }
     await request(app.getHttpServer())
-      .patch(`/papers/update/${publicId}`)
+      .patch(`/papers/update-draft/${publicId}`)
       .set("Authorization", "Bearer owner")
       .send(update)
       .expect(200)
     await request(app.getHttpServer())
-      .patch(`/papers/update/${publicId}`)
+      .patch(`/papers/update-draft/${publicId}`)
       .set("Authorization", "Bearer owner")
       .send(update)
       .expect(409)
     await request(app.getHttpServer())
-      .delete(`/papers/delete/${publicId}`)
+      .delete(`/papers/delete-draft/${publicId}`)
       .set("Authorization", "Bearer other")
       .expect(404)
     await request(app.getHttpServer())
-      .delete(`/papers/delete/${publicId}`)
+      .delete(`/papers/delete-draft/${publicId}`)
       .set("Authorization", "Bearer owner")
       .expect(200)
     expect(await db.select().from(papers)).toHaveLength(0)

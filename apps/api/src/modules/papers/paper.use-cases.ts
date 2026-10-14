@@ -56,7 +56,7 @@ export class PaperUseCases {
       .where(
         and(
           eq(profiles.status, "active"),
-          inArray(profiles.role, ["instructor", "coordinator", "admin"])
+          inArray(profiles.role, ["instructor", "coordinator"])
         )
       )
       .orderBy(asc(profiles.fullName), asc(profiles.id))
@@ -199,7 +199,7 @@ export class PaperUseCases {
         and(
           eq(profiles.id, id),
           eq(profiles.status, "active"),
-          inArray(profiles.role, ["instructor", "coordinator", "admin"])
+          inArray(profiles.role, ["instructor", "coordinator"])
         )
       )
     if (!profile) throw new InvalidAdviserError()

@@ -94,7 +94,7 @@ describe("Settings API", () => {
   it("returns seeded settings and rejects invalid writes with authored validation", async () => {
     await request(app.getHttpServer())
       .get(getSettingsContract.path)
-      .set("Authorization", "Bearer admin")
+      .set("Authorization", "Bearer coordinator")
       .expect(200)
       .expect({
         defaultAccessGrantDays: 7,
@@ -104,7 +104,7 @@ describe("Settings API", () => {
       })
     const invalid = await request(app.getHttpServer())
       .patch(updateSettingsContract.path)
-      .set("Authorization", "Bearer admin")
+      .set("Authorization", "Bearer coordinator")
       .send({
         defaultAccessGrantDays: 31,
         maximumAccessGrantDays: 30,
@@ -115,9 +115,52 @@ describe("Settings API", () => {
     expect(JSON.stringify(invalid.body)).toContain(
       "Default Access Grant length cannot exceed the maximum."
     )
+    const underMinimum = await request(app.getHttpServer())
+      .patch(updateSettingsContract.path)
+      .set("Authorization", "Bearer coordinator")
+      .send({
+        defaultAccessGrantDays: 0,
+        maximumAccessGrantDays: 30,
+        pendingRequestDays: 14,
+        institutionName: "NCF",
+      })
+      .expect(400)
+    expect(JSON.stringify(underMinimum.body)).toContain(
+      "Default Access Grant length must be at least 1 day."
+    )
     await request(app.getHttpServer())
       .get(getSettingsContract.path)
       .set("Authorization", "Bearer member")
+      .expect(403)
+    await request(app.getHttpServer())
+      .get(getSettingsContract.path)
+      .set("Authorization", "Bearer admin")
+      .expect(403)
+    const adminHeaders = { Authorization: "Bearer admin" }
+    await request(app.getHttpServer())
+      .patch(updateSettingsContract.path)
+      .set(adminHeaders)
+      .send({
+        defaultAccessGrantDays: 7,
+        maximumAccessGrantDays: 30,
+        pendingRequestDays: 14,
+        institutionName: "Naga College Foundation",
+      })
+      .expect(403)
+    await request(app.getHttpServer())
+      .post(publishDepositNoticeContract.path)
+      .set(adminHeaders)
+      .send({ text: "Notice" })
+      .expect(403)
+    await request(app.getHttpServer())
+      .post("/programs/create")
+      .set(adminHeaders)
+      .send({ name: "Blocked Program" })
+      .expect(403)
+    await request(app.getHttpServer())
+      .patch("/programs/update/30000000-0000-0000-0000-000000000004")
+      .set(adminHeaders)
+      .send({ name: "Blocked Program", active: false })
       .expect(403)
     await request(app.getHttpServer())
       .get(getSettingsContract.path)
@@ -130,7 +173,7 @@ describe("Settings API", () => {
     for (const text of ["First notice", "Updated notice"]) {
       const published = await request(app.getHttpServer())
         .post(publishDepositNoticeContract.path)
-        .set("Authorization", "Bearer admin")
+        .set("Authorization", "Bearer coordinator")
         .send({ text })
         .expect(201)
       versions.push(published.body.version as number)
@@ -149,7 +192,7 @@ describe("Settings API", () => {
     expect(await db.select().from(auditEvents)).toHaveLength(2)
     const history = await request(app.getHttpServer())
       .get("/deposit-notices/get-all")
-      .set("Authorization", "Bearer admin")
+      .set("Authorization", "Bearer coordinator")
       .expect(200)
     expect(history.body).toMatchObject([
       { version: versions[1], text: "Updated notice" },
@@ -160,7 +203,7 @@ describe("Settings API", () => {
   it("deactivates Programs from reference data without removing existing profile links", async () => {
     const created = await request(app.getHttpServer())
       .post("/programs/create")
-      .set("Authorization", "Bearer admin")
+      .set("Authorization", "Bearer coordinator")
       .send({ name: "Computing" })
       .expect(201)
     const id = created.body.id as string
@@ -170,7 +213,7 @@ describe("Settings API", () => {
       .where(eq(profiles.id, "30000000-0000-0000-0000-000000000002"))
     await request(app.getHttpServer())
       .patch(`/programs/update/${id}`)
-      .set("Authorization", "Bearer admin")
+      .set("Authorization", "Bearer coordinator")
       .send({ name: "Computing", active: false })
       .expect(200)
     await request(app.getHttpServer())
@@ -193,12 +236,12 @@ describe("Settings API", () => {
   it("returns an authored conflict when a Program name is duplicated", async () => {
     await request(app.getHttpServer())
       .post("/programs/create")
-      .set("Authorization", "Bearer admin")
+      .set("Authorization", "Bearer coordinator")
       .send({ name: "Computing" })
       .expect(201)
     const conflict = await request(app.getHttpServer())
       .post("/programs/create")
-      .set("Authorization", "Bearer admin")
+      .set("Authorization", "Bearer coordinator")
       .send({ name: "Computing" })
       .expect(409)
     expect(conflict.body.message).toBe(
