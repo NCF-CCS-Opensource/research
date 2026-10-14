@@ -1,7 +1,7 @@
 import { pgEnum, pgTable, uuid, varchar } from "drizzle-orm/pg-core"
 import { programs } from "./programs"
 
-export const accountRoleEnum = pgEnum("account_role", ["user", "admin"])
+export const accountRoleEnum = pgEnum("account_role", ["user", "admin", "instructor", "coordinator"])
 export const accountStatusEnum = pgEnum("account_status", [
   "active",
   "suspended",

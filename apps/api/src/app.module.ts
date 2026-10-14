@@ -6,9 +6,10 @@ import { ZodValidationPipe } from "./common/pipes/zod-validation.pipe"
 import { DatabaseModule } from "./database/database.module"
 import { AccountModule } from "./modules/account/account.module"
 import { TaxonomyModule } from "./modules/taxonomy/taxonomy.module"
+import { PapersModule } from "./modules/papers/papers.module"
 
 @Module({
-  imports: [DatabaseModule, TaxonomyModule, AccountModule],
+  imports: [DatabaseModule, TaxonomyModule, AccountModule, PapersModule],
   providers: [
     {
       provide: APP_GUARD,

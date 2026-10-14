@@ -69,7 +69,7 @@ export class GlobalAuthGuard implements CanActivate {
       throw new RegistrationRequiredError()
     }
 
-    if (isAdminOnly && identity.role !== "admin") {
+    if (isAdminOnly && identity.role !== "admin" && identity.role !== "coordinator") {
       throw new AdminOnlyError()
     }
 

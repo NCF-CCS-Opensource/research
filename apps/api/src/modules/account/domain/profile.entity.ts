@@ -3,7 +3,7 @@ import { EmailDomainNotAllowedError } from "./profile.errors"
 
 const NCF_EMAIL_DOMAINS = ["gbox.ncf.edu.ph", "ncf.edu.ph"]
 
-export type AccountRole = "user" | "admin"
+export type AccountRole = "user" | "admin" | "instructor" | "coordinator"
 export type AccountStatus = "active" | "suspended"
 
 export interface RegisterProfileProperties {
