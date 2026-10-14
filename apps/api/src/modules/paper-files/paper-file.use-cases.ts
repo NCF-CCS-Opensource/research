@@ -72,7 +72,11 @@ export class PaperFileUseCases implements OnModuleInit, OnModuleDestroy {
       })
       .from(papers)
       .where(and(eq(papers.publicId, publicId), eq(papers.ownerId, ownerId)));
-    if (!paper || paper.status !== 'draft' || !paper.versionId)
+    if (
+      !paper ||
+      !['draft', 'revision_requested'].includes(paper.status) ||
+      !paper.versionId
+    )
       throw new NotFoundException();
     await this.db.transaction(async (tx) => {
       await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${ownerId}))`);
@@ -166,7 +170,7 @@ export class PaperFileUseCases implements OnModuleInit, OnModuleDestroy {
           .for('update');
         if (
           !locked ||
-          locked.status !== 'draft' ||
+          !['draft', 'revision_requested'].includes(locked.status) ||
           locked.versionId !== paper.versionId
         )
           throw new NotFoundException();

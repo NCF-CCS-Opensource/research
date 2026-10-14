@@ -1,5 +1,9 @@
-import { paperDetailsSchema } from '@repo/contracts';
-import { PaperUseCases } from '../src/modules/paper/paper.use-cases.js';
+import { decidePaperContract, paperDetailsSchema } from '@repo/contracts';
+import {
+  InvalidPaperTransitionError,
+  PaperUseCases,
+  SubmissionIncompleteError,
+} from '../src/modules/paper/paper.use-cases.js';
 import type { Database } from '../src/database/database.js';
 
 describe('Paper draft contracts', () => {
@@ -16,6 +20,27 @@ describe('Paper draft contracts', () => {
       programId: 'not-a-uuid',
     });
     expect(result.success).toBe(false);
+  });
+
+  it('requires a reason for revision requests and rejections', () => {
+    expect(
+      decidePaperContract.request.safeParse({ decision: 'revision_request' })
+        .success,
+    ).toBe(false);
+    expect(
+      decidePaperContract.request.safeParse({
+        decision: 'reject',
+        reason: 'Incomplete',
+      }).success,
+    ).toBe(true);
+  });
+
+  it('maps invalid transitions to conflicts and missing submission fields to authored validation errors', () => {
+    expect(new InvalidPaperTransitionError().kind).toBe('conflict');
+    expect(new SubmissionIncompleteError('CLEAN PDF').kind).toBe('invalid');
+    expect(new SubmissionIncompleteError('CLEAN PDF').message).toContain(
+      'CLEAN PDF',
+    );
   });
 
   it('hides draft workflows from non-Student accounts', async () => {

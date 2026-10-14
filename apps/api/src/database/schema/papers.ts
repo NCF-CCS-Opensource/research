@@ -12,7 +12,13 @@ import { accounts } from './accounts.js';
 import { programs } from './programs.js';
 import { RESEARCH_TYPE_VALUES } from '@repo/contracts';
 
-export const paperStatusEnum = pgEnum('paper_status', ['draft', 'submitted']);
+export const paperStatusEnum = pgEnum('paper_status', [
+  'draft',
+  'submitted',
+  'endorsed',
+  'revision_requested',
+  'rejected',
+]);
 export const paperPublicationStatusEnum = pgEnum('paper_publication_status', [
   'unpublished',
   'published',

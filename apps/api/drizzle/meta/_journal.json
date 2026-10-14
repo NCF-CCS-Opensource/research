@@ -43,6 +43,13 @@
       "when": 1792108800000,
       "tag": "0005_paper_publication_status",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1792195200000,
+      "tag": "0006_paper_endorsement",
+      "breakpoints": true
     }
   ]
 }
