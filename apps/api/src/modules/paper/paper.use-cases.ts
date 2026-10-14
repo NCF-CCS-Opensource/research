@@ -22,6 +22,7 @@ import {
   paperVersions,
   papers,
   programs,
+  settings,
 } from '../../database/schema/index.js';
 
 export class StalePaperEditError extends DomainError {
@@ -440,7 +441,12 @@ export class PaperUseCases {
 
   async getPublic(publicId: string): Promise<PublicPaper> {
     const [row] = await this.db
-      .select({ paper: papers, version: paperVersions, program: programs.name })
+      .select({
+        paper: papers,
+        version: paperVersions,
+        program: programs.name,
+        institutionName: settings.institutionName,
+      })
       .from(papers)
       .innerJoin(
         paperVersions,
@@ -450,6 +456,7 @@ export class PaperUseCases {
         ),
       )
       .innerJoin(programs, eq(programs.id, papers.programId))
+      .crossJoin(settings)
       .where(
         and(
           eq(papers.publicId, publicId),
@@ -467,6 +474,7 @@ export class PaperUseCases {
       year: row.version.year,
       researchType: row.version.researchType,
       publishedAt: row.version.publishedAt.toISOString(),
+      institutionName: row.institutionName,
     };
   }
 

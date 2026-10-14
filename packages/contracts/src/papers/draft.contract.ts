@@ -6,6 +6,7 @@ export const authorSchema = z.object({
   kind: z.enum(['person', 'organization']),
   givenName: z.string().trim().max(100).optional(),
   familyName: z.string().trim().max(100).optional(),
+  suffix: z.string().trim().max(20).optional(),
 });
 export const paperDetailsSchema = z.object({
   title: z
@@ -146,6 +147,7 @@ export const publicPaperSchema = z.object({
   year: z.number().int(),
   researchType: paperDetailsSchema.shape.researchType,
   publishedAt: z.string().datetime(),
+  institutionName: z.string(),
 });
 export type PublicPaper = z.infer<typeof publicPaperSchema>;
 export const getPublicPaperContract = {
