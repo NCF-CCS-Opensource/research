@@ -32,13 +32,13 @@ export default async function BookPublicationQueuePage() {
             </p>
             <form action={decideBook}>
               <input type="hidden" name="publicId" value={book.publicId} />
-              <button name="decision" value="publish">
+              <button type="submit" name="decision" value="publish">
                 Publish
               </button>
               <label>
                 Rejection reason <input name="reason" maxLength={1000} />
               </label>
-              <button name="decision" value="reject">
+              <button type="submit" name="decision" value="reject">
                 Reject
               </button>
             </form>
@@ -67,7 +67,7 @@ export default async function BookPublicationQueuePage() {
                   }
                 >
                   <input type="hidden" name="publicId" value={book.publicId} />
-                  <button>
+                  <button type="submit">
                     {book.status === "published" ? "Withdraw" : "Restore"}
                   </button>
                 </form>

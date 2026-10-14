@@ -100,14 +100,14 @@ export function emailMessage(job: {
     book_withdrawn: 'Your Book was withdrawn',
   };
   const subject = labels[job.event] ?? 'Paper workflow update';
-  const url = new URL(
-    job.bookPublicId
-      ? job.event === 'book_submitted'
+  let path: string;
+  if (job.bookPublicId)
+    path =
+      job.event === 'book_submitted'
         ? '/books/publication-queue'
-        : '/books/mine'
-      : `/papers/${encodeURIComponent(job.paperPublicId ?? '')}`,
-    env.WEB_ORIGIN,
-  ).toString();
+        : '/books/mine';
+  else path = `/papers/${encodeURIComponent(job.paperPublicId ?? '')}`;
+  const url = new URL(path, env.WEB_ORIGIN).toString();
   const text = `${job.recipientName},\n\n${subject}: ${title}.${detail ? `\n\nReason: ${detail}` : ''}\n\nOpen the application: ${url}`;
   return {
     to: job.recipientEmail,

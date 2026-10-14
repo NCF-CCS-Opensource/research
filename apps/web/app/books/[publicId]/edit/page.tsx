@@ -7,9 +7,7 @@ export const dynamic = "force-dynamic";
 
 export default async function EditBookPage({
   params,
-}: {
-  params: Promise<{ publicId: string }>;
-}) {
+}: Readonly<{ params: Promise<{ publicId: string }> }>) {
   const { publicId } = await params;
   const response = await apiFetch(
     getManagedBookContract.path.replace(

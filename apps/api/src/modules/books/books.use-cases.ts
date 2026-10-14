@@ -318,7 +318,7 @@ export class BooksUseCases {
     return rows.map((row) => this.toManaged(row));
   }
 
-  async update(actor: Actor, publicId: string, details: BookDetails) {
+  update(actor: Actor, publicId: string, details: BookDetails) {
     if (actor.kind !== 'active') throw new NotFoundException();
     return this.db.transaction(async (tx) => {
       const [book] = await tx
@@ -358,7 +358,7 @@ export class BooksUseCases {
     });
   }
 
-  async decide(
+  decide(
     actor: Actor,
     publicId: string,
     decision: 'publish' | 'reject',
@@ -373,7 +373,7 @@ export class BooksUseCases {
         .from(books)
         .where(eq(books.publicId, publicId))
         .for('update');
-      if (!book || book.status !== 'submitted') throw new NotFoundException();
+      if (book?.status !== 'submitted') throw new NotFoundException();
       const status = decision === 'publish' ? 'published' : 'rejected';
       const [saved] = await tx
         .update(books)
@@ -411,7 +411,7 @@ export class BooksUseCases {
     return this.setWithdrawal(coordinator.id, publicId, false);
   }
 
-  private async setWithdrawal(
+  private setWithdrawal(
     actorId: string,
     publicId: string,
     withdraw: boolean,
@@ -422,7 +422,7 @@ export class BooksUseCases {
         .from(books)
         .where(eq(books.publicId, publicId))
         .for('update');
-      if (!book || book.status !== (withdraw ? 'published' : 'withdrawn'))
+      if (book?.status !== (withdraw ? 'published' : 'withdrawn'))
         throw new NotFoundException();
       const [saved] = await tx
         .update(books)

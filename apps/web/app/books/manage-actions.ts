@@ -9,12 +9,17 @@ import {
 import { revalidatePath } from "next/cache";
 import { apiFetch } from "../../lib/backend";
 
+const field = (formData: FormData, name: string) => {
+  const value = formData.get(name);
+  return typeof value === "string" ? value : "";
+};
+
 export async function decideBook(formData: FormData) {
-  const publicId = String(formData.get("publicId") ?? "");
-  const decision = String(formData.get("decision") ?? "");
+  const publicId = field(formData, "publicId");
+  const decision = field(formData, "decision");
   const body = decideBookContract.request.parse({
     decision,
-    reason: String(formData.get("reason") ?? "").trim() || undefined,
+    reason: field(formData, "reason").trim() || undefined,
   });
   const response = await apiFetch(
     decideBookContract.path.replace(":publicId", encodeURIComponent(publicId)),
@@ -27,21 +32,21 @@ export async function decideBook(formData: FormData) {
 }
 
 export async function updateBook(formData: FormData) {
-  const publicId = String(formData.get("publicId") ?? "");
+  const publicId = field(formData, "publicId");
   const details = updateBookContract.request.parse({
-    title: String(formData.get("title") ?? ""),
-    authors: String(formData.get("authors") ?? "")
+    title: field(formData, "title"),
+    authors: field(formData, "authors")
       .split(/\r?\n/)
       .map((value) => value.trim())
       .filter(Boolean),
-    year: Number(formData.get("year")),
-    licence: String(formData.get("licence") ?? ""),
-    sourceUrl: String(formData.get("sourceUrl") ?? ""),
-    publisher: String(formData.get("publisher") ?? ""),
-    edition: String(formData.get("edition") ?? ""),
-    isbn: String(formData.get("isbn") ?? ""),
-    description: String(formData.get("description") ?? ""),
-    keywords: String(formData.get("keywords") ?? "")
+    year: Number(field(formData, "year")),
+    licence: field(formData, "licence"),
+    sourceUrl: field(formData, "sourceUrl"),
+    publisher: field(formData, "publisher"),
+    edition: field(formData, "edition"),
+    isbn: field(formData, "isbn"),
+    description: field(formData, "description"),
+    keywords: field(formData, "keywords")
       .split(/\r?\n/)
       .map((value) => value.trim())
       .filter(Boolean),
@@ -56,7 +61,7 @@ export async function updateBook(formData: FormData) {
 }
 
 async function changeAvailability(formData: FormData, restore: boolean) {
-  const publicId = String(formData.get("publicId") ?? "");
+  const publicId = field(formData, "publicId");
   const contract = restore ? restoreBookContract : withdrawBookContract;
   const response = await apiFetch(
     contract.path.replace(":publicId", encodeURIComponent(publicId)),
