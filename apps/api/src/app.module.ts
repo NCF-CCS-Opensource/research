@@ -7,9 +7,10 @@ import { DatabaseModule } from "./database/database.module"
 import { AccountModule } from "./modules/account/account.module"
 import { TaxonomyModule } from "./modules/taxonomy/taxonomy.module"
 import { PapersModule } from "./modules/papers/papers.module"
+import { SettingsModule } from "./modules/settings/settings.module"
 
 @Module({
-  imports: [DatabaseModule, TaxonomyModule, AccountModule, PapersModule],
+  imports: [DatabaseModule, TaxonomyModule, AccountModule, PapersModule, SettingsModule],
   providers: [
     {
       provide: APP_GUARD,

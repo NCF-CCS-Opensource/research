@@ -1,6 +1,6 @@
 import { Inject, Injectable } from "@nestjs/common"
 import type { Program } from "@repo/contracts"
-import { asc } from "drizzle-orm"
+import { asc, eq } from "drizzle-orm"
 import type { Database } from "../../../database/database"
 import { DATABASE_CONNECTION } from "../../../database/database.module"
 import { programs } from "../../../database/schema"
@@ -17,6 +17,7 @@ export class DrizzleProgramQuery implements ProgramQuery {
         name: programs.name,
       })
       .from(programs)
+      .where(eq(programs.isActive, true))
       .orderBy(asc(programs.name))
 
     return rows
