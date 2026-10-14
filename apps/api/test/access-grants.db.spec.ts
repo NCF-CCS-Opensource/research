@@ -3,7 +3,7 @@ import { Readable } from 'node:stream';
 import type { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { getPaperContentContract } from '@repo/contracts';
-import { and, eq, gt, isNull } from 'drizzle-orm';
+import { and, eq, gt, inArray, isNull } from 'drizzle-orm';
 import request from 'supertest';
 import { vi } from 'vitest';
 import { AppModule } from '../src/app.module.js';
@@ -203,6 +203,9 @@ describe('Access Grants (database)', () => {
     fixture: Awaited<ReturnType<typeof paperFixture>>,
     ...accountIds: string[]
   ) {
+    await db
+      .delete(schema.auditEvents)
+      .where(inArray(schema.auditEvents.actorAccountId, accountIds));
     await db.delete(paperFiles).where(eq(paperFiles.id, fixture.fileId));
     await db.delete(papers).where(eq(papers.id, fixture.paperId));
     for (const id of accountIds)
@@ -350,8 +353,8 @@ describe('Access Grants (database)', () => {
         requester.row.id,
         owner.row.id,
         adviser.row.id,
+        coordinator.row.id,
       );
-      await db.delete(accounts).where(eq(accounts.id, coordinator.row.id));
     }
   });
 });
