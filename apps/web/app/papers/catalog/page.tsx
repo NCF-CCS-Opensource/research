@@ -28,9 +28,19 @@ export default async function CatalogPage({
   const query = new URLSearchParams();
   for (const [key, value] of Object.entries(values))
     if (value) query.set(key, value);
-  const response = await apiFetch(
-    `${listPublishedPapersContract.path}?${query}`,
-  );
+  let response: Response;
+  let payload: unknown;
+  try {
+    response = await apiFetch(`${listPublishedPapersContract.path}?${query}`);
+    payload = response.ok ? await response.json() : null;
+  } catch {
+    return (
+      <main>
+        <h1>Paper catalog</h1>
+        <p role="alert">The catalog could not be reached. Please try again.</p>
+      </main>
+    );
+  }
   if (!response.ok)
     return (
       <main>
@@ -39,7 +49,7 @@ export default async function CatalogPage({
       </main>
     );
   const result = listPublishedPapersContract.response.safeParse(
-    (await response.json())?.data,
+    (payload as { data?: unknown } | null)?.data,
   );
   if (!result.success)
     return (
