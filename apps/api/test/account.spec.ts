@@ -17,7 +17,12 @@ import { AdminOnly } from "../src/common/decorators/admin-only.decorator"
 import type { Database } from "../src/database/database"
 import { DATABASE_CONNECTION } from "../src/database/database.module"
 import { runMigrations } from "../src/database/migrate"
-import { profiles, programs } from "../src/database/schema"
+import {
+  auditEvents,
+  depositNotices,
+  profiles,
+  programs,
+} from "../src/database/schema"
 import {
   TOKEN_VERIFIER,
   type TokenVerifier,
@@ -119,6 +124,8 @@ describe("Account module", () => {
   })
 
   beforeEach(async () => {
+    await db.delete(auditEvents)
+    await db.delete(depositNotices)
     await db.delete(profiles)
     await db.delete(programs)
   })

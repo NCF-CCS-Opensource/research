@@ -71,20 +71,18 @@ export class PaperUseCases {
     const [program] = await this.db
       .select({ id: programs.id })
       .from(programs)
-      .where(eq(programs.id, input.programId))
+      .where(and(eq(programs.id, input.programId), eq(programs.isActive, true)))
     if (!program) throw new InvalidPaperProgramError()
     const paperId = randomUUID()
     const publicId = randomUUID().replaceAll("-", "")
     return this.db.transaction(async (tx) => {
-      await tx
-        .insert(papers)
-        .values({
-          id: paperId,
-          publicId,
-          ownerId,
-          adviserId: input.adviserId,
-          programId: input.programId,
-        })
+      await tx.insert(papers).values({
+        id: paperId,
+        publicId,
+        ownerId,
+        adviserId: input.adviserId,
+        programId: input.programId,
+      })
       const [version] = await tx
         .insert(paperVersions)
         .values({
@@ -147,32 +145,34 @@ export class PaperUseCases {
     const [program] = await this.db
       .select({ id: programs.id })
       .from(programs)
-      .where(eq(programs.id, input.programId))
+      .where(and(eq(programs.id, input.programId), eq(programs.isActive, true)))
     if (!program) throw new InvalidPaperProgramError()
-    const [saved] = await this.db
-      .update(paperVersions)
-      .set({
-        title: input.title,
-        abstract: input.abstract,
-        authors: input.authors,
-        year: input.year,
-        researchType: input.researchType,
-        keywords: input.keywords,
-        lockVersion: input.expectedLockVersion + 1,
-      })
-      .where(
-        and(
-          eq(paperVersions.id, paper.versionId),
-          eq(paperVersions.lockVersion, input.expectedLockVersion)
+    return this.db.transaction(async (tx) => {
+      const [saved] = await tx
+        .update(paperVersions)
+        .set({
+          title: input.title,
+          abstract: input.abstract,
+          authors: input.authors,
+          year: input.year,
+          researchType: input.researchType,
+          keywords: input.keywords,
+          lockVersion: input.expectedLockVersion + 1,
+        })
+        .where(
+          and(
+            eq(paperVersions.id, paper.versionId),
+            eq(paperVersions.lockVersion, input.expectedLockVersion)
+          )
         )
-      )
-      .returning()
-    if (!saved) throw new StalePaperEditError()
-    await this.db
-      .update(papers)
-      .set({ adviserId: input.adviserId, programId: input.programId })
-      .where(eq(papers.id, paper.id))
-    return this.getForOwner(this.db, publicId, ownerId)
+        .returning()
+      if (!saved) throw new StalePaperEditError()
+      await tx
+        .update(papers)
+        .set({ adviserId: input.adviserId, programId: input.programId })
+        .where(eq(papers.id, paper.id))
+      return this.getForOwner(tx, publicId, ownerId)
+    })
   }
 
   async delete(identity: RequestIdentity, publicId: string) {
