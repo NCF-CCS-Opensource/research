@@ -11,6 +11,7 @@ import {
   auditEvents,
   depositAcknowledgements,
   depositNotices,
+  emailJobs,
   paperDecisions,
   paperFiles,
   paperVersions,
@@ -276,6 +277,18 @@ export class PaperUseCases {
         subjectId: paper.id,
         details: { noticeVersion },
       });
+      const [adviser] = await tx
+        .select({ email: accounts.email, name: accounts.name })
+        .from(accounts)
+        .where(eq(accounts.id, paper.adviserId));
+      if (adviser)
+        await tx.insert(emailJobs).values({
+          event: 'submitted',
+          recipientEmail: adviser.email,
+          recipientName: adviser.name,
+          paperPublicId: paper.publicId,
+          paperTitle: version.title,
+        });
       return this.getForOwner(tx, publicId, ownerId);
     });
   }
@@ -354,6 +367,50 @@ export class PaperUseCases {
         subjectId: paper.id,
         details: { reason: reason?.trim() ?? null },
       });
+      const [version] = paper.currentVersionId
+        ? await tx
+            .select({ title: paperVersions.title })
+            .from(paperVersions)
+            .where(eq(paperVersions.id, paper.currentVersionId))
+        : [];
+      if (decision === 'endorse') {
+        const coordinators = await tx
+          .select({ email: accounts.email, name: accounts.name })
+          .from(accounts)
+          .where(
+            and(
+              eq(accounts.role, 'COORDINATOR'),
+              eq(accounts.status, 'ACTIVE'),
+            ),
+          );
+        if (version && coordinators.length)
+          await tx.insert(emailJobs).values(
+            coordinators.map((coordinator) => ({
+              event: 'endorsement',
+              recipientEmail: coordinator.email,
+              recipientName: coordinator.name,
+              paperPublicId: paper.publicId,
+              paperTitle: version.title,
+            })),
+          );
+      } else {
+        const [owner] = await tx
+          .select({ email: accounts.email, name: accounts.name })
+          .from(accounts)
+          .where(eq(accounts.id, paper.ownerId));
+        if (owner && version)
+          await tx.insert(emailJobs).values({
+            event:
+              decision === 'revision_request'
+                ? 'revision_request'
+                : 'rejection',
+            recipientEmail: owner.email,
+            recipientName: owner.name,
+            paperPublicId: paper.publicId,
+            paperTitle: version.title,
+            details: { reason: reason?.trim() ?? '' },
+          });
+      }
       return this.getForOwner(tx, publicId, paper.ownerId);
     });
   }
