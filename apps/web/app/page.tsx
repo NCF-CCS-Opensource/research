@@ -37,6 +37,9 @@ export default async function Home() {
               <p>
                 <Link href="/papers/publication-queue">Publication queue</Link>
               </p>
+              <p>
+                <Link href="/papers/legacy-deposit">Create Legacy Deposit</Link>
+              </p>
             </>
           )}
           {identity.account.role === "STUDENT" && (

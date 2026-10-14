@@ -43,7 +43,8 @@ export const paperSchema = paperDetailsSchema.extend({
   versionId: z.string().uuid(),
   publicId: z.string(),
   ownerId: z.string().uuid(),
-  adviserId: z.string().uuid(),
+  adviserId: z.string().uuid().nullable(),
+  legacyDeposit: z.boolean(),
   status: z.enum([
     'draft',
     'submitted',
@@ -69,6 +70,17 @@ export const createPaperContract = {
   request: paperDetailsSchema.extend({ adviserId: z.string().uuid() }),
   response: paperSchema,
 };
+export const createLegacyDepositContract = {
+  method: 'POST' as const,
+  path: '/papers/legacy-deposit/create' as const,
+  request: paperDetailsSchema.extend({
+    adviserId: z.string().uuid().nullable().optional(),
+  }),
+  response: paperSchema,
+};
+export type CreateLegacyDepositRequest = z.infer<
+  typeof createLegacyDepositContract.request
+>;
 export type CreatePaperRequest = z.infer<typeof createPaperContract.request>;
 export const listMyPapersContract = {
   method: 'GET' as const,
@@ -168,6 +180,11 @@ export const listPublicationQueueContract = {
 export const publishPaperContract = {
   method: 'POST' as const,
   path: '/papers/publish/:publicId' as const,
+  response: paperSchema,
+};
+export const publishLegacyDepositContract = {
+  method: 'POST' as const,
+  path: '/papers/legacy-deposit/publish/:publicId' as const,
   response: paperSchema,
 };
 

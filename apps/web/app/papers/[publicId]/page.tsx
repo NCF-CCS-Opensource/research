@@ -6,6 +6,7 @@ import { PaperFileUpload } from "./paper-file-upload";
 import { SubmissionPanel } from "./submission-panel";
 import { PaperDecision } from "../adviser-queue/paper-decision";
 import { CitationActions } from "./citation-actions";
+import { publishLegacyDeposit } from "../legacy-deposit/actions";
 
 export const dynamic = "force-dynamic";
 
@@ -80,9 +81,10 @@ export default async function PaperPage({
   if (!parsed.success) notFound();
   const identity = await getCurrentIdentity();
   const editable = ["draft", "revision_requested"].includes(parsed.data.status);
-  const noticeResponse = editable
-    ? await apiFetch("/deposit-notices/get-current")
-    : null;
+  const noticeResponse =
+    editable && !parsed.data.legacyDeposit
+      ? await apiFetch("/deposit-notices/get-current")
+      : null;
   const notice = noticeResponse?.ok
     ? (await noticeResponse.json())?.data
     : null;
@@ -97,6 +99,12 @@ export default async function PaperPage({
         Read PDF
       </Link>
       {editable && <PaperFileUpload publicId={publicId} />}
+      {parsed.data.legacyDeposit && editable && (
+        <form action={publishLegacyDeposit}>
+          <input type="hidden" name="publicId" value={publicId} />
+          <button type="submit">Publish Legacy Deposit</button>
+        </form>
+      )}
       {editable && notice && (
         <SubmissionPanel publicId={publicId} notice={notice} />
       )}

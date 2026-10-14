@@ -23,7 +23,10 @@ import {
   listPublishedPapersContract,
   listPublicationQueueContract,
   publishPaperContract,
+  createLegacyDepositContract,
+  publishLegacyDepositContract,
   type CreatePaperRequest,
+  type CreateLegacyDepositRequest,
   type Paper,
   type UpdatePaperRequest,
 } from '@repo/contracts';
@@ -59,6 +62,23 @@ export class PaperController {
   @Post(publishPaperContract.path)
   publish(@CurrentActor() actor: Actor, @Param('publicId') publicId: string) {
     return this.papers.publish(actor, publicId);
+  }
+
+  @Post(createLegacyDepositContract.path)
+  createLegacyDeposit(
+    @CurrentActor() actor: Actor,
+    @Body(new ZodBody(createLegacyDepositContract.request))
+    input: CreateLegacyDepositRequest,
+  ) {
+    return this.papers.createLegacyDeposit(actor, input);
+  }
+
+  @Post(publishLegacyDepositContract.path)
+  publishLegacyDeposit(
+    @CurrentActor() actor: Actor,
+    @Param('publicId') publicId: string,
+  ) {
+    return this.papers.publishLegacyDeposit(actor, publicId);
   }
 
   @Get(listAdvisersContract.path)
