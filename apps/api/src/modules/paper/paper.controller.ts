@@ -14,6 +14,10 @@ import {
   listAdvisersContract,
   listMyPapersContract,
   updatePaperContract,
+  submitPaperContract,
+  listAdviserQueueContract,
+  decidePaperContract,
+  changePaperAdviserContract,
   type CreatePaperRequest,
   type Paper,
   type UpdatePaperRequest,
@@ -67,5 +71,40 @@ export class PaperController {
   @Delete(deletePaperContract.path)
   delete(@CurrentActor() identity: Actor, @Param('publicId') publicId: string) {
     return this.papers.delete(identity, publicId);
+  }
+
+  @Post(submitPaperContract.path)
+  submitPaper(
+    @CurrentActor() actor: Actor,
+    @Param('publicId') publicId: string,
+    @Body(new ZodBody(submitPaperContract.request))
+    body: { noticeVersion: number },
+  ) {
+    return this.papers.submit(actor, publicId, body.noticeVersion);
+  }
+  @Get(listAdviserQueueContract.path)
+  adviserQueue(@CurrentActor() actor: Actor) {
+    return this.papers.listAdviserQueue(actor);
+  }
+  @Post(decidePaperContract.path)
+  decide(
+    @CurrentActor() actor: Actor,
+    @Param('publicId') publicId: string,
+    @Body(new ZodBody(decidePaperContract.request))
+    body: {
+      decision: 'endorse' | 'revision_request' | 'reject';
+      reason?: string;
+    },
+  ) {
+    return this.papers.decide(actor, publicId, body.decision, body.reason);
+  }
+  @Patch(changePaperAdviserContract.path)
+  changeAdviser(
+    @CurrentActor() actor: Actor,
+    @Param('publicId') publicId: string,
+    @Body(new ZodBody(changePaperAdviserContract.request))
+    body: { adviserId: string },
+  ) {
+    return this.papers.changeAdviser(actor, publicId, body.adviserId);
   }
 }

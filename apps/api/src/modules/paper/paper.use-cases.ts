@@ -1,13 +1,18 @@
 import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 import type { Paper, PaperDetails } from '@repo/contracts';
-import { and, asc, eq, inArray } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray } from 'drizzle-orm';
 import { DomainError } from '../../shared/domain/domain-error.js';
 import type { Actor } from '../../shared/domain/actor.js';
 import { DATABASE } from '../../database/database.module.js';
 import type { Database } from '../../database/database.js';
 import {
   accounts,
+  auditEvents,
+  depositAcknowledgements,
+  depositNotices,
+  paperDecisions,
+  paperFiles,
   paperVersions,
   papers,
   programs,
@@ -43,6 +48,33 @@ export class InvalidAdviserError extends DomainError {
 export class InvalidPaperProgramError extends DomainError {
   constructor() {
     super('INVALID_PROGRAM', 'Choose an active Program.', 'invalid');
+  }
+}
+export class InvalidPaperTransitionError extends DomainError {
+  constructor() {
+    super(
+      'PAPER_STATE_CONFLICT',
+      'This Paper cannot make that transition.',
+      'conflict',
+    );
+  }
+}
+export class SubmissionIncompleteError extends DomainError {
+  constructor(field: string) {
+    super(
+      'SUBMISSION_INCOMPLETE',
+      `${field} is required before submission.`,
+      'invalid',
+    );
+  }
+}
+export class PaperDecisionForbiddenError extends DomainError {
+  constructor() {
+    super(
+      'PAPER_DECISION_FORBIDDEN',
+      'Only the current Adviser or a Coordinator may decide this Paper.',
+      'forbidden',
+    );
   }
 }
 
@@ -140,7 +172,8 @@ export class PaperUseCases {
   ): Promise<Paper> {
     const ownerId = this.requireStudent(identity);
     const paper = await this.getForOwner(this.db, publicId, ownerId);
-    if (paper.status !== 'draft') throw new PaperNotEditableError();
+    if (!['draft', 'revision_requested'].includes(paper.status))
+      throw new PaperNotEditableError();
     await this.validateAdviser(input.adviserId);
     const [program] = await this.db
       .select({ id: programs.id })
@@ -185,6 +218,204 @@ export class PaperUseCases {
     return { deleted: true as const };
   }
 
+  async submit(
+    identity: Actor,
+    publicId: string,
+    noticeVersion: number,
+  ): Promise<Paper> {
+    const ownerId = this.requireStudent(identity);
+    return this.db.transaction(async (tx) => {
+      const [paper] = await tx
+        .select()
+        .from(papers)
+        .where(eq(papers.publicId, publicId))
+        .for('update');
+      if (!paper || paper.ownerId !== ownerId) throw new NotFoundException();
+      if (!['draft', 'revision_requested'].includes(paper.status))
+        throw new InvalidPaperTransitionError();
+      const [currentNotice] = await tx
+        .select()
+        .from(depositNotices)
+        .orderBy(desc(depositNotices.version))
+        .limit(1);
+      if (!currentNotice) throw new SubmissionIncompleteError('Deposit Notice');
+      if (noticeVersion !== currentNotice.version)
+        throw new SubmissionIncompleteError(
+          'Current Deposit Notice acknowledgement',
+        );
+      if (!paper.currentVersionId)
+        throw new SubmissionIncompleteError('Paper details');
+      const [version] = await tx
+        .select()
+        .from(paperVersions)
+        .where(eq(paperVersions.id, paper.currentVersionId));
+      if (!version) throw new SubmissionIncompleteError('Paper details');
+      const [file] = version.pdfFileId
+        ? await tx
+            .select({ status: paperFiles.status })
+            .from(paperFiles)
+            .where(eq(paperFiles.id, version.pdfFileId))
+        : [];
+      if (!file || file.status !== 'CLEAN')
+        throw new SubmissionIncompleteError('CLEAN PDF');
+      await this.validateAdviser(paper.adviserId);
+      await tx
+        .insert(depositAcknowledgements)
+        .values({ paperId: paper.id, accountId: ownerId, noticeVersion });
+      await tx
+        .update(papers)
+        .set({ status: 'submitted' })
+        .where(eq(papers.id, paper.id));
+      await tx
+        .insert(paperDecisions)
+        .values({ paperId: paper.id, actorId: ownerId, decision: 'SUBMITTED' });
+      await tx
+        .insert(auditEvents)
+        .values({
+          actorAccountId: ownerId,
+          action: 'PAPER_SUBMITTED',
+          subjectType: 'PAPER',
+          subjectId: paper.id,
+          details: { noticeVersion },
+        });
+      return this.getForOwner(tx, publicId, ownerId);
+    });
+  }
+
+  async listAdviserQueue(identity: Actor): Promise<Paper[]> {
+    if (
+      identity.kind !== 'active' ||
+      !['INSTRUCTOR', 'COORDINATOR'].includes(identity.account.role)
+    )
+      throw new NotFoundException();
+    const ids = await this.db
+      .select({ publicId: papers.publicId, ownerId: papers.ownerId })
+      .from(papers)
+      .where(
+        and(
+          eq(papers.adviserId, identity.account.id),
+          eq(papers.status, 'submitted'),
+        ),
+      )
+      .orderBy(asc(papers.createdAt));
+    return Promise.all(
+      ids.map(({ publicId, ownerId }) =>
+        this.getForOwner(this.db, publicId, ownerId),
+      ),
+    );
+  }
+
+  async decide(
+    identity: Actor,
+    publicId: string,
+    decision: 'endorse' | 'revision_request' | 'reject',
+    reason?: string,
+  ): Promise<Paper> {
+    if (identity.kind !== 'active') throw new NotFoundException();
+    const coordinator = identity.account.role === 'COORDINATOR';
+    if (!coordinator && identity.account.role !== 'INSTRUCTOR')
+      throw new PaperDecisionForbiddenError();
+    if (decision !== 'endorse' && !reason?.trim())
+      throw new SubmissionIncompleteError('Reason');
+    return this.db.transaction(async (tx) => {
+      const [paper] = await tx
+        .select()
+        .from(papers)
+        .where(eq(papers.publicId, publicId))
+        .for('update');
+      if (!paper) throw new NotFoundException();
+      if (decision === 'endorse' && paper.adviserId !== identity.account.id)
+        throw new PaperDecisionForbiddenError();
+      if (
+        decision !== 'endorse' &&
+        !coordinator &&
+        paper.adviserId !== identity.account.id
+      )
+        throw new PaperDecisionForbiddenError();
+      if (
+        decision === 'endorse'
+          ? paper.status !== 'submitted'
+          : coordinator
+            ? !['submitted', 'endorsed'].includes(paper.status)
+            : paper.status !== 'submitted'
+      )
+        throw new InvalidPaperTransitionError();
+      const status =
+        decision === 'endorse'
+          ? 'endorsed'
+          : decision === 'revision_request'
+            ? 'revision_requested'
+            : 'rejected';
+      await tx.update(papers).set({ status }).where(eq(papers.id, paper.id));
+      await tx
+        .insert(paperDecisions)
+        .values({
+          paperId: paper.id,
+          actorId: identity.account.id,
+          decision: decision.toUpperCase(),
+          reason: reason?.trim() ?? null,
+        });
+      await tx
+        .insert(auditEvents)
+        .values({
+          actorAccountId: identity.account.id,
+          action: `PAPER_${decision.toUpperCase()}`,
+          subjectType: 'PAPER',
+          subjectId: paper.id,
+          details: { reason: reason?.trim() ?? null },
+        });
+      return this.getForOwner(tx, publicId, paper.ownerId);
+    });
+  }
+
+  async changeAdviser(
+    identity: Actor,
+    publicId: string,
+    adviserId: string,
+  ): Promise<Paper> {
+    if (identity.kind !== 'active') throw new NotFoundException();
+    return this.db.transaction(async (tx) => {
+      const [paper] = await tx
+        .select()
+        .from(papers)
+        .where(eq(papers.publicId, publicId))
+        .for('update');
+      if (!paper) throw new NotFoundException();
+      const coordinator = identity.account.role === 'COORDINATOR';
+      if (
+        !coordinator &&
+        (identity.account.role !== 'STUDENT' ||
+          identity.account.id !== paper.ownerId ||
+          !['draft', 'revision_requested'].includes(paper.status))
+      )
+        throw new InvalidPaperTransitionError();
+      await this.validateAdviser(adviserId);
+      const status = paper.status === 'endorsed' ? 'submitted' : paper.status;
+      await tx
+        .update(papers)
+        .set({ adviserId, status })
+        .where(eq(papers.id, paper.id));
+      await tx
+        .insert(paperDecisions)
+        .values({
+          paperId: paper.id,
+          actorId: identity.account.id,
+          decision: 'ADVISER_CHANGED',
+          reason: `${paper.adviserId} -> ${adviserId}`,
+        });
+      await tx
+        .insert(auditEvents)
+        .values({
+          actorAccountId: identity.account.id,
+          action: 'PAPER_ADVISER_CHANGED',
+          subjectType: 'PAPER',
+          subjectId: paper.id,
+          details: { previousAdviserId: paper.adviserId, adviserId, status },
+        });
+      return this.getForOwner(tx, publicId, paper.ownerId);
+    });
+  }
+
   private requireStudent(identity: Actor): string {
     if (identity.kind !== 'active' || identity.account.role !== 'STUDENT')
       throw new NotFoundException();
@@ -216,6 +447,15 @@ export class PaperUseCases {
       .innerJoin(paperVersions, eq(papers.currentVersionId, paperVersions.id))
       .where(and(eq(papers.publicId, publicId), eq(papers.ownerId, ownerId)));
     if (!row) throw new NotFoundException();
+    const history = await db
+      .select({
+        decision: paperDecisions.decision,
+        reason: paperDecisions.reason,
+        createdAt: paperDecisions.createdAt,
+      })
+      .from(paperDecisions)
+      .where(eq(paperDecisions.paperId, row.paper.id))
+      .orderBy(asc(paperDecisions.createdAt));
     return {
       ...row.version,
       id: row.paper.id,
@@ -225,6 +465,10 @@ export class PaperUseCases {
       adviserId: row.paper.adviserId,
       programId: row.paper.programId,
       status: row.paper.status,
+      decisionHistory: history.map((item) => ({
+        ...item,
+        createdAt: item.createdAt.toISOString(),
+      })),
       publicationStatus: row.paper.publicationStatus,
       authors: row.version.authors as Paper['authors'],
     };

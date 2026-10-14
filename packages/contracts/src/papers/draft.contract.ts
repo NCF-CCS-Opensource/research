@@ -43,7 +43,20 @@ export const paperSchema = paperDetailsSchema.extend({
   publicId: z.string(),
   ownerId: z.string().uuid(),
   adviserId: z.string().uuid(),
-  status: z.enum(['draft', 'submitted']),
+  status: z.enum([
+    'draft',
+    'submitted',
+    'endorsed',
+    'revision_requested',
+    'rejected',
+  ]),
+  decisionHistory: z.array(
+    z.object({
+      decision: z.string(),
+      reason: z.string().nullable(),
+      createdAt: z.string().datetime(),
+    }),
+  ),
   publicationStatus: z.enum(['unpublished', 'published', 'withdrawn']),
   lockVersion: z.number().int(),
 });
@@ -85,6 +98,42 @@ export const listAdvisersContract = {
   method: 'GET' as const,
   path: '/papers/list-selectable-advisers' as const,
   response: z.array(z.object({ id: z.string().uuid(), fullName: z.string() })),
+};
+
+export const submitPaperContract = {
+  method: 'POST' as const,
+  path: '/papers/submit/:publicId' as const,
+  request: z.object({ noticeVersion: z.number().int().positive() }),
+  response: paperSchema,
+};
+export const listAdviserQueueContract = {
+  method: 'GET' as const,
+  path: '/papers/get-adviser-queue' as const,
+  response: z.array(paperSchema),
+};
+export const decidePaperContract = {
+  method: 'POST' as const,
+  path: '/papers/decide/:publicId' as const,
+  request: z
+    .object({
+      decision: z.enum(['endorse', 'revision_request', 'reject']),
+      reason: z.string().trim().max(2000).optional(),
+    })
+    .superRefine((value, context) => {
+      if (value.decision !== 'endorse' && !value.reason)
+        context.addIssue({
+          code: 'custom',
+          path: ['reason'],
+          message: 'A reason is required.',
+        });
+    }),
+  response: paperSchema,
+};
+export const changePaperAdviserContract = {
+  method: 'PATCH' as const,
+  path: '/papers/change-adviser/:publicId' as const,
+  request: z.object({ adviserId: z.string().uuid() }),
+  response: paperSchema,
 };
 
 export const paperFileStatusSchema = z.enum([
