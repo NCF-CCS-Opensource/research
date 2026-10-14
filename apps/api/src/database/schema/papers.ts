@@ -62,6 +62,7 @@ export const paperVersions = pgTable('paper_versions', {
   keywords: text('keywords').array().notNull(),
   authors: jsonb('authors').notNull(),
   pdfFileId: uuid('pdf_file_id'),
+  publishedAt: timestamp('published_at', { withTimezone: true }),
   createdAt: timestamp('created_at', { withTimezone: true })
     .notNull()
     .defaultNow(),

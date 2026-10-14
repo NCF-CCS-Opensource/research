@@ -1,7 +1,12 @@
 import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
-import type { Paper, PaperDetails } from '@repo/contracts';
-import { and, asc, desc, eq, inArray } from 'drizzle-orm';
+import {
+  paperDetailsSchema,
+  type Paper,
+  type PaperDetails,
+  type PublicPaper,
+} from '@repo/contracts';
+import { and, asc, desc, eq, inArray, isNotNull } from 'drizzle-orm';
 import { DomainError } from '../../shared/domain/domain-error.js';
 import type { Actor } from '../../shared/domain/actor.js';
 import { DATABASE } from '../../database/database.module.js';
@@ -77,6 +82,20 @@ export class PaperDecisionForbiddenError extends DomainError {
       'forbidden',
     );
   }
+}
+
+export function paperReferencesMatch(
+  paperId: string,
+  version: { id: string; paperId: string; pdfFileId: string | null },
+  file?: { id: string; paperId: string | null; versionId: string | null },
+) {
+  return (
+    version.paperId === paperId &&
+    !!file &&
+    file.id === version.pdfFileId &&
+    file.paperId === paperId &&
+    file.versionId === version.id
+  );
 }
 
 @Injectable()
@@ -314,6 +333,162 @@ export class PaperUseCases {
         this.getForOwner(this.db, publicId, ownerId),
       ),
     );
+  }
+
+  async listPublicationQueue(identity: Actor): Promise<Paper[]> {
+    if (identity.kind !== 'active' || identity.account.role !== 'COORDINATOR')
+      throw new NotFoundException();
+    const ids = await this.db
+      .select({ publicId: papers.publicId, ownerId: papers.ownerId })
+      .from(papers)
+      .where(
+        and(
+          eq(papers.status, 'endorsed'),
+          eq(papers.publicationStatus, 'unpublished'),
+        ),
+      )
+      .orderBy(asc(papers.createdAt));
+    const queue = await Promise.all(
+      ids.map(({ publicId, ownerId }) =>
+        this.getForOwner(this.db, publicId, ownerId),
+      ),
+    );
+    return queue;
+  }
+
+  publish(identity: Actor, publicId: string): Promise<Paper> {
+    if (identity.kind !== 'active' || identity.account.role !== 'COORDINATOR')
+      throw new NotFoundException();
+    return this.db.transaction(async (tx) => {
+      const [paper] = await tx
+        .select()
+        .from(papers)
+        .where(eq(papers.publicId, publicId))
+        .for('update');
+      if (
+        !paper ||
+        paper.status !== 'endorsed' ||
+        paper.publicationStatus !== 'unpublished' ||
+        !paper.currentVersionId
+      )
+        throw new NotFoundException();
+      const [version] = await tx
+        .select()
+        .from(paperVersions)
+        .where(eq(paperVersions.id, paper.currentVersionId));
+      const [file] = version?.pdfFileId
+        ? await tx
+            .select()
+            .from(paperFiles)
+            .where(eq(paperFiles.id, version.pdfFileId))
+        : [];
+      const [program] = await tx
+        .select({ name: programs.name })
+        .from(programs)
+        .where(
+          and(eq(programs.id, paper.programId), eq(programs.active, true)),
+        );
+      if (
+        !version ||
+        !paperReferencesMatch(paper.id, version, file) ||
+        file.status !== 'CLEAN' ||
+        !program ||
+        !paperDetailsSchema.safeParse({
+          ...version,
+          programId: paper.programId,
+        }).success
+      )
+        throw new SubmissionIncompleteError(
+          'Clean PDF and complete Paper details',
+        );
+      const publishedAt = new Date();
+      await tx
+        .update(paperVersions)
+        .set({ publishedAt })
+        .where(eq(paperVersions.id, version.id));
+      await tx
+        .update(papers)
+        .set({ publicationStatus: 'published', currentVersionId: version.id })
+        .where(eq(papers.id, paper.id));
+      await tx.insert(auditEvents).values({
+        actorAccountId: identity.account.id,
+        action: 'PAPER_PUBLISHED',
+        subjectType: 'PAPER',
+        subjectId: paper.id,
+        details: { versionId: version.id },
+      });
+      const [owner] = await tx
+        .select({ email: accounts.email, name: accounts.name })
+        .from(accounts)
+        .where(eq(accounts.id, paper.ownerId));
+      const [adviser] = await tx
+        .select({ email: accounts.email, name: accounts.name })
+        .from(accounts)
+        .where(eq(accounts.id, paper.adviserId));
+      for (const recipient of [owner, adviser])
+        if (recipient)
+          await tx.insert(emailJobs).values({
+            event: 'published',
+            recipientEmail: recipient.email,
+            recipientName: recipient.name,
+            paperPublicId: paper.publicId,
+            paperTitle: version.title,
+          });
+      return this.getForOwner(tx, publicId, paper.ownerId);
+    });
+  }
+
+  async getPublic(publicId: string): Promise<PublicPaper> {
+    const [row] = await this.db
+      .select({ paper: papers, version: paperVersions, program: programs.name })
+      .from(papers)
+      .innerJoin(
+        paperVersions,
+        and(
+          eq(paperVersions.id, papers.currentVersionId),
+          eq(paperVersions.paperId, papers.id),
+        ),
+      )
+      .innerJoin(programs, eq(programs.id, papers.programId))
+      .where(
+        and(
+          eq(papers.publicId, publicId),
+          eq(papers.publicationStatus, 'published'),
+        ),
+      );
+    if (!row || !row.version.publishedAt) throw new NotFoundException();
+    return {
+      publicId,
+      title: row.version.title,
+      authors: row.version.authors as PublicPaper['authors'],
+      abstract: row.version.abstract,
+      keywords: row.version.keywords,
+      program: row.program,
+      year: row.version.year,
+      researchType: row.version.researchType,
+      publishedAt: row.version.publishedAt.toISOString(),
+    };
+  }
+
+  async listPublished(): Promise<PublicPaper[]> {
+    const ids = await this.db
+      .select({ publicId: papers.publicId })
+      .from(papers)
+      .innerJoin(
+        paperVersions,
+        and(
+          eq(paperVersions.id, papers.currentVersionId),
+          eq(paperVersions.paperId, papers.id),
+        ),
+      )
+      .where(
+        and(
+          eq(papers.publicationStatus, 'published'),
+          isNotNull(paperVersions.publishedAt),
+        ),
+      )
+      .orderBy(desc(paperVersions.publishedAt));
+    return Promise.all(ids.map(({ publicId }) => this.getPublic(publicId)));
   }
 
   decide(

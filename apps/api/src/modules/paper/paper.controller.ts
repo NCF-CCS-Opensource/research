@@ -6,6 +6,7 @@ import {
   Param,
   Patch,
   Post,
+  Header,
 } from '@nestjs/common';
 import {
   createPaperContract,
@@ -18,11 +19,16 @@ import {
   listAdviserQueueContract,
   decidePaperContract,
   changePaperAdviserContract,
+  getPublicPaperContract,
+  listPublishedPapersContract,
+  listPublicationQueueContract,
+  publishPaperContract,
   type CreatePaperRequest,
   type Paper,
   type UpdatePaperRequest,
 } from '@repo/contracts';
 import { CurrentActor } from '../../common/current-actor.decorator.js';
+import { Public } from '../../common/public.decorator.js';
 import type { Actor } from '../../shared/domain/actor.js';
 import { ZodBody } from '../../common/zod-body.pipe.js';
 import { PaperUseCases } from './paper.use-cases.js';
@@ -30,6 +36,30 @@ import { PaperUseCases } from './paper.use-cases.js';
 @Controller()
 export class PaperController {
   constructor(private readonly papers: PaperUseCases) {}
+
+  @Public()
+  @Header('Cache-Control', 'no-store')
+  @Get(getPublicPaperContract.path)
+  getPublic(@Param('publicId') publicId: string) {
+    return this.papers.getPublic(publicId);
+  }
+
+  @Public()
+  @Header('Cache-Control', 'no-store')
+  @Get(listPublishedPapersContract.path)
+  listPublished() {
+    return this.papers.listPublished();
+  }
+
+  @Get(listPublicationQueueContract.path)
+  publicationQueue(@CurrentActor() actor: Actor) {
+    return this.papers.listPublicationQueue(actor);
+  }
+
+  @Post(publishPaperContract.path)
+  publish(@CurrentActor() actor: Actor, @Param('publicId') publicId: string) {
+    return this.papers.publish(actor, publicId);
+  }
 
   @Get(listAdvisersContract.path)
   listAdvisers() {

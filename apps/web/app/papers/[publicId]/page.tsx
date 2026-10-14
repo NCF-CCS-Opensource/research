@@ -1,4 +1,4 @@
-import { getPaperContract } from "@repo/contracts";
+import { getPaperContract, getPublicPaperContract } from "@repo/contracts";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { apiFetch, getCurrentIdentity } from "../../../lib/backend";
@@ -8,10 +8,56 @@ import { PaperDecision } from "../adviser-queue/paper-decision";
 
 export const dynamic = "force-dynamic";
 
-export default async function PaperDraftPage({
+export default async function PaperPage({
   params,
 }: Readonly<{ params: Promise<{ publicId: string }> }>) {
   const { publicId } = await params;
+  const publicPath = getPublicPaperContract.path.replace(
+    ":publicId",
+    encodeURIComponent(publicId),
+  );
+  const publicResponse = await apiFetch(publicPath);
+  if (publicResponse.ok) {
+    const paper = getPublicPaperContract.response.safeParse(
+      (await publicResponse.json())?.data,
+    );
+    if (paper.success)
+      return (
+        <main style={{ padding: "2rem", display: "grid", gap: "1rem" }}>
+          <h1>{paper.data.title}</h1>
+          <p>
+            {paper.data.authors.map((author) => author.displayName).join(", ")}
+          </p>
+          <h2>Abstract</h2>
+          <p>{paper.data.abstract}</p>
+          <p>
+            <strong>Keywords:</strong> {paper.data.keywords.join(", ")}
+          </p>
+          <dl>
+            <dt>Program</dt>
+            <dd>{paper.data.program}</dd>
+            <dt>Year</dt>
+            <dd>{paper.data.year}</dd>
+            <dt>Research Type</dt>
+            <dd>{paper.data.researchType}</dd>
+            <dt>Publication date</dt>
+            <dd>
+              {new Date(paper.data.publishedAt).toLocaleDateString("en", {
+                dateStyle: "long",
+                timeZone: "UTC",
+              })}
+            </dd>
+          </dl>
+          <aside>
+            <h2>Full text access</h2>
+            <p>
+              The full text is restricted. Guests must{" "}
+              <Link href="/sign-in">sign in</Link> to request access.
+            </p>
+          </aside>
+        </main>
+      );
+  }
   const path = getPaperContract.path.replace(
     ":publicId",
     encodeURIComponent(publicId),

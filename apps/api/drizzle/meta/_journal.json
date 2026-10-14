@@ -57,6 +57,13 @@
       "when": 1792281600000,
       "tag": "0007_email_jobs",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1792281600001,
+      "tag": "0008_paper_version_publication",
+      "breakpoints": true
     }
   ]
 }
