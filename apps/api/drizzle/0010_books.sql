@@ -1,0 +1,20 @@
+CREATE TABLE books (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  public_id varchar(32) NOT NULL UNIQUE,
+  owner_id uuid NOT NULL REFERENCES accounts(id),
+  title varchar(300) NOT NULL,
+  authors jsonb NOT NULL,
+  year integer NOT NULL,
+  licence varchar(100) NOT NULL,
+  source_url text,
+  publisher varchar(255),
+  edition varchar(100),
+  isbn varchar(32),
+  description text,
+  keywords text[] NOT NULL,
+  object_key text NOT NULL UNIQUE,
+  filename varchar(255) NOT NULL,
+  byte_count integer NOT NULL,
+  sha256 varchar(64) NOT NULL,
+  published_at timestamptz NOT NULL DEFAULT now()
+);

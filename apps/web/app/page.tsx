@@ -50,6 +50,7 @@ export default async function Home() {
         </>
       )}
       <h2>Recently published Papers</h2>
+      <p><Link href="/books">Browse Books</Link></p>
       {catalog?.success && catalog.data.length ? (
         <ul>
           {catalog.data.map((paper) => (
