@@ -15,10 +15,14 @@ export class FakePaperFileStorage implements PaperFileStorage {
       'FAKE storage adapter is active; files are held in process memory.',
     );
   }
-  async get(key: string) {
+  async get(key: string, start?: number, end?: number) {
     const value = this.objects.get(key);
     if (!value) throw new Error('Stored PDF not found');
-    return Readable.from(value);
+    return Readable.from(
+      start === undefined
+        ? value
+        : value.subarray(start, (end ?? value.length - 1) + 1),
+    );
   }
   async delete(key: string) {
     this.objects.delete(key);

@@ -1,8 +1,18 @@
-import { Controller, Get, HttpCode, Param, Post, Req } from '@nestjs/common';
-import type { Request } from 'express';
+import {
+  Controller,
+  Get,
+  HttpCode,
+  Param,
+  Post,
+  Req,
+  Res,
+} from '@nestjs/common';
+import type { Request, Response } from 'express';
 import { CurrentActor } from '../../common/current-actor.decorator.js';
+import { SessionCookieAccess } from '../../common/public.decorator.js';
 import type { Actor } from '../../shared/domain/actor.js';
 import {
+  getPaperContentContract,
   getPaperFileStatusContract,
   uploadPaperFileContract,
 } from '@repo/contracts';
@@ -23,5 +33,16 @@ export class PaperFileController {
   @Get(getPaperFileStatusContract.path)
   status(@CurrentActor() actor: Actor, @Param('fileId') fileId: string) {
     return this.files.status(actor, fileId);
+  }
+
+  @Get(getPaperContentContract.path)
+  @SessionCookieAccess()
+  content(
+    @CurrentActor() actor: Actor,
+    @Param('publicId') publicId: string,
+    @Req() req: Request,
+    @Res() res: Response,
+  ) {
+    return this.files.streamContent(actor, publicId, req, res);
   }
 }

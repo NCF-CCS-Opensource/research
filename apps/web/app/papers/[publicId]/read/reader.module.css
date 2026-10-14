@@ -1,0 +1,35 @@
+.page {
+  position: relative;
+  width: fit-content;
+  max-width: 100%;
+  overflow: auto;
+  background: white;
+  color: black;
+  outline-offset: 3px;
+}
+
+.page canvas {
+  display: block;
+}
+
+.textLayer {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  line-height: 1;
+  text-size-adjust: none;
+  forced-color-adjust: none;
+  transform-origin: 0 0;
+}
+
+.textLayer span {
+  position: absolute;
+  color: transparent;
+  white-space: pre;
+  cursor: text;
+  transform-origin: 0 0;
+}
+
+.textLayer ::selection {
+  background: rgb(0 100 255 / 30%);
+}

@@ -14,7 +14,9 @@ import { PDFDocument } from 'pdf-lib';
 import { and, eq, gt, sql } from 'drizzle-orm';
 import { createHash, randomUUID } from 'node:crypto';
 import { Transform } from 'node:stream';
+import { pipeline } from 'node:stream/promises';
 import type { Request } from 'express';
+import type { Response } from 'express';
 import type { Actor } from '../../shared/domain/actor.js';
 import { DATABASE } from '../../database/database.module.js';
 import type { Database } from '../../database/database.js';
@@ -32,12 +34,16 @@ import { MALWARE_SCANNER, type MalwareScanner } from './malware-scanner.js';
 const MAX_BYTES = 25 * 1024 * 1024;
 const MAX_ATTEMPTS = 5;
 const now = () => new Date();
+const MAX_CONTENT_STREAMS = 8;
+
+class InvalidByteRange extends Error {}
 
 @Injectable()
 export class PaperFileUseCases implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(PaperFileUseCases.name);
   private worker?: NodeJS.Timeout;
   private ticks = 0;
+  private contentStreams = 0;
   constructor(
     @Inject(DATABASE) private readonly db: Database,
     @Inject(PAPER_FILE_STORAGE) private readonly storage: PaperFileStorage,
@@ -178,15 +184,13 @@ export class PaperFileUseCases implements OnModuleInit, OnModuleDestroy {
           })
           .returning();
         await tx.insert(paperFileJobs).values({ fileId: id });
-        await tx
-          .insert(auditEvents)
-          .values({
-            actorAccountId: ownerId,
-            action: 'PAPER_FILE_UPLOADED',
-            subjectType: 'PAPER_FILE',
-            subjectId: id,
-            details: { status: 'PENDING', sha256: digest, byteCount: bytes },
-          });
+        await tx.insert(auditEvents).values({
+          actorAccountId: ownerId,
+          action: 'PAPER_FILE_UPLOADED',
+          subjectType: 'PAPER_FILE',
+          subjectId: id,
+          details: { status: 'PENDING', sha256: digest, byteCount: bytes },
+        });
         await tx
           .update(paperVersions)
           .set({ pdfFileId: id })
@@ -212,6 +216,131 @@ export class PaperFileUseCases implements OnModuleInit, OnModuleDestroy {
       .where(and(eq(paperFiles.id, fileId), eq(paperFiles.ownerId, ownerId)));
     if (!file) throw new NotFoundException();
     return file;
+  }
+
+  async streamContent(
+    actor: Actor,
+    publicId: string,
+    req: Request,
+    res: Response,
+  ) {
+    if (actor.kind !== 'active') throw new NotFoundException();
+    const [row] = await this.db
+      .select({
+        paperId: papers.id,
+        ownerId: papers.ownerId,
+        adviserId: papers.adviserId,
+        publicationStatus: papers.publicationStatus,
+        objectKey: paperFiles.objectKey,
+        filename: paperFiles.filename,
+        byteCount: paperFiles.byteCount,
+        sha256: paperFiles.sha256,
+        fileId: paperFiles.id,
+      })
+      .from(papers)
+      .innerJoin(paperVersions, eq(paperVersions.id, papers.currentVersionId))
+      .innerJoin(paperFiles, eq(paperFiles.id, paperVersions.pdfFileId))
+      .where(
+        and(eq(papers.publicId, publicId), eq(paperFiles.status, 'CLEAN')),
+      );
+    if (
+      !row ||
+      (actor.account.id !== row.ownerId &&
+        actor.account.id !== row.adviserId &&
+        actor.account.role !== 'COORDINATOR')
+    )
+      throw new NotFoundException();
+
+    const basis =
+      actor.account.role === 'COORDINATOR'
+        ? 'COORDINATOR'
+        : actor.account.id === row.ownerId
+          ? 'OWNER'
+          : 'ADVISER';
+    const etag = `"${row.sha256}"`;
+    const headers = {
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': `inline; filename="paper.pdf"; filename*=UTF-8''${encodeURIComponent(row.filename)}`,
+      'Cache-Control': 'private, no-store',
+      'X-Content-Type-Options': 'nosniff',
+      'X-Robots-Tag': 'noindex, nofollow, noarchive',
+      'Accept-Ranges': 'bytes',
+      ETag: etag,
+    };
+    const rawRange = req.headers.range;
+    let range: { start: number; end: number } | undefined;
+    try {
+      range = rawRange ? parseByteRange(rawRange, row.byteCount) : undefined;
+    } catch (error) {
+      if (!(error instanceof InvalidByteRange)) throw error;
+      return res
+        .status(416)
+        .set({
+          ...headers,
+          'Content-Range': `bytes */${row.byteCount}`,
+        })
+        .end();
+    }
+    if (
+      range &&
+      req.headers['if-range'] &&
+      req.headers['if-range'] !== `"${row.sha256}"`
+    )
+      range = undefined;
+
+    await this.db.insert(auditEvents).values({
+      actorAccountId: actor.account.id,
+      action: 'PAPER_CONTENT_OPENED',
+      subjectType: 'PAPER',
+      subjectId: row.paperId,
+      details: { basis, fileId: row.fileId },
+    });
+    res.set(headers);
+    const ifMatch = req.headers['if-match'];
+    if (ifMatch && ifMatch !== '*' && !ifMatch.split(',').includes(etag))
+      return res.status(412).end();
+    const ifNoneMatch = req.headers['if-none-match'];
+    if (
+      ifNoneMatch &&
+      (ifNoneMatch === '*' ||
+        ifNoneMatch
+          .split(',')
+          .some((candidate) => candidate.trim().replace(/^W\//, '') === etag))
+    )
+      return res.status(304).end();
+    if (this.contentStreams >= MAX_CONTENT_STREAMS)
+      return res.status(503).end();
+
+    // shortcut: per-process stream cap, move to shared admission control if the API runs multiple instances.
+    this.contentStreams++;
+    res.status(range ? 206 : 200);
+    res.set(
+      'Content-Length',
+      String(range ? range.end - range.start + 1 : row.byteCount),
+    );
+    if (range)
+      res.set(
+        'Content-Range',
+        `bytes ${range.start}-${range.end}/${row.byteCount}`,
+      );
+    let cancel: (() => void) | undefined;
+    try {
+      const stream = await this.storage.get(
+        row.objectKey,
+        range?.start,
+        range?.end,
+      );
+      cancel = () => {
+        if (!res.writableEnded) stream.destroy();
+      };
+      res.once('close', cancel);
+      await pipeline(stream, res);
+    } catch (error) {
+      if (!res.destroyed) throw error;
+    } finally {
+      if (cancel) res.off('close', cancel);
+      this.contentStreams--;
+    }
   }
 
   private owner(actor: Actor) {
@@ -350,15 +479,36 @@ export class PaperFileUseCases implements OnModuleInit, OnModuleDestroy {
         .set({ status, reason })
         .where(eq(paperFiles.id, file.id));
       await tx.delete(paperFileJobs).where(eq(paperFileJobs.id, jobId));
-      await tx
-        .insert(auditEvents)
-        .values({
-          actorAccountId: file.ownerId,
-          action: `PAPER_FILE_${status}`,
-          subjectType: 'PAPER_FILE',
-          subjectId: file.id,
-          details: { status, reason },
-        });
+      await tx.insert(auditEvents).values({
+        actorAccountId: file.ownerId,
+        action: `PAPER_FILE_${status}`,
+        subjectType: 'PAPER_FILE',
+        subjectId: file.id,
+        details: { status, reason },
+      });
     });
   }
+}
+
+function parseByteRange(value: string, total: number) {
+  const match = /^bytes=(\d*)-(\d*)$/i.exec(value);
+  if (!match || value.includes(',')) throw new InvalidByteRange();
+  const [, first, last] = match;
+  if (!first && !last) throw new InvalidByteRange();
+  if (total < 1) throw new InvalidByteRange();
+  if (!first) {
+    const suffixLength = Number(last);
+    if (!suffixLength) throw new InvalidByteRange();
+    return { start: Math.max(0, total - suffixLength), end: total - 1 };
+  }
+  const start = Number(first);
+  const end = last ? Math.min(Number(last), total - 1) : total - 1;
+  if (
+    !Number.isSafeInteger(start) ||
+    !Number.isSafeInteger(end) ||
+    start >= total ||
+    start > end
+  )
+    throw new InvalidByteRange();
+  return { start, end };
 }

@@ -44,6 +44,7 @@ export const paperSchema = paperDetailsSchema.extend({
   ownerId: z.string().uuid(),
   adviserId: z.string().uuid(),
   status: z.enum(['draft', 'submitted']),
+  publicationStatus: z.enum(['unpublished', 'published', 'withdrawn']),
   lockVersion: z.number().int(),
 });
 export type PaperDetails = z.infer<typeof paperDetailsSchema>;
@@ -114,5 +115,9 @@ export const getPaperFileStatusContract = {
     status: paperFileStatusSchema,
     reason: paperFileReasonSchema.nullable(),
   }),
+};
+export const getPaperContentContract = {
+  method: 'GET' as const,
+  path: '/paper-files/content/:publicId' as const,
 };
 export type PaperFileStatus = z.infer<typeof paperFileStatusSchema>;

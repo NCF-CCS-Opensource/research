@@ -30,9 +30,15 @@ export class S3PaperFileStorage implements PaperFileStorage {
       leavePartsOnError: false,
     }).done();
   }
-  async get(key: string) {
+  async get(key: string, start?: number, end?: number) {
     const result = await this.client.send(
-      new GetObjectCommand({ Bucket: this.env.R2_BUCKET, Key: key }),
+      new GetObjectCommand({
+        Bucket: this.env.R2_BUCKET,
+        Key: key,
+        ...(start === undefined
+          ? {}
+          : { Range: `bytes=${start}-${end ?? ''}` }),
+      }),
     );
     if (!result.Body) throw new Error('Stored PDF has no body');
     return result.Body as Readable;
