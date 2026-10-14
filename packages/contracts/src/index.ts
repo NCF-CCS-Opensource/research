@@ -7,3 +7,4 @@ export * from './account/settings.contract.js';
 export * from './account/deposit-notice.contract.js';
 export * from './taxonomy/manage-programs.contract.js';
 export * from './email-jobs.contract.js';
+export * from './access-requests.contract.js';

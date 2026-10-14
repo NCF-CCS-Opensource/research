@@ -22,6 +22,7 @@ import { DATABASE } from '../../database/database.module.js';
 import type { Database } from '../../database/database.js';
 import {
   auditEvents,
+  accessGrants,
   paperFileJobs,
   paperFiles,
   paperFileUploadAttempts,
@@ -247,20 +248,36 @@ export class PaperFileUseCases implements OnModuleInit, OnModuleDestroy {
       .where(
         and(eq(papers.publicId, publicId), eq(paperFiles.status, 'CLEAN')),
       );
-    if (
-      !row ||
-      (actor.account.id !== row.ownerId &&
-        actor.account.id !== row.adviserId &&
-        actor.account.role !== 'COORDINATOR')
-    )
-      throw new NotFoundException();
+    if (!row) throw new NotFoundException();
+
+    const management =
+      actor.account.id === row.ownerId ||
+      actor.account.id === row.adviserId ||
+      actor.account.role === 'COORDINATOR';
+    if (!management) {
+      if (row.publicationStatus !== 'published') throw new NotFoundException();
+      const [grant] = await this.db
+        .select({ id: accessGrants.id })
+        .from(accessGrants)
+        .where(
+          and(
+            eq(accessGrants.paperId, row.paperId),
+            eq(accessGrants.accountId, actor.account.id),
+            gt(accessGrants.expiresAt, new Date()),
+          ),
+        )
+        .limit(1);
+      if (!grant) throw new NotFoundException();
+    }
 
     const basis =
       actor.account.role === 'COORDINATOR'
         ? 'COORDINATOR'
         : actor.account.id === row.ownerId
           ? 'OWNER'
-          : 'ADVISER';
+          : actor.account.id === row.adviserId
+            ? 'ADVISER'
+            : 'ACCESS_GRANT';
     const etag = `"${row.sha256}"`;
     const headers = {
       'Content-Type': 'application/pdf',

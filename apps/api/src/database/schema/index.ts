@@ -7,3 +7,4 @@ export * from './deposit-notices.js';
 export * from './paper-files.js';
 export * from './paper-decisions.js';
 export * from './email-jobs.js';
+export * from './access-requests.js';
