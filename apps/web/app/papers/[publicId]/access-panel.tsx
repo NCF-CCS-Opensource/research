@@ -134,7 +134,7 @@ export function AccessPanel({
               rows={4}
             />
           </label>
-          <button disabled={busy}>
+          <button type="submit" disabled={busy}>
             {busy ? "Sending…" : "Request access"}
           </button>
         </form>
