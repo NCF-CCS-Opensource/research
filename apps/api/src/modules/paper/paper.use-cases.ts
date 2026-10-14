@@ -6,7 +6,7 @@ import {
   type PaperDetails,
   type PublicPaper,
 } from '@repo/contracts';
-import { and, asc, desc, eq, inArray, isNotNull } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray, isNotNull, sql } from 'drizzle-orm';
 import { DomainError } from '../../shared/domain/domain-error.js';
 import type { Actor } from '../../shared/domain/actor.js';
 import { DATABASE } from '../../database/database.module.js';
@@ -454,6 +454,8 @@ export class PaperUseCases {
         and(
           eq(papers.publicId, publicId),
           eq(papers.publicationStatus, 'published'),
+          eq(papers.status, 'endorsed'),
+          eq(programs.active, true),
         ),
       );
     if (!row || !row.version.publishedAt) throw new NotFoundException();
@@ -470,7 +472,46 @@ export class PaperUseCases {
     };
   }
 
-  async listPublished(): Promise<PublicPaper[]> {
+  async listPublished(query: {
+    q?: string;
+    program?: string;
+    year?: number;
+    researchType?: 'THESIS' | 'CAPSTONE' | 'RESEARCH_PAPER' | 'PROJECT_REPORT';
+    sort?: 'relevance' | 'date' | 'title';
+    page: number;
+    pageSize: number;
+  }) {
+    const textVector = sql`setweight(to_tsvector('english', ${paperVersions.title}), 'A') || setweight(to_tsvector('english', ${paperVersions.abstract}), 'C') || setweight(to_tsvector('simple', ${paperVersions.authors}::text), 'B') || setweight(to_tsvector('simple', array_to_string(${paperVersions.keywords}, ' ')), 'A')`;
+    const search = query.q?.trim();
+    const conditions = [
+      eq(papers.publicationStatus, 'published'),
+      eq(papers.status, 'endorsed'),
+      isNotNull(paperVersions.publishedAt),
+      eq(programs.active, true),
+      ...(query.program ? [eq(papers.programId, query.program)] : []),
+      ...(query.year ? [eq(paperVersions.year, query.year)] : []),
+      ...(query.researchType
+        ? [eq(paperVersions.researchType, query.researchType)]
+        : []),
+      ...(search
+        ? [
+            sql`(${textVector} @@ websearch_to_tsquery('english', ${search}) OR ${textVector} @@ websearch_to_tsquery('simple', ${search}))`,
+          ]
+        : []),
+    ];
+    const where = and(...conditions);
+    const [count] = await this.db
+      .select({ total: sql<number>`count(*)::int` })
+      .from(papers)
+      .innerJoin(
+        paperVersions,
+        and(
+          eq(paperVersions.id, papers.currentVersionId),
+          eq(paperVersions.paperId, papers.id),
+        ),
+      )
+      .innerJoin(programs, eq(programs.id, papers.programId))
+      .where(where);
     const ids = await this.db
       .select({ publicId: papers.publicId })
       .from(papers)
@@ -481,14 +522,72 @@ export class PaperUseCases {
           eq(paperVersions.paperId, papers.id),
         ),
       )
+      .innerJoin(programs, eq(programs.id, papers.programId))
+      .where(where)
+      .orderBy(
+        ...(search && (query.sort ?? 'relevance') === 'relevance'
+          ? [
+              desc(
+                sql`greatest(ts_rank(${textVector}, websearch_to_tsquery('english', ${search})), ts_rank(${textVector}, websearch_to_tsquery('simple', ${search})))`,
+              ),
+            ]
+          : query.sort === 'title'
+            ? [asc(paperVersions.title)]
+            : [desc(paperVersions.publishedAt)]),
+        asc(papers.id),
+      )
+      .limit(query.pageSize)
+      .offset((query.page - 1) * query.pageSize);
+    const programsList = await this.db
+      .selectDistinct({ id: programs.id, name: programs.name })
+      .from(papers)
+      .innerJoin(
+        paperVersions,
+        and(
+          eq(paperVersions.id, papers.currentVersionId),
+          eq(paperVersions.paperId, papers.id),
+        ),
+      )
+      .innerJoin(programs, eq(programs.id, papers.programId))
       .where(
         and(
           eq(papers.publicationStatus, 'published'),
+          eq(papers.status, 'endorsed'),
+          eq(programs.active, true),
           isNotNull(paperVersions.publishedAt),
         ),
       )
-      .orderBy(desc(paperVersions.publishedAt));
-    return Promise.all(ids.map(({ publicId }) => this.getPublic(publicId)));
+      .orderBy(asc(programs.name));
+    const years = await this.db
+      .selectDistinct({ year: paperVersions.year })
+      .from(papers)
+      .innerJoin(
+        paperVersions,
+        and(
+          eq(paperVersions.id, papers.currentVersionId),
+          eq(paperVersions.paperId, papers.id),
+        ),
+      )
+      .innerJoin(programs, eq(programs.id, papers.programId))
+      .where(
+        and(
+          eq(papers.publicationStatus, 'published'),
+          eq(papers.status, 'endorsed'),
+          eq(programs.active, true),
+          isNotNull(paperVersions.publishedAt),
+        ),
+      )
+      .orderBy(desc(paperVersions.year));
+    return {
+      items: await Promise.all(
+        ids.map(({ publicId }) => this.getPublic(publicId)),
+      ),
+      total: count.total,
+      page: query.page,
+      pageSize: query.pageSize,
+      programs: programsList,
+      years: years.map(({ year }) => year),
+    };
   }
 
   decide(
