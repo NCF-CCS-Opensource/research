@@ -1,4 +1,5 @@
 import {
+  boolean,
   customType,
   integer,
   jsonb,
@@ -35,9 +36,8 @@ export const papers = pgTable('papers', {
   ownerId: uuid('owner_id')
     .notNull()
     .references(() => accounts.id),
-  adviserId: uuid('adviser_id')
-    .notNull()
-    .references(() => accounts.id),
+  adviserId: uuid('adviser_id').references(() => accounts.id),
+  legacyDeposit: boolean('legacy_deposit').notNull().default(false),
   programId: uuid('program_id')
     .notNull()
     .references(() => programs.id),

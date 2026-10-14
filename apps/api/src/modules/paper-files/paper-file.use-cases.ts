@@ -63,18 +63,22 @@ export class PaperFileUseCases implements OnModuleInit, OnModuleDestroy {
   }
 
   async upload(actor: Actor, publicId: string, req: Request) {
-    const ownerId = this.owner(actor);
+    if (actor.kind !== 'active') throw new NotFoundException();
+    const ownerId = actor.account.id;
     const [paper] = await this.db
       .select({
         id: papers.id,
         ownerId: papers.ownerId,
         versionId: papers.currentVersionId,
         status: papers.status,
+        legacyDeposit: papers.legacyDeposit,
       })
       .from(papers)
-      .where(and(eq(papers.publicId, publicId), eq(papers.ownerId, ownerId)));
+      .where(eq(papers.publicId, publicId));
     if (
       !paper ||
+      (paper.ownerId !== ownerId &&
+        !(actor.account.role === 'COORDINATOR' && paper.legacyDeposit)) ||
       !['draft', 'revision_requested'].includes(paper.status) ||
       !paper.versionId
     )
@@ -167,7 +171,9 @@ export class PaperFileUseCases implements OnModuleInit, OnModuleDestroy {
             status: papers.status,
           })
           .from(papers)
-          .where(and(eq(papers.id, paper.id), eq(papers.ownerId, ownerId)))
+          .where(
+            and(eq(papers.id, paper.id), eq(papers.ownerId, paper.ownerId)),
+          )
           .for('update');
         if (
           !locked ||
@@ -210,17 +216,25 @@ export class PaperFileUseCases implements OnModuleInit, OnModuleDestroy {
   }
 
   async status(actor: Actor, fileId: string) {
-    const ownerId = this.owner(actor);
+    if (actor.kind !== 'active') throw new NotFoundException();
     const [file] = await this.db
       .select({
         id: paperFiles.id,
         status: paperFiles.status,
         reason: paperFiles.reason,
+        ownerId: paperFiles.ownerId,
+        legacyDeposit: papers.legacyDeposit,
       })
       .from(paperFiles)
-      .where(and(eq(paperFiles.id, fileId), eq(paperFiles.ownerId, ownerId)));
-    if (!file) throw new NotFoundException();
-    return file;
+      .innerJoin(papers, eq(paperFiles.paperId, papers.id))
+      .where(eq(paperFiles.id, fileId));
+    if (
+      !file ||
+      (file.ownerId !== actor.account.id &&
+        !(actor.account.role === 'COORDINATOR' && file.legacyDeposit))
+    )
+      throw new NotFoundException();
+    return { id: file.id, status: file.status, reason: file.reason };
   }
 
   async streamContent(

@@ -121,7 +121,30 @@ export class PaperUseCases {
     input: PaperDetails & { adviserId: string },
   ): Promise<Paper> {
     const ownerId = this.requireStudent(identity);
-    await this.validateAdviser(input.adviserId);
+    return this.createDraft(ownerId, input, input.adviserId, false);
+  }
+
+  async createLegacyDeposit(
+    identity: Actor,
+    input: PaperDetails & { adviserId?: string | null },
+  ): Promise<Paper> {
+    if (identity.kind !== 'active' || identity.account.role !== 'COORDINATOR')
+      throw new NotFoundException();
+    return this.createDraft(
+      identity.account.id,
+      input,
+      input.adviserId ?? null,
+      true,
+    );
+  }
+
+  private async createDraft(
+    ownerId: string,
+    input: PaperDetails,
+    adviserId: string | null,
+    legacyDeposit: boolean,
+  ): Promise<Paper> {
+    if (adviserId) await this.validateAdviser(adviserId);
     const [program] = await this.db
       .select({ id: programs.id })
       .from(programs)
@@ -134,7 +157,8 @@ export class PaperUseCases {
         id: paperId,
         publicId,
         ownerId,
-        adviserId: input.adviserId,
+        adviserId,
+        legacyDeposit,
         programId: input.programId,
       });
       const [version] = await tx
@@ -154,6 +178,14 @@ export class PaperUseCases {
         .update(papers)
         .set({ currentVersionId: version.id })
         .where(eq(papers.id, paperId));
+      if (legacyDeposit)
+        await tx.insert(auditEvents).values({
+          actorAccountId: ownerId,
+          action: 'PAPER_LEGACY_DEPOSIT_CREATED',
+          subjectType: 'PAPER',
+          subjectId: paperId,
+          details: { versionId: version.id },
+        });
       return this.getForOwner(tx, publicId, ownerId);
     });
   }
@@ -279,6 +311,7 @@ export class PaperUseCases {
         : [];
       if (file?.status !== 'CLEAN')
         throw new SubmissionIncompleteError('CLEAN PDF');
+      if (!paper.adviserId) throw new SubmissionIncompleteError('Adviser');
       await this.validateAdviser(paper.adviserId);
       await tx
         .insert(depositAcknowledgements)
@@ -297,10 +330,12 @@ export class PaperUseCases {
         subjectId: paper.id,
         details: { noticeVersion },
       });
-      const [adviser] = await tx
-        .select({ email: accounts.email, name: accounts.name })
-        .from(accounts)
-        .where(eq(accounts.id, paper.adviserId));
+      const [adviser] = paper.adviserId
+        ? await tx
+            .select({ email: accounts.email, name: accounts.name })
+            .from(accounts)
+            .where(eq(accounts.id, paper.adviserId))
+        : [];
       if (adviser)
         await tx.insert(emailJobs).values({
           event: 'submitted',
@@ -360,6 +395,20 @@ export class PaperUseCases {
   publish(identity: Actor, publicId: string): Promise<Paper> {
     if (identity.kind !== 'active' || identity.account.role !== 'COORDINATOR')
       throw new NotFoundException();
+    return this.publishWithMode(identity, publicId, false);
+  }
+
+  publishLegacyDeposit(identity: Actor, publicId: string): Promise<Paper> {
+    if (identity.kind !== 'active' || identity.account.role !== 'COORDINATOR')
+      throw new NotFoundException();
+    return this.publishWithMode(identity, publicId, true);
+  }
+
+  private async publishWithMode(
+    identity: Extract<Actor, { kind: 'active' }>,
+    publicId: string,
+    legacyDeposit: boolean,
+  ): Promise<Paper> {
     return this.db.transaction(async (tx) => {
       const [paper] = await tx
         .select()
@@ -368,7 +417,8 @@ export class PaperUseCases {
         .for('update');
       if (
         !paper ||
-        paper.status !== 'endorsed' ||
+        paper.legacyDeposit !== legacyDeposit ||
+        paper.status !== (legacyDeposit ? 'draft' : 'endorsed') ||
         paper.publicationStatus !== 'unpublished' ||
         !paper.currentVersionId
       )
@@ -413,7 +463,9 @@ export class PaperUseCases {
         .where(eq(papers.id, paper.id));
       await tx.insert(auditEvents).values({
         actorAccountId: identity.account.id,
-        action: 'PAPER_PUBLISHED',
+        action: legacyDeposit
+          ? 'PAPER_LEGACY_DEPOSIT_PUBLISHED'
+          : 'PAPER_PUBLISHED',
         subjectType: 'PAPER',
         subjectId: paper.id,
         details: { versionId: version.id },
@@ -422,10 +474,12 @@ export class PaperUseCases {
         .select({ email: accounts.email, name: accounts.name })
         .from(accounts)
         .where(eq(accounts.id, paper.ownerId));
-      const [adviser] = await tx
-        .select({ email: accounts.email, name: accounts.name })
-        .from(accounts)
-        .where(eq(accounts.id, paper.adviserId));
+      const [adviser] = paper.adviserId
+        ? await tx
+            .select({ email: accounts.email, name: accounts.name })
+            .from(accounts)
+            .where(eq(accounts.id, paper.adviserId))
+        : [];
       for (const recipient of [owner, adviser])
         if (recipient)
           await tx.insert(emailJobs).values({
@@ -788,6 +842,7 @@ export class PaperUseCases {
       publicId: row.paper.publicId,
       ownerId: row.paper.ownerId,
       adviserId: row.paper.adviserId,
+      legacyDeposit: row.paper.legacyDeposit,
       programId: row.paper.programId,
       status: row.paper.status,
       decisionHistory: history.map((item) => ({

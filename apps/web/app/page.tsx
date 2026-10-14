@@ -38,6 +38,9 @@ export default async function Home() {
                 <Link href="/papers/publication-queue">Publication queue</Link>
               </p>
               <p>
+                <Link href="/papers/legacy-deposit">Create Legacy Deposit</Link>
+              </p>
+              <p>
                 <Link href="/papers/access-management">Access Requests</Link>
               </p>
             </>
@@ -60,6 +63,7 @@ export default async function Home() {
         </>
       )}
       <h2>Recently published Papers</h2>
+      <p><Link href="/books">Browse Books</Link></p>
       <p>
         <Link href="/papers/catalog">Search the catalog</Link>
       </p>

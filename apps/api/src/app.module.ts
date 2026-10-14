@@ -17,6 +17,7 @@ import { PaperModule } from './modules/paper/paper.module.js';
 import { SettingsModule } from './modules/settings/settings.module.js';
 import { PaperFileModule } from './modules/paper-files/paper-file.module.js';
 import { EmailModule } from './modules/email/email.module.js';
+import { BooksModule } from './modules/books/books.module.js';
 import { AccessRequestModule } from './modules/access-requests/access-request.module.js';
 
 @Module({
@@ -30,6 +31,7 @@ import { AccessRequestModule } from './modules/access-requests/access-request.mo
     SettingsModule,
     PaperFileModule,
     EmailModule,
+    BooksModule,
     AccessRequestModule,
   ],
   providers: [

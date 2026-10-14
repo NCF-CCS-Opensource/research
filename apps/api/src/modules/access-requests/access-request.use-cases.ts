@@ -132,14 +132,16 @@ export class AccessRequestUseCases {
           ),
         })
         .returning();
-      const [adviser] = await tx
-        .select({
-          email: accounts.email,
-          name: accounts.name,
-          status: accounts.status,
-        })
-        .from(accounts)
-        .where(eq(accounts.id, paper.adviserId));
+      const [adviser] = paper.adviserId
+        ? await tx
+            .select({
+              email: accounts.email,
+              name: accounts.name,
+              status: accounts.status,
+            })
+            .from(accounts)
+            .where(eq(accounts.id, paper.adviserId))
+        : [];
       const recipients =
         adviser?.status === 'ACTIVE'
           ? [adviser]

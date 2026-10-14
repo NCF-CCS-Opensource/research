@@ -30,5 +30,6 @@ import { PAPER_FILE_STORAGE } from './storage.js';
     },
     { provide: MALWARE_SCANNER, useClass: FakeMalwareScanner },
   ],
+  exports: [PAPER_FILE_STORAGE, MALWARE_SCANNER],
 })
 export class PaperFileModule {}
