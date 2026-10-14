@@ -536,32 +536,8 @@ export class PaperUseCases {
         !paper.currentVersionId
       )
         throw new NotFoundException();
-      const [version] = await tx
-        .select()
-        .from(paperVersions)
-        .where(eq(paperVersions.id, paper.currentVersionId));
-      const [file] = version?.pdfFileId
-        ? await tx
-            .select()
-            .from(paperFiles)
-            .where(eq(paperFiles.id, version.pdfFileId))
-        : [];
-      const [program] = await tx
-        .select({ name: programs.name })
-        .from(programs)
-        .where(
-          and(eq(programs.id, paper.programId), eq(programs.active, true)),
-        );
-      if (
-        !version?.publishedAt ||
-        !paperReferencesMatch(paper.id, version, file) ||
-        file.status !== 'CLEAN' ||
-        !program ||
-        !paperDetailsSchema.safeParse({
-          ...version,
-          programId: paper.programId,
-        }).success
-      )
+      const version = await this.publicationEligibleVersion(tx, paper);
+      if (!version?.publishedAt)
         throw new SubmissionIncompleteError('Publication eligibility');
       await tx
         .update(papers)
@@ -597,32 +573,8 @@ export class PaperUseCases {
         !paper.currentVersionId
       )
         throw new NotFoundException();
-      const [version] = await tx
-        .select()
-        .from(paperVersions)
-        .where(eq(paperVersions.id, paper.currentVersionId));
-      const [file] = version?.pdfFileId
-        ? await tx
-            .select()
-            .from(paperFiles)
-            .where(eq(paperFiles.id, version.pdfFileId))
-        : [];
-      const [program] = await tx
-        .select({ name: programs.name })
-        .from(programs)
-        .where(
-          and(eq(programs.id, paper.programId), eq(programs.active, true)),
-        );
-      if (
-        !version ||
-        !paperReferencesMatch(paper.id, version, file) ||
-        file.status !== 'CLEAN' ||
-        !program ||
-        !paperDetailsSchema.safeParse({
-          ...version,
-          programId: paper.programId,
-        }).success
-      )
+      const version = await this.publicationEligibleVersion(tx, paper);
+      if (!version)
         throw new SubmissionIncompleteError(
           'Clean PDF and complete Paper details',
         );
@@ -665,6 +617,40 @@ export class PaperUseCases {
           });
       return this.getForOwner(tx, publicId, paper.ownerId);
     });
+  }
+
+  private async publicationEligibleVersion(
+    tx: Parameters<Parameters<Database['transaction']>[0]>[0],
+    paper: typeof papers.$inferSelect,
+  ) {
+    const [version] = paper.currentVersionId
+      ? await tx
+          .select()
+          .from(paperVersions)
+          .where(eq(paperVersions.id, paper.currentVersionId))
+      : [];
+    const [file] = version?.pdfFileId
+      ? await tx
+          .select()
+          .from(paperFiles)
+          .where(eq(paperFiles.id, version.pdfFileId))
+      : [];
+    const [program] = await tx
+      .select({ name: programs.name })
+      .from(programs)
+      .where(and(eq(programs.id, paper.programId), eq(programs.active, true)));
+    if (
+      !version ||
+      !paperReferencesMatch(paper.id, version, file) ||
+      file.status !== 'CLEAN' ||
+      !program ||
+      !paperDetailsSchema.safeParse({
+        ...version,
+        programId: paper.programId,
+      }).success
+    )
+      return;
+    return version;
   }
 
   async getPublic(publicId: string): Promise<PublicPaper> {
