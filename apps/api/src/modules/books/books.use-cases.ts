@@ -13,7 +13,7 @@ import { createHash, randomUUID } from 'node:crypto';
 import { Transform } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 import type { Request, Response } from 'express';
-import { bookDetailsSchema, type BookDetails } from '@repo/contracts';
+import { bookUploadMetadataSchema, type BookDetails } from '@repo/contracts';
 import { DATABASE } from '../../database/database.module.js';
 import type { Database } from '../../database/database.js';
 import { books } from '../../database/schema/index.js';
@@ -28,7 +28,10 @@ import {
 } from '../paper-files/malware-scanner.js';
 
 const MAX_BYTES = 100 * 1024 * 1024;
+const RATE_WINDOW_MS = 60_000;
+const MAX_IP_COUNTERS = 10_000;
 const counters = new Map<string, { start: number; count: number }>();
+let rateLimitCalls = 0;
 
 @Injectable()
 export class BooksUseCases {
@@ -72,7 +75,9 @@ export class BooksUseCases {
             return reject(new UnsupportedMediaTypeException());
           seenMetadata = true;
           try {
-            const parsed = bookDetailsSchema.safeParse(JSON.parse(value));
+            const parsed = bookUploadMetadataSchema.safeParse(
+              JSON.parse(value),
+            );
             if (!parsed.success)
               return reject(
                 new HttpException(
@@ -277,12 +282,22 @@ export class BooksUseCases {
   private rateLimit(ip: string) {
     // shortcut: process-local IP limit; use shared admission control when the API has multiple instances.
     const now = Date.now();
+    if (++rateLimitCalls % 256 === 0) {
+      for (const [address, counter] of counters)
+        if (now - counter.start >= RATE_WINDOW_MS) counters.delete(address);
+    }
     const entry = counters.get(ip);
-    if (entry && now - entry.start < 60_000 && entry.count >= 60)
+    if (entry && now - entry.start < RATE_WINDOW_MS && entry.count >= 60)
       throw new HttpException('Too many Book reads.', 429);
-    if (!entry || now - entry.start >= 60_000)
+    if (!entry || now - entry.start >= RATE_WINDOW_MS) {
+      if (counters.size >= MAX_IP_COUNTERS) {
+        for (const [address, counter] of counters)
+          if (now - counter.start >= RATE_WINDOW_MS) counters.delete(address);
+        if (counters.size >= MAX_IP_COUNTERS)
+          throw new HttpException('Rate limit capacity reached.', 503);
+      }
       counters.set(ip, { start: now, count: 1 });
-    else entry.count++;
+    } else entry.count++;
   }
 
   private toPublic(row: typeof books.$inferSelect) {

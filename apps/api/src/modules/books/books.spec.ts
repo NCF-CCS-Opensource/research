@@ -1,4 +1,8 @@
-import { formatBookCitations, type PublicBook } from '@repo/contracts';
+import {
+  bookUploadMetadataSchema,
+  formatBookCitations,
+  type PublicBook,
+} from '@repo/contracts';
 import { parseBookRange } from './books.use-cases.js';
 
 const book: PublicBook = {
@@ -11,6 +15,42 @@ const book: PublicBook = {
 };
 
 describe('Book public behavior', () => {
+  it('accepts listed licences and attested named open licences, but rejects closed terms', () => {
+    const base = {
+      title: 'Open Book',
+      authors: ['A. Author'],
+      year: 2024,
+      sourceUrl: '',
+      keywords: [],
+      openLicenceConfirmed: true,
+    };
+    expect(
+      bookUploadMetadataSchema.safeParse({ ...base, licence: 'CC BY' }).success,
+    ).toBe(true);
+    expect(
+      bookUploadMetadataSchema.safeParse({
+        ...base,
+        licence: 'OTHER',
+        otherLicenceName: 'Open Data Commons Open Database License 1.0',
+      }).success,
+    ).toBe(true);
+    expect(
+      bookUploadMetadataSchema.safeParse({
+        ...base,
+        licence: 'OTHER',
+        otherLicenceName: 'All rights reserved',
+      }).success,
+    ).toBe(false);
+    expect(
+      bookUploadMetadataSchema.safeParse({
+        ...base,
+        licence: 'OTHER',
+        otherLicenceName: 'Open Licence',
+        openLicenceConfirmed: false,
+      }).success,
+    ).toBe(false);
+  });
+
   it('includes supplied citation fields and warns about a missing publisher', () => {
     const citation = formatBookCitations(
       { ...book, edition: '2nd ed.', isbn: '123' },

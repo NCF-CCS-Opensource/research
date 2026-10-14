@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 
 export async function createBook(formData: FormData) {
   const token = await (await auth()).getToken();
+  const licence = String(formData.get("licence") ?? "");
   const metadata = {
     title: String(formData.get("title") ?? ""),
     authors: String(formData.get("authors") ?? "")
@@ -12,7 +13,11 @@ export async function createBook(formData: FormData) {
       .map((value) => value.trim())
       .filter(Boolean),
     year: Number(formData.get("year")),
-    licence: String(formData.get("licence") ?? ""),
+    licence,
+    ...(licence === "OTHER"
+      ? { otherLicenceName: String(formData.get("otherLicenceName") ?? "") }
+      : {}),
+    openLicenceConfirmed: formData.get("openLicenceConfirmed") === "on",
     sourceUrl: String(formData.get("sourceUrl") ?? ""),
     publisher: String(formData.get("publisher") ?? ""),
     edition: String(formData.get("edition") ?? ""),

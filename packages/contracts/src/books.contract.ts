@@ -1,6 +1,18 @@
 import { z } from 'zod';
 
-export const bookLicenceSchema = z.string().trim().min(2).max(100);
+const knownLicencePattern =
+  /^(CC0|CC BY(?:-SA|-NC|-NC-SA|-ND|-NC-ND)?|public domain)(?:\s+\d+(?:\.\d+)?)?$/i;
+const closedLicencePattern =
+  /all rights reserved|proprietary|no licence|not licensed|copyright only/i;
+export const bookLicenceSchema = z
+  .string()
+  .trim()
+  .min(2)
+  .max(100)
+  .refine(
+    (value) => !closedLicencePattern.test(value),
+    'A closed licence is not accepted',
+  );
 export const bookDetailsSchema = z.object({
   title: z.string().trim().min(1).max(300),
   authors: z.array(z.string().trim().min(1).max(255)).min(1).max(20),
@@ -17,6 +29,57 @@ export const bookDetailsSchema = z.object({
     .optional(),
   keywords: z.array(z.string().trim().min(1).max(50)).max(10),
 });
+export const bookUploadMetadataSchema = z
+  .object({
+    title: bookDetailsSchema.shape.title,
+    authors: bookDetailsSchema.shape.authors,
+    year: bookDetailsSchema.shape.year,
+    licence: z.union([
+      z.string().regex(knownLicencePattern),
+      z.literal('OTHER'),
+    ]),
+    otherLicenceName: z.string().trim().min(2).max(100).optional(),
+    openLicenceConfirmed: z.literal(true),
+    sourceUrl: bookDetailsSchema.shape.sourceUrl,
+    publisher: bookDetailsSchema.shape.publisher,
+    edition: bookDetailsSchema.shape.edition,
+    isbn: bookDetailsSchema.shape.isbn,
+    description: bookDetailsSchema.shape.description,
+    keywords: bookDetailsSchema.shape.keywords,
+  })
+  .superRefine((value, context) => {
+    if (value.licence === 'OTHER' && !value.otherLicenceName)
+      context.addIssue({
+        code: 'custom',
+        path: ['otherLicenceName'],
+        message: 'Name the open licence.',
+      });
+    if (value.licence !== 'OTHER' && value.otherLicenceName)
+      context.addIssue({
+        code: 'custom',
+        path: ['otherLicenceName'],
+        message: 'Only provide this for another open licence.',
+      });
+    const name =
+      value.licence === 'OTHER' ? value.otherLicenceName : value.licence;
+    if (name && closedLicencePattern.test(name))
+      context.addIssue({
+        code: 'custom',
+        path: ['licence'],
+        message: 'A closed licence is not accepted.',
+      });
+  })
+  .transform(
+    ({
+      licence,
+      otherLicenceName,
+      openLicenceConfirmed: _confirmed,
+      ...details
+    }) => ({
+      ...details,
+      licence: licence === 'OTHER' ? otherLicenceName! : licence,
+    }),
+  );
 export const publicBookSchema = bookDetailsSchema.extend({
   publicId: z.string(),
   sourceUrl: z.string().optional(),
@@ -38,7 +101,7 @@ export const listBooksContract = {
 export const createBookContract = {
   method: 'POST' as const,
   path: '/books/create' as const,
-  request: bookDetailsSchema,
+  request: bookUploadMetadataSchema,
   response: publicBookSchema,
 };
 export const getBookContentContract = {
