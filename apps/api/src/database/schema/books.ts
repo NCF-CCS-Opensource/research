@@ -1,6 +1,7 @@
 import {
   integer,
   jsonb,
+  pgEnum,
   pgTable,
   text,
   timestamp,
@@ -9,12 +10,22 @@ import {
 } from 'drizzle-orm/pg-core';
 import { accounts } from './accounts.js';
 
+export const bookStatusEnum = pgEnum('book_status', [
+  'draft',
+  'submitted',
+  'published',
+  'rejected',
+  'withdrawn',
+]);
+
 export const books = pgTable('books', {
   id: uuid('id').primaryKey().defaultRandom(),
   publicId: varchar('public_id', { length: 32 }).notNull().unique(),
   ownerId: uuid('owner_id')
     .notNull()
     .references(() => accounts.id),
+  status: bookStatusEnum('status').notNull().default('published'),
+  rejectionReason: text('rejection_reason'),
   title: varchar('title', { length: 300 }).notNull(),
   authors: jsonb('authors').notNull(),
   year: integer('year').notNull(),
@@ -29,7 +40,6 @@ export const books = pgTable('books', {
   filename: varchar('filename', { length: 255 }).notNull(),
   byteCount: integer('byte_count').notNull(),
   sha256: varchar('sha256', { length: 64 }).notNull(),
-  publishedAt: timestamp('published_at', { withTimezone: true })
-    .notNull()
-    .defaultNow(),
+  publishedAt: timestamp('published_at', { withTimezone: true }),
+  withdrawnAt: timestamp('withdrawn_at', { withTimezone: true }),
 });

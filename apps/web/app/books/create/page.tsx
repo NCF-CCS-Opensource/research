@@ -4,11 +4,10 @@ import { notFound } from "next/navigation";
 
 export default async function CreateBookPage() {
   const identity = await getCurrentIdentity();
-  if (identity.state !== "active" || identity.account.role !== "COORDINATOR")
-    notFound();
+  if (identity.state !== "active") notFound();
   return (
     <main style={{ padding: "2rem", maxWidth: 720 }}>
-      <h1>Add a Book</h1>
+      <h1>Upload a Book</h1>
       <p>
         Only openly licensed and public-domain Books may be shared here. A
         purchased copy grants no right to copy and redistribute it.
@@ -93,7 +92,7 @@ export default async function CreateBookPage() {
             accept="application/pdf,.pdf"
           />
         </label>
-        <button type="submit">Publish Book</button>
+        <button type="submit">Submit Book</button>
       </form>
     </main>
   );
