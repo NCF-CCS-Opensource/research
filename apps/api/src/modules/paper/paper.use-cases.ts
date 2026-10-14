@@ -6,7 +6,17 @@ import {
   type PaperDetails,
   type PublicPaper,
 } from '@repo/contracts';
-import { and, asc, desc, eq, inArray, isNotNull, sql } from 'drizzle-orm';
+import {
+  and,
+  asc,
+  desc,
+  eq,
+  inArray,
+  isNotNull,
+  isNull,
+  or,
+  sql,
+} from 'drizzle-orm';
 import { DomainError } from '../../shared/domain/domain-error.js';
 import type { Actor } from '../../shared/domain/actor.js';
 import { DATABASE } from '../../database/database.module.js';
@@ -14,6 +24,8 @@ import type { Database } from '../../database/database.js';
 import {
   accounts,
   auditEvents,
+  accessGrants,
+  accessRequests,
   depositAcknowledgements,
   depositNotices,
   emailJobs,
@@ -404,6 +416,168 @@ export class PaperUseCases {
     return this.publishWithMode(identity, publicId, true);
   }
 
+  withdraw(
+    identity: Actor,
+    publicId: string,
+    reason: string,
+    publicNotice: string,
+  ): Promise<Paper> {
+    if (identity.kind !== 'active' || identity.account.role !== 'COORDINATOR')
+      throw new NotFoundException();
+    return this.db.transaction(async (tx) => {
+      const [initial] = await tx
+        .select()
+        .from(papers)
+        .where(eq(papers.publicId, publicId));
+      if (!initial) throw new NotFoundException();
+      const requesters = await tx
+        .selectDistinct({ accountId: accessRequests.accountId })
+        .from(accessRequests)
+        .where(
+          and(
+            eq(accessRequests.paperId, initial.id),
+            eq(accessRequests.status, 'pending'),
+          ),
+        )
+        .orderBy(asc(accessRequests.accountId));
+      if (requesters.length)
+        await tx
+          .select({ id: accounts.id })
+          .from(accounts)
+          .where(
+            inArray(
+              accounts.id,
+              requesters.map(({ accountId }) => accountId),
+            ),
+          )
+          .orderBy(asc(accounts.id))
+          .for('update');
+      const [paper] = await tx
+        .select()
+        .from(papers)
+        .where(eq(papers.id, initial.id))
+        .for('update');
+      if (!paper || paper.publicationStatus !== 'published')
+        throw new NotFoundException();
+      const now = new Date();
+      await tx
+        .update(papers)
+        .set({
+          publicationStatus: 'withdrawn',
+          withdrawalReason: reason,
+          publicWithdrawalNotice: publicNotice,
+        })
+        .where(eq(papers.id, paper.id));
+      await tx
+        .update(accessRequests)
+        .set({ status: 'cancelled', decidedAt: now })
+        .where(
+          and(
+            eq(accessRequests.paperId, paper.id),
+            eq(accessRequests.status, 'pending'),
+          ),
+        );
+      await tx
+        .update(accessGrants)
+        .set({ revokedAt: now, revocationReason: 'Paper withdrawn.' })
+        .where(
+          and(
+            eq(accessGrants.paperId, paper.id),
+            isNull(accessGrants.revokedAt),
+          ),
+        );
+      await tx.insert(auditEvents).values({
+        actorAccountId: identity.account.id,
+        action: 'PAPER_WITHDRAWN',
+        subjectType: 'PAPER',
+        subjectId: paper.id,
+        details: { reason, publicNotice },
+      });
+      const [version] = paper.currentVersionId
+        ? await tx
+            .select()
+            .from(paperVersions)
+            .where(eq(paperVersions.id, paper.currentVersionId))
+        : [];
+      for (const accountId of new Set(
+        [paper.ownerId, paper.adviserId].filter(Boolean),
+      )) {
+        const [recipient] = await tx
+          .select({ email: accounts.email, name: accounts.name })
+          .from(accounts)
+          .where(eq(accounts.id, accountId!));
+        if (recipient)
+          await tx.insert(emailJobs).values({
+            event: 'paper_withdrawn',
+            recipientEmail: recipient.email,
+            recipientName: recipient.name,
+            paperPublicId: paper.publicId,
+            paperTitle: version?.title ?? 'Paper',
+            details: { reason: publicNotice },
+          });
+      }
+      return this.getForOwner(tx, publicId, paper.ownerId);
+    });
+  }
+
+  restore(identity: Actor, publicId: string): Promise<Paper> {
+    if (identity.kind !== 'active' || identity.account.role !== 'COORDINATOR')
+      throw new NotFoundException();
+    return this.db.transaction(async (tx) => {
+      const [paper] = await tx
+        .select()
+        .from(papers)
+        .where(eq(papers.publicId, publicId))
+        .for('update');
+      if (
+        !paper ||
+        paper.publicationStatus !== 'withdrawn' ||
+        paper.status !== (paper.legacyDeposit ? 'draft' : 'endorsed') ||
+        !paper.currentVersionId
+      )
+        throw new NotFoundException();
+      const [version] = await tx
+        .select()
+        .from(paperVersions)
+        .where(eq(paperVersions.id, paper.currentVersionId));
+      const [file] = version?.pdfFileId
+        ? await tx
+            .select()
+            .from(paperFiles)
+            .where(eq(paperFiles.id, version.pdfFileId))
+        : [];
+      const [program] = await tx
+        .select({ name: programs.name })
+        .from(programs)
+        .where(
+          and(eq(programs.id, paper.programId), eq(programs.active, true)),
+        );
+      if (
+        !version?.publishedAt ||
+        !paperReferencesMatch(paper.id, version, file) ||
+        file.status !== 'CLEAN' ||
+        !program ||
+        !paperDetailsSchema.safeParse({
+          ...version,
+          programId: paper.programId,
+        }).success
+      )
+        throw new SubmissionIncompleteError('Publication eligibility');
+      await tx
+        .update(papers)
+        .set({ publicationStatus: 'published' })
+        .where(eq(papers.id, paper.id));
+      await tx.insert(auditEvents).values({
+        actorAccountId: identity.account.id,
+        action: 'PAPER_RESTORED',
+        subjectType: 'PAPER',
+        subjectId: paper.id,
+        details: null,
+      });
+      return this.getForOwner(tx, publicId, paper.ownerId);
+    });
+  }
+
   private async publishWithMode(
     identity: Extract<Actor, { kind: 'active' }>,
     publicId: string,
@@ -499,6 +673,7 @@ export class PaperUseCases {
         paper: papers,
         version: paperVersions,
         program: programs.name,
+        programActive: programs.active,
         institutionName: settings.institutionName,
       })
       .from(papers)
@@ -514,13 +689,29 @@ export class PaperUseCases {
       .where(
         and(
           eq(papers.publicId, publicId),
-          eq(papers.publicationStatus, 'published'),
-          eq(papers.status, 'endorsed'),
-          eq(programs.active, true),
+          inArray(papers.publicationStatus, ['published', 'withdrawn']),
+          or(
+            eq(papers.status, 'endorsed'),
+            and(eq(papers.legacyDeposit, true), eq(papers.status, 'draft')),
+          ),
         ),
       );
-    if (!row || !row.version.publishedAt) throw new NotFoundException();
+    if (!row) throw new NotFoundException();
+    if (row.paper.publicationStatus === 'withdrawn') {
+      if (!row.paper.publicWithdrawalNotice) throw new NotFoundException();
+      return {
+        withdrawn: true,
+        publicId,
+        title: row.version.title,
+        authors: row.version.authors as PublicPaper['authors'],
+        year: row.version.year,
+        withdrawalNotice: row.paper.publicWithdrawalNotice,
+      };
+    }
+    if (!row.version.publishedAt || !row.programActive)
+      throw new NotFoundException();
     return {
+      withdrawn: false,
       publicId,
       title: row.version.title,
       authors: row.version.authors as PublicPaper['authors'],
@@ -640,10 +831,11 @@ export class PaperUseCases {
         ),
       )
       .orderBy(desc(paperVersions.year));
+    const items = await Promise.all(
+      ids.map(({ publicId }) => this.getPublic(publicId)),
+    );
     return {
-      items: await Promise.all(
-        ids.map(({ publicId }) => this.getPublic(publicId)),
-      ),
+      items: items.filter((paper) => !paper.withdrawn),
       total: count.total,
       page: query.page,
       pageSize: query.pageSize,

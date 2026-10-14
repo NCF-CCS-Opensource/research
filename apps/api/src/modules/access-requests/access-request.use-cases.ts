@@ -66,7 +66,8 @@ export class AccessRequestUseCases {
         .from(papers)
         .innerJoin(paperVersions, eq(paperVersions.id, papers.currentVersionId))
         .leftJoin(paperFiles, eq(paperFiles.id, paperVersions.pdfFileId))
-        .where(eq(papers.publicId, publicId));
+        .where(eq(papers.publicId, publicId))
+        .for('update', { of: papers });
       if (
         !paper ||
         paper.ownerId === account.id ||

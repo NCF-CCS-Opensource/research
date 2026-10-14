@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { paperDetailsSchema } from './draft.contract.js';
+import { paperDetailsSchema, publicPaperSchema } from './draft.contract.js';
 
 const valid = {
   title: 'A valid research title',
@@ -31,5 +31,28 @@ describe('paperDetailsSchema', () => {
     expect(
       paperDetailsSchema.safeParse({ ...valid, abstract: 'too short' }).success,
     ).toBe(false);
+  });
+});
+
+describe('publicPaperSchema', () => {
+  it('exposes only citation fields for withdrawn Papers', () => {
+    const parsed = publicPaperSchema.parse({
+      withdrawn: true,
+      publicId: 'paper-1',
+      title: 'A withdrawn Paper',
+      authors: [{ displayName: 'Ada Lovelace', kind: 'person' }],
+      year: 2025,
+      withdrawalNotice: 'This Paper has been withdrawn.',
+      abstract: 'must not be exposed',
+      reason: 'must not be exposed',
+    });
+    expect(parsed).toEqual({
+      withdrawn: true,
+      publicId: 'paper-1',
+      title: 'A withdrawn Paper',
+      authors: [{ displayName: 'Ada Lovelace', kind: 'person' }],
+      year: 2025,
+      withdrawalNotice: 'This Paper has been withdrawn.',
+    });
   });
 });

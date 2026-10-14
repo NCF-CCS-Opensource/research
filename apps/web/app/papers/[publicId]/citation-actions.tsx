@@ -1,12 +1,12 @@
 "use client";
 
-import { formatPaperCitations, type PublicPaper } from "@repo/contracts";
+import { formatPaperCitations, type PublishedPaper } from "@repo/contracts";
 
 export function CitationActions({
   paper,
   url,
 }: {
-  paper: PublicPaper;
+  paper: PublishedPaper;
   url: string;
 }) {
   const citations = formatPaperCitations(paper, url);

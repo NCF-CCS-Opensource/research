@@ -149,7 +149,8 @@ export const changePaperAdviserContract = {
   response: paperSchema,
 };
 
-export const publicPaperSchema = z.object({
+const publishedPaperSchema = z.object({
+  withdrawn: z.literal(false),
   publicId: z.string(),
   title: z.string(),
   authors: paperDetailsSchema.shape.authors,
@@ -161,6 +162,19 @@ export const publicPaperSchema = z.object({
   publishedAt: z.string().datetime(),
   institutionName: z.string(),
 });
+const withdrawnPaperSchema = z.object({
+  withdrawn: z.literal(true),
+  publicId: z.string(),
+  title: z.string(),
+  authors: paperDetailsSchema.shape.authors,
+  year: z.number().int(),
+  withdrawalNotice: z.string(),
+});
+export const publicPaperSchema = z.union([
+  publishedPaperSchema,
+  withdrawnPaperSchema,
+]);
+export type PublishedPaper = z.infer<typeof publishedPaperSchema>;
 export type PublicPaper = z.infer<typeof publicPaperSchema>;
 export const getPublicPaperContract = {
   method: 'GET' as const,
@@ -180,7 +194,7 @@ export const listPublishedPapersContract = {
     pageSize: z.coerce.number().int().positive().max(100).default(20),
   }),
   response: z.object({
-    items: z.array(publicPaperSchema),
+    items: z.array(publishedPaperSchema),
     total: z.number().int(),
     page: z.number().int(),
     pageSize: z.number().int(),
@@ -201,6 +215,20 @@ export const publishPaperContract = {
 export const publishLegacyDepositContract = {
   method: 'POST' as const,
   path: '/papers/legacy-deposit/publish/:publicId' as const,
+  response: paperSchema,
+};
+export const withdrawPaperContract = {
+  method: 'POST' as const,
+  path: '/papers/manage/:publicId/withdraw' as const,
+  request: z.object({
+    reason: z.string().trim().min(1).max(2000),
+    publicNotice: z.string().trim().min(1).max(1000),
+  }),
+  response: paperSchema,
+};
+export const restorePaperContract = {
+  method: 'POST' as const,
+  path: '/papers/manage/:publicId/restore' as const,
   response: paperSchema,
 };
 

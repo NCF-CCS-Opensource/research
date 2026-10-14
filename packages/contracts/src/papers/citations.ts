@@ -1,6 +1,6 @@
-import type { PublicPaper } from './draft.contract.js';
+import type { PublishedPaper } from './draft.contract.js';
 
-type Author = PublicPaper['authors'][number] & { suffix?: string };
+type Author = PublishedPaper['authors'][number] & { suffix?: string };
 
 function name(author: Author, style: 'apa' | 'ieee') {
   if (author.kind === 'organization') return author.displayName;
@@ -30,7 +30,7 @@ function apaAuthors(authors: Author[]) {
         : (names[0] ?? '');
 }
 
-export function formatPaperCitations(paper: PublicPaper, url: string) {
+export function formatPaperCitations(paper: PublishedPaper, url: string) {
   const authors = paper.authors as Author[];
   const missing = [
     ...(authors.length ? [] : ['Authors']),

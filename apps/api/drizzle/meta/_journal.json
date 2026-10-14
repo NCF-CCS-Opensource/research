@@ -106,6 +106,13 @@
       "when": 1792530000000,
       "tag": "0014_access_grant_revocation",
       "breakpoints": true
+    },
+    {
+      "idx": 15,
+      "version": "7",
+      "when": 1792530000004,
+      "tag": "0015_paper_withdrawal",
+      "breakpoints": true
     }
   ]
 }

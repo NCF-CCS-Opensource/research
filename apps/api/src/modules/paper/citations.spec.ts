@@ -1,6 +1,7 @@
-import { formatPaperCitations, type PublicPaper } from '@repo/contracts';
+import { formatPaperCitations, type PublishedPaper } from '@repo/contracts';
 
-const paper = (authors: PublicPaper['authors']): PublicPaper => ({
+const paper = (authors: PublishedPaper['authors']): PublishedPaper => ({
+  withdrawn: false,
   publicId: 'abc123',
   title: 'A Study of Systems',
   authors,

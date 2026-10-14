@@ -22,13 +22,16 @@ export default async function PaperReadPage({
     (await response.json())?.data,
   );
   if (!parsed.success) notFound();
-  const coordinator =
-    identity?.state === "active" && identity.account.role === "COORDINATOR";
+  const management =
+    identity?.state === "active" &&
+    (identity.account.role === "COORDINATOR" ||
+      identity.account.id === parsed.data.ownerId ||
+      identity.account.id === parsed.data.adviserId);
 
   return (
     <main style={{ padding: "2rem", display: "grid", gap: "1rem" }}>
       <h1>{parsed.data.title}</h1>
-      {coordinator && parsed.data.publicationStatus !== "published" && (
+      {management && parsed.data.publicationStatus !== "published" && (
         <p
           role="status"
           style={{ padding: "0.75rem", border: "1px solid currentColor" }}
