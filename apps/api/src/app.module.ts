@@ -19,6 +19,7 @@ import { PaperFileModule } from './modules/paper-files/paper-file.module.js';
 import { EmailModule } from './modules/email/email.module.js';
 import { BooksModule } from './modules/books/books.module.js';
 import { AccessRequestModule } from './modules/access-requests/access-request.module.js';
+import { DashboardModule } from './modules/dashboard/dashboard.module.js';
 
 @Module({
   imports: [
@@ -33,6 +34,7 @@ import { AccessRequestModule } from './modules/access-requests/access-request.mo
     EmailModule,
     BooksModule,
     AccessRequestModule,
+    DashboardModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: AuthGuard },
