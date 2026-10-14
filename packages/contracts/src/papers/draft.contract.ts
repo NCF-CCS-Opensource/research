@@ -158,7 +158,23 @@ export const getPublicPaperContract = {
 export const listPublishedPapersContract = {
   method: 'GET' as const,
   path: '/papers/catalog' as const,
-  response: z.array(publicPaperSchema),
+  query: z.object({
+    q: z.string().trim().max(200).optional(),
+    program: z.string().uuid().optional(),
+    year: z.coerce.number().int().min(1900).max(2200).optional(),
+    researchType: paperDetailsSchema.shape.researchType.optional(),
+    sort: z.enum(['relevance', 'date', 'title']).optional(),
+    page: z.coerce.number().int().positive().default(1),
+    pageSize: z.coerce.number().int().positive().max(100).default(20),
+  }),
+  response: z.object({
+    items: z.array(publicPaperSchema),
+    total: z.number().int(),
+    page: z.number().int(),
+    pageSize: z.number().int(),
+    programs: z.array(z.object({ id: z.string().uuid(), name: z.string() })),
+    years: z.array(z.number().int()),
+  }),
 };
 export const listPublicationQueueContract = {
   method: 'GET' as const,
