@@ -6,6 +6,10 @@ const envSchema = z.object({
   WEB_ORIGIN: z.string().min(1).default('http://localhost:3000'),
   CLERK_SECRET_KEY: z.string().min(1).optional(),
   CLERK_JWT_KEY: z.string().min(1).optional(),
+  R2_ENDPOINT: z.string().url().optional(),
+  R2_BUCKET: z.string().min(1).optional(),
+  R2_ACCESS_KEY_ID: z.string().min(1).optional(),
+  R2_SECRET_ACCESS_KEY: z.string().min(1).optional(),
 });
 
 export type Env = z.infer<typeof envSchema>;

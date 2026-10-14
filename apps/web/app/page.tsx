@@ -27,6 +27,11 @@ export default async function Home() {
               <Link href="/admin/accounts">Manage accounts</Link>
             </p>
           )}
+          {identity.account.role === "STUDENT" && (
+            <p>
+              <Link href="/papers">My Papers</Link>
+            </p>
+          )}
         </>
       )}
     </main>

@@ -85,3 +85,34 @@ export const listAdvisersContract = {
   path: '/papers/list-selectable-advisers' as const,
   response: z.array(z.object({ id: z.string().uuid(), fullName: z.string() })),
 };
+
+export const paperFileStatusSchema = z.enum([
+  'PENDING',
+  'CLEAN',
+  'REJECTED',
+  'FAILED',
+]);
+export const paperFileReasonSchema = z.enum([
+  'CORRUPT_PDF',
+  'ENCRYPTED_PDF',
+  'ACTIVE_CONTENT',
+  'MALWARE',
+]);
+export const uploadPaperFileContract = {
+  method: 'POST' as const,
+  path: '/paper-files/upload/:publicId' as const,
+  response: z.object({
+    fileId: z.string().uuid(),
+    status: z.literal('PENDING'),
+  }),
+};
+export const getPaperFileStatusContract = {
+  method: 'GET' as const,
+  path: '/paper-files/status/:fileId' as const,
+  response: z.object({
+    id: z.string().uuid(),
+    status: paperFileStatusSchema,
+    reason: paperFileReasonSchema.nullable(),
+  }),
+};
+export type PaperFileStatus = z.infer<typeof paperFileStatusSchema>;

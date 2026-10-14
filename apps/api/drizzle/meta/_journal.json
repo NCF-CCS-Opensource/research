@@ -29,6 +29,13 @@
       "when": 1791962457136,
       "tag": "0003_paper_drafts",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1792022400000,
+      "tag": "0004_paper_file_uploads",
+      "breakpoints": true
     }
   ]
 }

@@ -35,6 +35,16 @@ export class ErrorEnvelopeFilter implements ExceptionFilter {
     }
     if (exception instanceof HttpException && exception.getStatus() < 500) {
       const status = exception.getStatus();
+      if (status === 413)
+        return send(413, 'FILE_TOO_LARGE', 'PDFs must be 25 MiB or smaller.');
+      if (status === 415)
+        return send(415, 'UNSUPPORTED_FILE_TYPE', 'Upload a PDF file.');
+      if (status === 429)
+        return send(
+          429,
+          'UPLOAD_LIMIT_REACHED',
+          'You have reached the upload limit. Try again later.',
+        );
       return status === 404
         ? send(404, 'NOT_FOUND', 'Not found.')
         : send(status, 'BAD_REQUEST', 'The request could not be processed.');
