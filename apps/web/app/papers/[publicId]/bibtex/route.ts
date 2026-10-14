@@ -2,7 +2,7 @@ import { formatPaperCitations, getPublicPaperContract } from "@repo/contracts";
 import { apiFetch } from "../../../../lib/backend";
 
 export async function GET(
-  request: Request,
+  _request: Request,
   { params }: { params: Promise<{ publicId: string }> },
 ) {
   const { publicId } = await params;
@@ -16,9 +16,11 @@ export async function GET(
     (await response.json())?.data,
   );
   if (!parsed.success) return new Response("Paper not found", { status: 404 });
+  const siteOrigin = new URL(process.env.WEB_ORIGIN ?? "http://localhost:3000")
+    .origin;
   const url = new URL(
     `/papers/${encodeURIComponent(publicId)}`,
-    request.url,
+    siteOrigin,
   ).toString();
   const bibtex = formatPaperCitations(parsed.data, url).bibtex;
   return new Response(bibtex, {
